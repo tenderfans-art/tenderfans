@@ -23,6 +23,12 @@ export type Bartender = {
   venueSlug: string;
   venueName: string;
   city: string;
+  venues?: {
+    slug: string;
+    name: string;
+    city: string;
+    isPrimary: boolean;
+  }[];
   cheers: number;
   claimed: boolean;
   photo?: string;

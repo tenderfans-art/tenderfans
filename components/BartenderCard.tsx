@@ -10,7 +10,25 @@ export default function BartenderCard({ bartender }: { bartender: Bartender }) {
       </div>
       <div className="person-copy">
         <div className="card-row"><h3>{bartender.name}</h3><strong>{bartender.cheers.toLocaleString()} Cheers</strong></div>
-        <p>{bartender.venueName} · {bartender.city}</p>
+        {bartender.venues?.length ? (
+          <div className="person-venues">
+            {bartender.venues.map((venue) => (
+              <div className="person-venue-row" key={venue.slug}>
+                <span>
+                  {venue.name}
+                  {venue.city ? ` · ${venue.city}` : ""}
+                </span>
+
+                {venue.isPrimary && (
+                  <small className="person-primary">Primary</small>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>{bartender.venueName} · {bartender.city}</p>
+        )}
+
         <div className="chips">{bartender.tags.slice(0,3).map(tag => <span className="chip" key={tag}>{tag}</span>)}</div>
       </div>
     </Link>

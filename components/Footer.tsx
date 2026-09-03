@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="footer">
       <div className="shell footer-inner">
         <strong>TenderFans</strong>
-        <span>No stars. No takedowns. Just props.</span>
+        <span>All stars. No Takedowns. Just Props</span>
       </div>
     </footer>
   );
