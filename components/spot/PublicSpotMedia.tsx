@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -54,8 +55,6 @@ export default function PublicSpotMedia({
       <div className="future-strip spot-media-strip">
         <span>Explore:</span>
 
-        <b>Events</b>
-
         <button
           type="button"
           onClick={() => openGallery("menu")}
@@ -80,7 +79,13 @@ export default function PublicSpotMedia({
           Photos
         </button>
 
-        <b>Awards</b>
+        <Link href={`/s/${venueId}/awards`} style={buttonStyle}>
+          Awards
+        </Link>
+
+        <Link href={`/s/${venueId}/events`} style={buttonStyle}>
+          Events
+        </Link>
       </div>
 
       {active && (

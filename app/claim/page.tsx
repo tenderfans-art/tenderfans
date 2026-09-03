@@ -68,7 +68,7 @@ export default function ClaimPage() {
     async function loadData() {
       setLoading(true);
 
-      const [bartenderResult, venueResult, relationshipResult] =
+      const [bartenderResult, venueResult, relationshipResult, claimedResult] =
         await Promise.all([
           supabase
             .from("bartenders")
@@ -84,6 +84,8 @@ export default function ClaimPage() {
             .from("bartender_venues")
             .select("bartender_id, venue_id")
             .eq("is_current", true),
+
+          supabase.rpc("public_approved_claimed_entities"),
         ]);
 
       if (bartenderResult.error) {
@@ -103,6 +105,29 @@ export default function ClaimPage() {
         setLoading(false);
         return;
       }
+
+      if (claimedResult.error) {
+        setMessage(claimedResult.error.message);
+        setLoading(false);
+        return;
+      }
+
+      const claimedEntities = (claimedResult.data ?? []) as {
+        entity_kind: string;
+        entity_id: string;
+      }[];
+
+      const claimedTenderIds = new Set(
+        claimedEntities
+          .filter((row) => row.entity_kind === "bartender")
+          .map((row) => row.entity_id)
+      );
+
+      const claimedVenueIds = new Set(
+        claimedEntities
+          .filter((row) => row.entity_kind === "venue")
+          .map((row) => row.entity_id)
+      );
 
       const venueMap = new Map(
         (venueResult.data ?? []).map((venue) => [
@@ -128,10 +153,16 @@ export default function ClaimPage() {
         }
       }
 
-      setVenues([...venueMap.values()]);
+      setVenues(
+        [...venueMap.values()].filter(
+          (venue) => !claimedVenueIds.has(venue.id)
+        )
+      );
 
       setTenders(
-        (bartenderResult.data ?? []).map((bartender) => {
+        (bartenderResult.data ?? [])
+          .filter((bartender) => !claimedTenderIds.has(bartender.id))
+          .map((bartender) => {
           const venueId =
             bartenderVenueMap.get(bartender.id) ?? null;
 
@@ -457,7 +488,7 @@ export default function ClaimPage() {
             </p>
 
             <div className="privacy-note">
-              <strong>No personal verification data is stored.</strong>{" "}
+              <strong>Your verification details are used only to review your claim.</strong>{" "}
               Your claim records only the account, profile, verification
               status and verification relationship.
             </div>

@@ -539,44 +539,39 @@ export default function TenderManageSpotsPage() {
                           onSelect={async (place: any) => {
                             setMessage("");
 
-                            const { data, error } =
-                              await supabase.rpc(
-                                "upsert_google_venue",
+                            try {
+                              const response = await fetch(
+                                "/api/google/place",
                                 {
-                                  p_place_id: place.id,
-                                  p_name: place.name,
-                                  p_street_address:
-                                    place.streetAddress,
-                                  p_city: place.city,
-                                  p_state_region: place.state,
-                                  p_postal_code:
-                                    place.postalCode,
-                                  p_latitude:
-                                    place.latitude,
-                                  p_longitude:
-                                    place.longitude,
-                                  p_public_phone:
-                                    place.publicPhone,
-                                  p_website_url:
-                                    place.websiteUrl,
-                                  p_regular_hours:
-                                    place.regularHours,
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type":
+                                      "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    placeId: place.id,
+                                  }),
                                 }
                               );
 
-                            if (error) {
-                              setMessage(error.message);
-                              return;
-                            }
+                              const result = await response.json();
 
-                            const { data: newVenue, error: venueError } =
-                              await supabase
-                                .from("venues")
-                                .select(
-                                  "id, name, city, state_region"
-                                )
-                                .eq("id", data)
-                                .single();
+                              if (!response.ok) {
+                                setMessage(
+                                  result.error ||
+                                    "Could not verify this Spot."
+                                );
+                                return;
+                              }
+
+                              const { data: newVenue, error: venueError } =
+                                await supabase
+                                  .from("venues")
+                                  .select(
+                                    "id, name, city, state_region"
+                                  )
+                                  .eq("id", result.venueId)
+                                  .single();
 
                             if (venueError || !newVenue) {
                               setMessage(
@@ -600,6 +595,15 @@ export default function TenderManageSpotsPage() {
                             setMessage(
                               `${newVenue.name} added. Complete the details below and request verification.`
                             );
+                            } catch (error) {
+                              console.error(
+                                "Google Place selection failed:",
+                                error
+                              );
+                              setMessage(
+                                "Could not verify this Spot."
+                              );
+                            }
                           }}
                         />
                       </div>

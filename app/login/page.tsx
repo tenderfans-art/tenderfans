@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const continuingClaim = searchParams.get("claim") === "1";
@@ -23,7 +23,7 @@ export default function LoginPage() {
       password,
     });
 
-    if (error) { if (error.message.toLowerCase().includes("email not confirmed")) { const { error: resendError } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: window.location.origin } }); setMessage(resendError ? "Your email is not verified yet. We could not resend the verification email: " + resendError.message : "Your email is not verified yet. We just sent you a new verification email. Please verify it, then come back here and sign in again."); } else { setMessage(error.message); } setLoading(false); return; }
+    if (error) { if (error.message.toLowerCase().includes("email not confirmed")) { const { error: resendError } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: `${window.location.origin}/auth/confirmed` } }); setMessage(resendError ? "Your email is not verified yet. We could not resend the verification email: " + resendError.message : "Your email is not verified yet. We just sent you a new verification email. Please verify it, then come back here and sign in again."); } else { setMessage(error.message); } setLoading(false); return; }
 
     if (continuingClaim) {
       try {
@@ -108,5 +108,14 @@ export default function LoginPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

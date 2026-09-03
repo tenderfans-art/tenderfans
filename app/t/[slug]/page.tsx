@@ -54,7 +54,7 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
 
   const { count: cheerCount } = await supabase
     .from("shoutouts")
-    .select("*", { count: "exact", head: true })
+    .select("id", { count: "exact", head: true })
     .eq("bartender_id", bartender.id)
     .eq("status", "published");
 

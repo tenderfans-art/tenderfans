@@ -63,7 +63,42 @@ export default function ShoutFlow() {
   return <div className="flow-card">
     {step === 1 && <div className="flow-step"><div className="eyebrow">Step 1</div><h1>Where do they work?</h1><p>We search TenderFans first. If the spot is new, the production version will fall through to Google Places to select the real business and address.</p><input className="field" value={venueQuery} onChange={e=>setVenueQuery(e.target.value)} placeholder="Start typing a bar, brewery or spot..."/>
       <div className="choice-list">{venueMatches.map(v => <button key={v.id} className={`choice ${venueId===v.id?"selected":""}`} onClick={()=>setVenueId(v.id)}><strong>{v.name}</strong><span>{[v.street_address, v.city, v.state_region].filter(Boolean).join(", ")}</span></button>)}</div>
-      {venueQuery && !venueMatches.length && <div className="new-entity"><strong>We don't have this spot yet.</strong><span>Search Google for the exact location:</span><GooglePlacePicker onSelect={async (place:any) => { setGoogleVenue(place); const { data, error } = await supabase.rpc("upsert_google_venue", { p_place_id: place.id, p_name: place.name, p_street_address: place.streetAddress, p_city: place.city, p_state_region: place.state, p_postal_code: place.postalCode, p_latitude: place.latitude, p_longitude: place.longitude, p_public_phone: place.publicPhone, p_website_url: place.websiteUrl, p_regular_hours: place.regularHours });  if (error) { console.error(error); return; } setVenueId(data); const { data: newVenue } = await supabase.from("venues").select("id, slug, name, city, street_address, state_region").eq("id", data).single(); if (newVenue) setLiveVenues(current => [...current.filter(v => v.id !== newVenue.id), newVenue]); }} />{googleVenue && <div><strong>{googleVenue.name}</strong><span>{googleVenue.address}</span></div>}</div>}
+      {venueQuery && !venueMatches.length && <div className="new-entity"><strong>We don't have this spot yet.</strong><span>Search Google for the exact location:</span><GooglePlacePicker onSelect={async (place:any) => {
+        try {
+          const verifyResponse = await fetch("/api/google/place", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ placeId: place.id }),
+          });
+
+          if (!verifyResponse.ok) {
+            console.error("Could not verify Google Place.");
+            return;
+          }
+
+          const result = await verifyResponse.json();
+          const verifiedPlace = result.place;
+          const verifiedVenueId = result.venueId;
+
+          setGoogleVenue(verifiedPlace);
+          setVenueId(verifiedVenueId);
+
+          const { data: newVenue } = await supabase
+            .from("venues")
+            .select("id, slug, name, city, street_address, state_region")
+            .eq("id", verifiedVenueId)
+            .single();
+
+          if (newVenue) {
+            setLiveVenues(current => [
+              ...current.filter(v => v.id !== newVenue.id),
+              newVenue,
+            ]);
+          }
+        } catch (error) {
+          console.error("Google Place selection failed:", error);
+        }
+      }} />{googleVenue && <div><strong>{googleVenue.name}</strong><span>{googleVenue.address}</span></div>}</div>}
       <button className="btn primary" disabled={!venueId} onClick={()=>setStep(2)}>Continue</button>
     </div>}
     {step === 2 && <div className="flow-step"><button className="back" onClick={()=>setStep(1)}>← Change spot</button><div className="eyebrow">Step 2</div><h1>Who deserves the shout?</h1><p>{selectedVenue?.name} selected. Existing profiles at this spot appear before we allow a new bartender to be created.</p><input className="field" value={bartenderQuery} onChange={e=>setBartenderQuery(e.target.value)} placeholder="Bartender name..."/>
