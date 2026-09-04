@@ -829,3 +829,14 @@
     text-align:center;
   }
 }
+
+@media (max-width:640px){
+  .discover-card{
+    width:calc(100% - 16px);
+  }
+
+  .discover-card.flow-card{
+    padding-left:14px;
+    padding-right:14px;
+  }
+}
