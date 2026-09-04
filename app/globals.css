@@ -786,3 +786,9 @@
     transform:translateX(-36px);
   }
 }
+
+@media (max-width:640px){
+  .header-logo{
+    transform:translateX(-4px);
+  }
+}
