@@ -463,6 +463,14 @@ export default function ClaimPage() {
                 <strong>I represent a Spot</strong>
                 <span>Claim an existing Spot.</span>
               </a>
+
+              <a
+                className="claim-card"
+                href="/login"
+              >
+                <strong>Login</strong>
+                <span>Already have an account? Sign in here.</span>
+              </a>
             </div>
           </div>
         </div>
