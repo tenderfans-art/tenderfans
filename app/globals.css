@@ -763,3 +763,20 @@
     height:70px;
   }
 }
+
+@media (max-width:640px){
+  .site-header,
+  .header-inner{
+    max-width:100%;
+  }
+
+  .brand{
+    min-width:0;
+    max-width:calc(100% - 46px);
+  }
+
+  .header-logo{
+    width:400px;
+    max-width:calc(100vw - 18px);
+  }
+}
