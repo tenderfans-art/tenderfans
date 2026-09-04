@@ -119,7 +119,7 @@ export default function LandingHero() {
       <div className="mobile-landing-actions">
         <div className="mobile-action-card">
           <span className="panel-kicker">FAN</span>
-          <h2>Need a vibe spot or know a Tender?</h2>
+          <h2>Need a vibe or know a Tender?</h2>
           <Link className="landing-action" href="/fan">
             Give a Shout or Find a Spot
           </Link>

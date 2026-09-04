@@ -817,3 +817,15 @@
     padding-right:10px;
   }
 }
+
+
+@media (max-width:640px){
+  .mobile-action-card{
+    text-align:center;
+  }
+
+  .mobile-action-card .panel-kicker,
+  .mobile-action-card h2{
+    text-align:center;
+  }
+}
