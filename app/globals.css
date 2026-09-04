@@ -753,3 +753,13 @@
     right:-4px;
   }
 }
+
+@media (max-width:640px){
+  .site-header{
+    background:#eee9dc;
+  }
+
+  .header-inner{
+    height:70px;
+  }
+}
