@@ -802,3 +802,9 @@
     right:-1px;
   }
 }
+
+@media (max-width:640px){
+  .header-logo{
+    transform:translateX(-10px);
+  }
+}
