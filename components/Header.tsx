@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function Header() {
   const [signedIn, setSignedIn] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -35,7 +36,22 @@ export default function Header() {
         <Link href="/" className="brand" aria-label="TenderFans home">
           <img src="/tfans.png" alt="TenderFans" className="header-logo" />
         </Link>
-        <nav className="nav">
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label="Open navigation menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <nav
+          className={`nav${menuOpen ? " mobile-open" : ""}`}
+          onClick={() => setMenuOpen(false)}
+        >
           <Link href="/shout">Give a Shout</Link>
           <Link href="/claim">Claim Profile</Link>
           <Link href="/how-it-works">How it Works</Link>
