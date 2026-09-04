@@ -734,3 +734,10 @@
     border-radius:8px;
   }
 }
+
+@media (max-width:640px){
+  .site-header{
+    background:var(--paper);
+    backdrop-filter:none;
+  }
+}
