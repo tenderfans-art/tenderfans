@@ -34,11 +34,17 @@ export default function LandingHero() {
   return (
     <section className="landing-hero" aria-label="TenderFans welcome">
       <div className="landing-stage">
-        <img
-          className="landing-art"
-          src="/landing-bar.png"
-          alt="Warm neighborhood bar with a Give a Shout panel on the left silhouette and bartender or owner login on the right silhouette."
-        />
+        <picture>
+          <source
+            media="(max-width: 767px)"
+            srcSet="/tfansmobile.png"
+          />
+          <img
+            className="landing-art"
+            src="/landing-bar.png"
+            alt="Warm neighborhood bar with two silhouetted figures at the bar."
+          />
+        </picture>
 
         <div className="hide-start-line" aria-hidden="true" />
 
