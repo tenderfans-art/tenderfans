@@ -808,3 +808,12 @@
     transform:translateX(-10px);
   }
 }
+
+
+@media (max-width:640px){
+  .mobile-landing-actions{
+    max-width:560px;
+    padding-left:10px;
+    padding-right:10px;
+  }
+}
