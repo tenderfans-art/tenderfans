@@ -18,6 +18,12 @@ type SpotResult = {
   longitude: number | null;
 };
 
+type TenderResult = {
+  id: string;
+  slug: string;
+  display_name: string;
+};
+
 export default function HomeSearch({
   showDiscoverHeader = false,
 }: {
@@ -25,6 +31,7 @@ export default function HomeSearch({
 }) {
   const [query, setQuery] = useState("");
   const [spots, setSpots] = useState<SpotResult[]>([]);
+  const [tenders, setTenders] = useState<TenderResult[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
@@ -122,6 +129,26 @@ export default function HomeSearch({
     loadSpots();
   }, [view]);
   
+  useEffect(() => {
+    async function loadTenders() {
+      const { data, error } = await supabase
+        .from("bartenders")
+        .select("id, slug, display_name")
+        .eq("status", "active")
+        .order("display_name");
+
+      if (error) {
+        console.error("TenderFans Tender search:", error);
+        setTenders([]);
+        return;
+      }
+
+      setTenders((data ?? []) as TenderResult[]);
+    }
+
+    loadTenders();
+  }, []);
+
   useEffect(() => {
     if (!isRecent) return;
 
@@ -230,6 +257,23 @@ export default function HomeSearch({
       )
       .slice(0, 8);
   }, [query, spots, view]);
+
+  const tenderMatches = useMemo(() => {
+    const normalize = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const q = normalize(query);
+
+    if (!q || isTrending || isNearby || isRecent) return [];
+
+    return tenders
+      .filter((tender) => normalize(tender.display_name).includes(q))
+      .slice(0, 8);
+  }, [query, tenders, isTrending, isNearby, isRecent]);
 
   return (
     <div className="search-wrap">
@@ -368,33 +412,65 @@ export default function HomeSearch({
             <div className="search-empty">
               Searching TenderFans...
             </div>
-          ) : matches.length ? (
-            matches.map((spot) => (
-              <Link
-                key={spot.id}
-                href={`/s/${spot.slug}`}
-                className="search-result"
-              >
-                <span className="result-kicker">Spot</span>
+          ) : view === "trending" ? (
+            matches.length ? (
+              matches.map((spot) => (
+                <Link
+                  key={spot.id}
+                  href={`/s/${spot.slug}`}
+                  className="search-result"
+                >
+                  <span className="result-kicker">Spot</span>
+                  <strong>{spot.name}</strong>
 
-                <strong>{spot.name}</strong>
+                  <small>
+                    {spot.city}
+                    {spot.state_region ? `, ${spot.state_region}` : ""}
+                    {" · "}
+                    {spot.tenderCount}{" "}
+                    {spot.tenderCount === 1 ? "Tender" : "Tenders"}
+                  </small>
+                </Link>
+              ))
+            ) : (
+              <div className="search-empty">No trending spots yet.</div>
+            )
+          ) : tenderMatches.length || matches.length ? (
+            <>
+              {tenderMatches.map((tender) => (
+                <Link
+                  key={`tender-${tender.id}`}
+                  href={`/t/${tender.slug}`}
+                  className="search-result"
+                >
+                  <span className="result-kicker">Tender</span>
+                  <strong>{tender.display_name}</strong>
+                  <small>View Tender profile</small>
+                </Link>
+              ))}
 
-                <small>
-                  {spot.city}
-                  {spot.state_region
-                    ? `, ${spot.state_region}`
-                    : ""}
-                  {" · "}
-                  {spot.tenderCount}{" "}
-                  {spot.tenderCount === 1
-                    ? "Tender"
-                    : "Tenders"}
-                </small>
-              </Link>
-            ))
+              {matches.map((spot) => (
+                <Link
+                  key={`spot-${spot.id}`}
+                  href={`/s/${spot.slug}`}
+                  className="search-result"
+                >
+                  <span className="result-kicker">Spot</span>
+                  <strong>{spot.name}</strong>
+
+                  <small>
+                    {spot.city}
+                    {spot.state_region ? `, ${spot.state_region}` : ""}
+                    {" · "}
+                    {spot.tenderCount}{" "}
+                    {spot.tenderCount === 1 ? "Tender" : "Tenders"}
+                  </small>
+                </Link>
+              ))}
+            </>
           ) : (
             <div className="search-empty">
-              No TenderFans spots found yet.
+              No TenderFans results found.
             </div>
           )}
         </div>
