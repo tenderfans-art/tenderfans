@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import NotificationSignup from "@/components/NotificationSignup";
 
 const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -17,17 +18,26 @@ type CalendarEvent = {
 };
 
 export default function EventsCalendar() {
-  const today = new Date();
+  const [today, setToday] = useState<Date | null>(null);
 
-  const [month, setMonth] = useState(
-    new Date(today.getFullYear(), today.getMonth(), 1)
-  );
+  const [month, setMonth] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const now = new Date();
+
+    setToday(now);
+    setMonth(
+      new Date(now.getFullYear(), now.getMonth(), 1)
+    );
+  }, []);
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const calendarDays = useMemo(() => {
+    if (!month) return [];
+
     const year = month.getFullYear();
     const monthIndex = month.getMonth();
 
@@ -119,21 +129,27 @@ export default function EventsCalendar() {
   }, [calendarDays]);
 
   function previousMonth() {
-    setMonth(
-      (current) =>
-        new Date(current.getFullYear(), current.getMonth() - 1, 1)
+    setMonth((current) =>
+      current
+        ? new Date(current.getFullYear(), current.getMonth() - 1, 1)
+        : current
     );
   }
 
   function nextMonth() {
-    setMonth(
-      (current) =>
-        new Date(current.getFullYear(), current.getMonth() + 1, 1)
+    setMonth((current) =>
+      current
+        ? new Date(current.getFullYear(), current.getMonth() + 1, 1)
+        : current
     );
   }
 
   function goToday() {
-    setMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    if (!today) return;
+
+    setMonth(
+      new Date(today.getFullYear(), today.getMonth(), 1)
+    );
   }
 
   function eventsForDate(date: Date) {
@@ -155,10 +171,12 @@ export default function EventsCalendar() {
     });
   }
 
-  const monthLabel = month.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = month
+    ? month.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "";
 
   return (
     <section className="events-calendar-card">
@@ -198,6 +216,7 @@ export default function EventsCalendar() {
       <div className="events-calendar-grid">
         {calendarDays.map(({ date, currentMonth }) => {
           const isToday =
+            !!today &&
             date.getFullYear() === today.getFullYear() &&
             date.getMonth() === today.getMonth() &&
             date.getDate() === today.getDate();
@@ -311,16 +330,22 @@ export default function EventsCalendar() {
               <span>Event flyer</span>
             </div>
 
-            {selectedEvent.venue_slug && (
-              <div className="events-modal-actions">
+            <div className="events-modal-actions">
+              <NotificationSignup
+                mode="reminder"
+                eventId={selectedEvent.id}
+                eventName={selectedEvent.title}
+              />
+
+              {selectedEvent.venue_slug && (
                 <a
                   className="btn primary events-modal-spot"
-                  href={`/v/${selectedEvent.venue_slug}`}
+                  href={`/s/${selectedEvent.venue_slug}`}
                 >
                   View Spot
                 </a>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}

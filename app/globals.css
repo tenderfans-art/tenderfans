@@ -1671,3 +1671,258 @@
     grid-row:2;
   }
 }
+
+/* Public follow / notification signup */
+.follow-entity{
+  display:inline-flex;
+}
+
+.follow-trigger{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 12px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:#fff;
+  font:inherit;
+  font-size:13px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.follow-trigger span:first-child{
+  font-size:18px;
+  line-height:1;
+}
+
+.follow-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(0,0,0,.45);
+}
+
+.follow-modal{
+  position:relative;
+  width:min(100%,460px);
+  padding:26px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--cream);
+  box-shadow:0 18px 50px rgba(0,0,0,.22);
+}
+
+.follow-modal h2{
+  margin:5px 0 8px;
+}
+
+.follow-modal-intro{
+  margin:0 0 18px;
+  color:var(--muted);
+}
+
+.follow-modal-close{
+  position:absolute;
+  top:10px;
+  right:12px;
+  border:0;
+  background:transparent;
+  font-size:26px;
+  cursor:pointer;
+}
+
+.follow-form{
+  display:grid;
+  gap:12px;
+}
+
+.follow-form > input{
+  width:100%;
+}
+
+.follow-channel{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:850;
+}
+
+.follow-sms-consent{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  font-size:11px;
+  line-height:1.4;
+  color:var(--muted);
+}
+
+.follow-message{
+  font-size:12px;
+  font-weight:750;
+}
+
+@media (max-width:760px){
+  .follow-modal{
+    padding:22px 18px;
+  }
+}
+
+.profile-title-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.profile-title-actions h1{
+  margin-right:auto;
+}
+
+@media (max-width:760px){
+  .profile-title-actions{
+    align-items:flex-start;
+  }
+}
+
+/* Public follow + event reminder controls */
+.notification-signup{
+  display:inline-flex;
+}
+
+.notification-trigger{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 12px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:#fff;
+  font:inherit;
+  font-size:13px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.notification-trigger span:first-child{
+  font-size:17px;
+  line-height:1;
+}
+
+.notification-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:1100;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(0,0,0,.45);
+}
+
+.notification-modal{
+  position:relative;
+  width:min(100%,460px);
+  padding:26px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--cream);
+  box-shadow:0 18px 50px rgba(0,0,0,.22);
+}
+
+.notification-modal h2{
+  margin:5px 0 8px;
+}
+
+.notification-modal-intro{
+  margin:0 0 18px;
+  color:var(--muted);
+}
+
+.notification-modal-close{
+  position:absolute;
+  top:10px;
+  right:12px;
+  border:0;
+  background:transparent;
+  font-size:26px;
+  cursor:pointer;
+}
+
+.notification-form{
+  display:grid;
+  gap:12px;
+}
+
+.notification-form > input,
+.notification-form select{
+  width:100%;
+}
+
+.notification-channel{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:850;
+}
+
+.notification-reminder-options label{
+  display:grid;
+  gap:6px;
+  font-size:12px;
+  font-weight:850;
+}
+
+.notification-sms-consent{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  font-size:11px;
+  line-height:1.4;
+  color:var(--muted);
+}
+
+.notification-message{
+  font-size:12px;
+  font-weight:750;
+}
+
+.notification-message-success{
+  color:var(--olive);
+}
+
+@media (max-width:760px){
+  .notification-modal{
+    padding:22px 18px;
+  }
+}
+
+/* Profile identity + Follow */
+.profile-title-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.profile-title-actions h1{
+  margin-right:auto;
+}
+
+@media (max-width:760px){
+  .profile-title-actions{
+    align-items:flex-start;
+  }
+}
+
+/* Keep Follow attached to the profile name */
+.profile-title-actions{
+  justify-content:flex-start;
+}
+
+.profile-title-actions h1{
+  margin-right:0;
+}
+

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import NotificationSignup from "@/components/NotificationSignup";
 
 export default async function TenderPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -96,7 +97,16 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
           </div>
 
           <div className="tender-profile-copy">
-            <h1>{bartender.display_name}</h1>
+            <div className="profile-title-actions">
+              <h1>{bartender.display_name}</h1>
+
+              <NotificationSignup
+                mode="follow"
+                entityKind="bartender"
+                entityId={bartender.id}
+                entityName={bartender.display_name}
+              />
+            </div>
 
             {venue && (
               <p className="tender-current-spot">

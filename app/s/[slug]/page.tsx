@@ -4,6 +4,7 @@ import VenueVisual from "@/components/VenueVisual";
 import { supabase } from "@/lib/supabase";
 import SpotTenderList from "@/components/SpotTenderList";
 import PublicSpotMedia from "@/components/spot/PublicSpotMedia";
+import NotificationSignup from "@/components/NotificationSignup";
 
 export default async function SpotPage({
   params,
@@ -78,7 +79,16 @@ export default async function SpotPage({
         <div className="venue-profile-copy">
           <div className="eyebrow">Spot profile</div>
 
-          <h1>{venue.name}</h1>
+          <div className="profile-title-actions">
+            <h1>{venue.name}</h1>
+
+            <NotificationSignup
+              mode="follow"
+              entityKind="venue"
+              entityId={venue.id}
+              entityName={venue.name}
+            />
+          </div>
 
           <p className="venue-meta">
             {venue.venue_type.charAt(0).toUpperCase() + venue.venue_type.slice(1)} · {venue.city}
