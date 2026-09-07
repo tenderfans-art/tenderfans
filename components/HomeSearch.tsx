@@ -22,6 +22,12 @@ type TenderResult = {
   id: string;
   slug: string;
   display_name: string;
+  currentSpots: {
+    id: string;
+    name: string;
+    city: string;
+    is_primary: boolean;
+  }[];
 };
 
 export default function HomeSearch({
@@ -143,7 +149,70 @@ export default function HomeSearch({
         return;
       }
 
-      setTenders((data ?? []) as TenderResult[]);
+      const bartenderRows = data ?? [];
+      const bartenderIds = bartenderRows.map((bartender) => bartender.id);
+
+      let relationshipRows: any[] = [];
+
+      if (bartenderIds.length) {
+        const { data: relationships, error: relationshipError } = await supabase
+          .from("bartender_venues")
+          .select(`
+            bartender_id,
+            is_primary,
+            venues!inner(
+              id,
+              name,
+              city,
+              status
+            )
+          `)
+          .in("bartender_id", bartenderIds)
+          .eq("is_current", true)
+          .eq("venues.status", "active");
+
+        if (relationshipError) {
+          console.error(
+            "TenderFans Tender Spot search:",
+            relationshipError
+          );
+        } else {
+          relationshipRows = relationships ?? [];
+        }
+      }
+
+      const spotMap = new Map<string, TenderResult["currentSpots"]>();
+
+      for (const row of relationshipRows) {
+        const venueData = row.venues;
+        const venue = Array.isArray(venueData)
+          ? venueData[0]
+          : venueData;
+
+        if (!venue) continue;
+
+        const current = spotMap.get(row.bartender_id) ?? [];
+
+        current.push({
+          id: venue.id,
+          name: venue.name,
+          city: venue.city ?? "",
+          is_primary: Boolean(row.is_primary),
+        });
+
+        spotMap.set(row.bartender_id, current);
+      }
+
+      setTenders(
+        bartenderRows.map((bartender) => ({
+          ...bartender,
+          currentSpots: (spotMap.get(bartender.id) ?? []).sort(
+            (a, b) =>
+              Number(b.is_primary) - Number(a.is_primary) ||
+              a.name.localeCompare(b.name)
+          ),
+        }))
+      );
     }
 
     loadTenders();
@@ -445,7 +514,16 @@ export default function HomeSearch({
                 >
                   <span className="result-kicker">Tender</span>
                   <strong>{tender.display_name}</strong>
-                  <small>View Tender profile</small>
+                  <small>
+                    {tender.currentSpots.length
+                      ? tender.currentSpots
+                          .map(
+                            (spot) =>
+                              `${spot.name}${spot.city ? ` · ${spot.city}` : ""}`
+                          )
+                          .join(" | ")
+                      : "No current Spot listed"}
+                  </small>
                 </Link>
               ))}
 
