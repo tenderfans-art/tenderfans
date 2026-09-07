@@ -15,24 +15,51 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
 
   if (!bartender) notFound();
 
-  const { data: relationship } = await supabase
+  const { data: relationships } = await supabase
     .from("bartender_venues")
-    .select("venue_id")
+    .select("venue_id, is_primary")
     .eq("bartender_id", bartender.id)
-    .eq("is_current", true)
-    .eq("is_primary", true)
-    .maybeSingle();
+    .eq("is_current", true);
 
-  let venue = null;
+  const venueIds = [
+    ...new Set(
+      (relationships ?? [])
+        .map((relationship) => relationship.venue_id)
+        .filter(Boolean)
+    ),
+  ];
 
-  if (relationship?.venue_id) {
-    const { data } = await supabase
+  let currentSpots: {
+    id: string;
+    name: string;
+    slug: string;
+    city: string | null;
+    is_primary: boolean;
+  }[] = [];
+
+  if (venueIds.length > 0) {
+    const { data: venues } = await supabase
       .from("venues")
-      .select("name, slug, city")
-      .eq("id", relationship.venue_id)
-      .single();
+      .select("id, name, slug, city")
+      .in("id", venueIds);
 
-    venue = data;
+    const primaryByVenue = new Map(
+      (relationships ?? []).map((relationship) => [
+        relationship.venue_id,
+        relationship.is_primary === true,
+      ])
+    );
+
+    currentSpots = (venues ?? [])
+      .map((venue) => ({
+        ...venue,
+        is_primary: primaryByVenue.get(venue.id) === true,
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.is_primary) - Number(a.is_primary) ||
+          a.name.localeCompare(b.name)
+      );
   }
   
   const { data: heroPhoto } = await supabase
@@ -68,7 +95,11 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
   const traitCounts = new Map<string, number>();
 
   for (const row of traitRows ?? []) {
-    const label = (row.traits as any)?.label;
+    const trait = (row as any).traits;
+    const label = Array.isArray(trait)
+      ? trait[0]?.label
+      : trait?.label;
+
     if (!label) continue;
     traitCounts.set(label, (traitCounts.get(label) ?? 0) + 1);
   }
@@ -82,18 +113,26 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
       <div className="shell tender-profile-shell">
 
         <div className="tender-profile-main">
-          <div className="tender-profile-visual">
-            {heroPhotoUrl ? (
-              <img
-                src={heroPhotoUrl}
-                alt={bartender.display_name}
-                className="tender-profile-photo"
-              />
-            ) : (
-              <div className="photo-fallback tender-profile-fallback">
-                {bartender.display_name[0]}
-              </div>
-            )}
+          <div className="tender-profile-media-column">
+            <div className="tender-profile-visual">
+              {heroPhotoUrl ? (
+                <img
+                  src={heroPhotoUrl}
+                  alt={bartender.display_name}
+                  className="tender-profile-photo"
+                />
+              ) : (
+                <div className="photo-fallback tender-profile-fallback">
+                  {bartender.display_name[0]}
+                </div>
+              )}
+            </div>
+
+            <div className="tender-shout-action">
+              <Link className="btn primary" href="/shout">
+                Give {bartender.display_name} a Shout
+              </Link>
+            </div>
           </div>
 
           <div className="tender-profile-copy">
@@ -107,14 +146,6 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
                 entityName={bartender.display_name}
               />
             </div>
-
-            {venue && (
-              <p className="tender-current-spot">
-                Current Tender at{" "}
-                <Link href={`/s/${venue.slug}`}>{venue.name}</Link>
-                {venue.city ? ` · ${venue.city}` : ""}
-              </p>
-            )}
 
             <div className="tender-cheers-inline">
               <strong>{cheerCount ?? 0}</strong>
@@ -130,27 +161,58 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
                 This profile is community-added and waiting to be claimed.
               </p>
             )}
+
+            {currentSpots.length > 0 && (
+              <div className="tender-current-spots">
+                <div className="tender-detail-label">
+                  Current {currentSpots.length === 1 ? "Spot" : "Spots"}
+                </div>
+
+                <div className="tender-current-spot-list">
+                  {currentSpots.map((spot) => (
+                    <div className="tender-current-spot-row" key={spot.id}>
+                      <Link href={`/s/${spot.slug}`}>{spot.name}</Link>
+
+                      {spot.city && (
+                        <span className="tender-spot-city">· {spot.city}</span>
+                      )}
+
+                      {spot.is_primary && (
+                        <span className="tender-primary-label">Primary</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {topTraits.length > 0 && (
+              <div className="tender-badges">
+                <div className="tender-detail-label">Top Badges</div>
+
+                <div className="tender-badge-grid">
+                  {topTraits.map(([label, count], index) => (
+                    <div
+                      className={`tender-badge tender-badge-${index + 1}`}
+                      key={label}
+                    >
+                      <div className="tender-badge-medallion">
+                        <span className="tender-badge-rank">#{index + 1}</span>
+                        <span className="tender-badge-star">★</span>
+                      </div>
+
+                      <div className="tender-badge-copy">
+                        <strong>{label}</strong>
+                        <span>
+                          {count} {count === 1 ? "shout" : "shouts"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-
-        {topTraits.length > 0 && (
-          <div className="tender-reputation-strip">
-            <span className="tender-reputation-label">Top Shouts</span>
-
-            <div className="tender-traits">
-              {topTraits.map(([label, count]) => (
-                <span className="chip" key={label}>
-                  {label} · {count}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="tender-shout-action">
-          <Link className="btn primary" href="/shout">
-            Give {bartender.display_name} a Shout
-          </Link>
         </div>
 
       </div>

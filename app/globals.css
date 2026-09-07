@@ -466,9 +466,15 @@
 
 .tender-profile-main{
   display:grid;
-  grid-template-columns:.9fr 1.1fr;
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:26px;
   align-items:stretch;
+}
+
+.tender-profile-media-column{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
 }
 
 .tender-profile-visual{
@@ -480,10 +486,18 @@
 
 .tender-profile-fallback{
   height:100%;
+  display:grid;
+  place-items:center;
   font-size:96px;
+  color:#f7f3ea;
+  background:
+    radial-gradient(circle at 72% 28%, rgba(255,255,255,.08), transparent 34%),
+    linear-gradient(145deg, #233845, #142531 62%, #0f1c25);
 }
 
 .tender-profile-copy{
+  min-width:0;
+  width:100%;
   padding:16px 0;
 }
 
@@ -566,12 +580,18 @@
   font-size:12px;
 }
 
-/* Centered beneath the entire profile rectangle */
+/* Full-width CTA directly beneath Tender photo */
 .tender-shout-action{
   width:100%;
   display:flex;
+  margin-top:12px;
+}
+
+.tender-shout-action .btn{
+  width:100%;
+  box-sizing:border-box;
   justify-content:center;
-  margin-top:10px;
+  text-align:center;
 }
 
 @media(max-width:900px){
@@ -1926,3 +1946,161 @@
   margin-right:0;
 }
 
+
+
+/* Tender profile current Spots + ranked badges */
+.tender-current-spots,
+.tender-badges {
+  margin-top: 22px;
+}
+
+.tender-detail-label {
+  margin-bottom: 9px;
+  font-size: 0.73rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #73821c;
+}
+
+.tender-current-spot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tender-current-spot-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  font-size: 0.98rem;
+}
+
+.tender-current-spot-row a {
+  color: #142531;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.tender-current-spot-row a:hover {
+  text-decoration: underline;
+}
+
+.tender-spot-city {
+  color: #7a8083;
+}
+
+.tender-primary-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #8ea31d;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tender-badges {
+  padding-top: 18px;
+  border-top: 1px solid #e5ded1;
+}
+
+.tender-badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 720px;
+}
+
+.tender-badge {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid #ddd5c7;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fffdf8, #f3eee4);
+  box-shadow: 0 5px 14px rgba(20, 37, 49, 0.08);
+}
+
+.tender-badge-medallion {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.72);
+  outline: 2px solid rgba(20,37,49,.12);
+  box-shadow:
+    0 4px 10px rgba(20,37,49,.18),
+    inset 0 0 0 3px rgba(255,255,255,.28);
+}
+
+.tender-badge-1 .tender-badge-medallion {
+  background: linear-gradient(145deg, #f8dc72, #b8860b);
+}
+
+.tender-badge-2 .tender-badge-medallion {
+  background: linear-gradient(145deg, #e9ecef, #9fa7ad);
+}
+
+.tender-badge-3 .tender-badge-medallion {
+  background: linear-gradient(145deg, #d99a68, #92552d);
+}
+
+.tender-badge-rank {
+  position: absolute;
+  top: 5px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #142531;
+  font-size: 0.62rem;
+  font-weight: 950;
+}
+
+.tender-badge-star {
+  margin-top: 10px;
+  color: #142531;
+  font-size: 1.7rem;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255,255,255,.45);
+}
+
+.tender-badge-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tender-badge-copy strong {
+  overflow: hidden;
+  color: #142531;
+  font-size: 0.92rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+}
+
+.tender-badge-copy span {
+  color: #777c7e;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .tender-badge-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tender-badge {
+    max-width: 320px;
+  }
+}
