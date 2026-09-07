@@ -53,8 +53,21 @@ export default function AccountPage() {
         return;
       }
 
+      // Approved Partner
+      const { data: partnerProfile } = await supabase
+        .from("partner_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "approved")
+        .maybeSingle();
+
+      if (partnerProfile) {
+        window.location.href = "/account/partner";
+        return;
+      }
+
       setMessage(
-        "Your account does not have an approved Tender or Spot profile yet."
+        "Your account does not have an approved Tender, Spot or Partner role yet."
       );
     }
 

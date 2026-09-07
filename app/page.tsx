@@ -6,6 +6,19 @@ export default function Home() {
   return <>
     <LandingHero />
 
+    <section className="partner-home-banner">
+      <div className="shell partner-home-banner-inner">
+        <span>
+          Promoters &amp; Brand Reps — bring your events to TenderFans.
+        </span>
+
+        <div className="partner-home-banner-links">
+          <a href="/partners/login">Partner Login</a>
+          <a href="/partners">About Partners</a>
+        </div>
+      </div>
+    </section>
+
     <TrendingTenders />
 
     <PopularSpots />

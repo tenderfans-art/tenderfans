@@ -55,6 +55,8 @@ export default function Header() {
           <Link href="/shout">Give a Shout</Link>
           <Link href="/claim">Claim Profile</Link>
           <Link href="/how-it-works">How it Works</Link>
+          <Link href="/events">Events</Link>
+          <Link href="/partners/login">Partners</Link>
           {signedIn ? (
             <>
               <Link className="nav-login" href="/account">Account</Link>
