@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
+import crypto from "crypto";
+
+function getClientIpHash(request: Request) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+
+  const ip =
+    forwardedFor?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown";
+
+  return crypto
+    .createHash("sha256")
+    .update(ip)
+    .digest("hex");
+}
 
 function normalizeEmail(value: unknown) {
   if (typeof value !== "string") return null;
@@ -141,6 +157,48 @@ export async function POST(request: Request) {
       }
     );
 
+      const ipHash = getClientIpHash(request);
+
+      const { data: allowed, error: rateLimitError } =
+        await adminSupabase.rpc(
+          "check_notification_rate_limit",
+          {
+            p_ip_hash: ipHash,
+            p_limit: 5,
+            p_window_minutes: 15,
+          }
+        );
+
+      if (rateLimitError) {
+        console.error(
+          "Notification rate limit check failed:",
+          rateLimitError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Notification signup is temporarily unavailable.",
+          },
+          { status: 500 }
+        );
+      }
+
+      if (allowed !== true) {
+        return NextResponse.json(
+          {
+            error:
+              "Too many notification requests. Please try again later.",
+          },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": "900",
+            },
+          }
+        );
+      }
+
     const { data: event, error: eventError } =
       await adminSupabase
         .from("events")
@@ -196,7 +254,20 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString();
 
-    const { error } = await adminSupabase
+    const emailVerificationToken =
+      wantsEmail
+        ? crypto.randomBytes(32).toString("hex")
+        : null;
+
+    const emailVerificationTokenHash =
+      emailVerificationToken
+        ? crypto
+            .createHash("sha256")
+            .update(emailVerificationToken)
+            .digest("hex")
+        : null;
+
+    const { data: reminder, error } = await adminSupabase
       .from("event_reminders")
       .insert({
         event_id: eventId,
@@ -222,6 +293,14 @@ export async function POST(request: Request) {
 
         status: "pending",
 
+        email_verification_token_hash:
+          emailVerificationTokenHash,
+
+        email_verification_sent_at:
+          wantsEmail
+            ? now
+            : null,
+
         sms_consent_at:
           wantsSms
             ? now
@@ -233,9 +312,23 @@ export async function POST(request: Request) {
             : null,
 
         updated_at: now,
-      });
+      })
+      .select("id")
+      .single();
 
     if (error) {
+      if (error.code === "23505") {
+        return NextResponse.json(
+          {
+            ok: true,
+            status: "existing",
+            message:
+              "You already have that event reminder set for this email.",
+          },
+          { status: 200 }
+        );
+      }
+
       console.error(
         "Event reminder insert failed:",
         error
@@ -250,11 +343,109 @@ export async function POST(request: Request) {
       );
     }
 
+    if (wantsEmail && email && emailVerificationToken) {
+      const resendApiKey =
+        process.env.RESEND_API_KEY;
+
+      const resendFromEmail =
+        process.env.RESEND_FROM_EMAIL;
+
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL;
+
+      if (
+        !resendApiKey ||
+        !resendFromEmail ||
+        !siteUrl
+      ) {
+        console.error(
+          "Resend email configuration is incomplete."
+        );
+
+        await adminSupabase
+          .from("event_reminders")
+          .delete()
+          .eq("id", reminder.id);
+
+        return NextResponse.json(
+          {
+            error:
+              "Email verification is not configured.",
+          },
+          { status: 500 }
+        );
+      }
+
+      const resend = new Resend(resendApiKey);
+
+      const verifyUrl =
+        `${siteUrl.replace(/\/$/, "")}` +
+        `/notifications/verify?type=reminder&token=${emailVerificationToken}`;
+
+      const { error: emailError } =
+        await resend.emails.send({
+          from: resendFromEmail,
+          to: email,
+          subject:
+            "Verify your TenderFans event reminder",
+          html: `
+            <div style="font-family:Arial,sans-serif;line-height:1.5;color:#222;">
+              <h2>Confirm your TenderFans reminder</h2>
+              <p>
+                Click below to verify your email address and turn on
+                this event reminder.
+              </p>
+              <p>
+                <a
+                  href="${verifyUrl}"
+                  style="
+                    display:inline-block;
+                    padding:10px 16px;
+                    background:#222;
+                    color:#fff;
+                    text-decoration:none;
+                    border-radius:8px;
+                    font-weight:700;
+                  "
+                >
+                  Verify Email
+                </a>
+              </p>
+              <p style="font-size:12px;color:#666;">
+                This is an automated message. This address does not accept replies.
+              </p>
+            </div>
+          `,
+        });
+
+      if (emailError) {
+        console.error(
+          "Resend reminder verification email failed:",
+          emailError
+        );
+
+        await adminSupabase
+          .from("event_reminders")
+          .delete()
+          .eq("id", reminder.id);
+
+        return NextResponse.json(
+          {
+            error:
+              "Could not send the verification email.",
+          },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       status: "pending",
       message:
-        "Your event reminder was saved.",
+        wantsEmail
+          ? "Check your email to verify your event reminder."
+          : "Your event reminder was saved.",
     });
   } catch (error) {
     console.error(

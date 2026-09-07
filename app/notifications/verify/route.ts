@@ -13,7 +13,10 @@ export async function GET(request: Request) {
     url.origin
   );
 
-  if (type !== "follow" || !token) {
+  if (
+    (type !== "follow" && type !== "reminder") ||
+    !token
+  ) {
     redirectBase.searchParams.set("status", "invalid");
     return NextResponse.redirect(redirectBase);
   }
@@ -49,9 +52,14 @@ export async function GET(request: Request) {
     .update(token)
     .digest("hex");
 
-  const { data: subscription, error } =
+  const table =
+    type === "follow"
+      ? "notification_subscriptions"
+      : "event_reminders";
+
+  const { data: record, error } =
     await adminSupabase
-      .from("notification_subscriptions")
+      .from(table)
       .select(
         "id, email_verified, email_verification_sent_at"
       )
@@ -63,7 +71,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error(
-      "Follow verification lookup failed:",
+      `${type} verification lookup failed:`,
       error
     );
 
@@ -71,12 +79,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(redirectBase);
   }
 
-  if (!subscription) {
+  if (!record) {
     redirectBase.searchParams.set("status", "invalid");
     return NextResponse.redirect(redirectBase);
   }
 
-  if (subscription.email_verified) {
+  if (record.email_verified) {
     redirectBase.searchParams.set(
       "status",
       "already-verified"
@@ -86,9 +94,9 @@ export async function GET(request: Request) {
   }
 
   const sentAt =
-    subscription.email_verification_sent_at
+    record.email_verification_sent_at
       ? new Date(
-          subscription.email_verification_sent_at
+          record.email_verification_sent_at
         ).getTime()
       : 0;
 
@@ -107,7 +115,7 @@ export async function GET(request: Request) {
 
   const { error: updateError } =
     await adminSupabase
-      .from("notification_subscriptions")
+      .from(table)
       .update({
         email_verified: true,
         email_verified_at: now,
@@ -115,11 +123,11 @@ export async function GET(request: Request) {
         status: "active",
         updated_at: now,
       })
-      .eq("id", subscription.id);
+      .eq("id", record.id);
 
   if (updateError) {
     console.error(
-      "Follow verification update failed:",
+      `${type} verification update failed:`,
       updateError
     );
 

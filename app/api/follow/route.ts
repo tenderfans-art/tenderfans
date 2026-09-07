@@ -3,6 +3,20 @@ import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import crypto from "crypto";
 
+function getClientIpHash(request: Request) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+
+  const ip =
+    forwardedFor?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown";
+
+  return crypto
+    .createHash("sha256")
+    .update(ip)
+    .digest("hex");
+}
+
 function normalizeEmail(value: unknown) {
   if (typeof value !== "string") return null;
 
@@ -137,6 +151,48 @@ export async function POST(request: Request) {
       }
     );
 
+      const ipHash = getClientIpHash(request);
+
+      const { data: allowed, error: rateLimitError } =
+        await adminSupabase.rpc(
+          "check_notification_rate_limit",
+          {
+            p_ip_hash: ipHash,
+            p_limit: 5,
+            p_window_minutes: 15,
+          }
+        );
+
+      if (rateLimitError) {
+        console.error(
+          "Notification rate limit check failed:",
+          rateLimitError
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Notification signup is temporarily unavailable.",
+          },
+          { status: 500 }
+        );
+      }
+
+      if (allowed !== true) {
+        return NextResponse.json(
+          {
+            error:
+              "Too many notification requests. Please try again later.",
+          },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": "900",
+            },
+          }
+        );
+      }
+
     if (entityKind === "bartender") {
       const { data: bartender } = await adminSupabase
         .from("bartenders")
@@ -240,6 +296,18 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
+      if (error.code === "23505") {
+        return NextResponse.json(
+          {
+            ok: true,
+            status: "existing",
+            message:
+              "You're already following this Tender or Spot with that email.",
+          },
+          { status: 200 }
+        );
+      }
+
       console.error(
         "Notification subscription insert failed:",
         error
