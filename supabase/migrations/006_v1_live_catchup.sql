@@ -593,6 +593,8 @@ using (
 -- ADMIN CLAIM FUNCTIONS — LIVE V1 DEFINITIONS
 -- ============================================================
 
+drop function if exists public.admin_pending_claim_details();
+
 create or replace function public.admin_pending_claim_details()
 returns table(
   id uuid,
