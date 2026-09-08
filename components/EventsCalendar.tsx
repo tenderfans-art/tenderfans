@@ -13,6 +13,7 @@ type CalendarEvent = {
   description: string | null;
   starts_at: string;
   ends_at: string | null;
+  flyer_url: string | null;
   venue_name: string;
   venue_slug: string | null;
 };
@@ -93,6 +94,7 @@ export default function EventsCalendar() {
           description,
           starts_at,
           ends_at,
+          flyer_url,
           venues (
             name,
             slug
@@ -117,6 +119,7 @@ export default function EventsCalendar() {
         description: event.description,
         starts_at: event.starts_at,
         ends_at: event.ends_at,
+        flyer_url: event.flyer_url ?? null,
         venue_name: event.venues?.name ?? "TenderFans Spot",
         venue_slug: event.venues?.slug ?? null,
       }));
@@ -327,7 +330,21 @@ export default function EventsCalendar() {
             </div>
 
             <div className="events-flyer-placeholder">
-              <span>Event flyer</span>
+              {selectedEvent.flyer_url ? (
+                <img
+                  src={selectedEvent.flyer_url}
+                  alt={`${selectedEvent.title} event flyer`}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    borderRadius: "inherit",
+                  }}
+                />
+              ) : (
+                <span>Event flyer</span>
+              )}
             </div>
 
             <div className="events-modal-actions">
