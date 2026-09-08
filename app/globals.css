@@ -2136,3 +2136,16 @@
     padding:20px 18px;
   }
 }
+
+/* --- Center login card copy --- */
+.login-card{
+  text-align:center;
+}
+
+.login-card input{
+  text-align:left;
+}
+
+.login-card .privacy-note{
+  text-align:center;
+}
