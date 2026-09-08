@@ -1,33 +1,187 @@
 "use client";
 
-import { FormEvent, Suspense, useState } from "react";
+import {
+  FormEvent,
+  Suspense,
+  useEffect,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const continuingClaim = searchParams.get("claim") === "1";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: FormEvent<HTMLFormElement>) {
+  const [needsVerification, setNeedsVerification] =
+    useState(false);
+
+  const [resendSeconds, setResendSeconds] = useState(0);
+  const [resendRemaining, setResendRemaining] = useState(3);
+  const [verificationLocked, setVerificationLocked] =
+    useState(false);
+
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendSeconds((current) =>
+        current <= 1 ? 0 : current - 1
+      );
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendSeconds]);
+
+  async function initializeVerificationState() {
+    try {
+      const response = await fetch(
+        "/api/auth/resend-verification",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email.trim(),
+            action: "start",
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (typeof data.retryAfterSeconds === "number") {
+        setResendSeconds(data.retryAfterSeconds);
+      }
+
+      if (typeof data.remaining === "number") {
+        setResendRemaining(data.remaining);
+      }
+
+      if (data.locked === true) {
+        setVerificationLocked(true);
+      }
+    } catch (error) {
+      console.error(
+        "Could not initialize verification state:",
+        error
+      );
+    }
+  }
+
+  async function handleResendVerification() {
+    if (
+      resendSeconds > 0 ||
+      verificationLocked ||
+      resending
+    ) {
+      return;
+    }
+
+    setResending(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        "/api/auth/resend-verification",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email.trim(),
+            action: "resend",
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (typeof data.retryAfterSeconds === "number") {
+        setResendSeconds(data.retryAfterSeconds);
+      }
+
+      if (typeof data.remaining === "number") {
+        setResendRemaining(data.remaining);
+      }
+
+      if (data.locked === true) {
+        setVerificationLocked(true);
+      }
+
+      if (!response.ok) {
+        setMessage(
+          data.error ||
+            "We couldn't send another verification email."
+        );
+        return;
+      }
+
+      setMessage(
+        data.remaining > 0
+          ? `A new verification email has been sent. You have ${data.remaining} resend attempt${data.remaining === 1 ? "" : "s"} remaining.`
+          : "A new verification email has been sent. This was your final automatic resend."
+      );
+    } catch {
+      setMessage(
+        "We couldn't send another verification email right now."
+      );
+    } finally {
+      setResending(false);
+    }
+  }
+
+  async function handleLogin(
+    e: FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
+
     setLoading(true);
     setMessage("");
+    setNeedsVerification(false);
 
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
 
-    if (error) { if (error.message.toLowerCase().includes("email not confirmed")) { const { error: resendError } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: `${window.location.origin}/auth/confirmed` } }); setMessage(resendError ? "Your email is not verified yet. We could not resend the verification email: " + resendError.message : "Your email is not verified yet. We just sent you a new verification email. Please verify it, then come back here and sign in again."); } else { setMessage(error.message); } setLoading(false); return; }
+    if (error) {
+      if (
+        error.message
+          .toLowerCase()
+          .includes("email not confirmed")
+      ) {
+        setNeedsVerification(true);
+
+        setMessage(
+          "Your email hasn't been verified yet. Check your inbox for the verification email we already sent."
+        );
+
+        await initializeVerificationState();
+      } else {
+        setMessage(error.message);
+      }
+
+      setLoading(false);
+      return;
+    }
 
     if (continuingClaim) {
       try {
-        const saved = localStorage.getItem("tf_pending_claim");
+        const saved = localStorage.getItem(
+          "tf_pending_claim"
+        );
 
         if (saved) {
           const pending = JSON.parse(saved);
@@ -36,7 +190,9 @@ function LoginContent() {
             pending?.type === "bartender" ||
             pending?.type === "venue"
           ) {
-            router.push(`/claim?type=${pending.type}&resume=1`);
+            router.push(
+              `/claim?type=${pending.type}&resume=1`
+            );
             return;
           }
         }
@@ -46,11 +202,20 @@ function LoginContent() {
     router.push("/account");
   }
 
+  const minutes = Math.floor(resendSeconds / 60);
+  const seconds = resendSeconds % 60;
+
+  const formattedCountdown =
+    `${minutes}:${String(seconds).padStart(2, "0")}`;
+
   return (
     <section className="flow-page">
       <div className="shell narrow">
         <div className="flow-card">
-          <div className="eyebrow">Tender / Spot Login</div>
+          <div className="eyebrow">
+            Tender / Spot Login
+          </div>
+
           <h1>Welcome back.</h1>
 
           <p className="lead-copy">
@@ -66,7 +231,10 @@ function LoginContent() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setNeedsVerification(false);
+              }}
               placeholder="Email"
               autoComplete="email"
               required
@@ -102,7 +270,52 @@ function LoginContent() {
             </button>
 
             {message && (
-              <div className="privacy-note">{message}</div>
+              <div className="privacy-note">
+                {message}
+              </div>
+            )}
+
+            {needsVerification && (
+              <div
+                style={{
+                  display: "grid",
+                  gap: "10px",
+                  marginTop: "4px",
+                }}
+              >
+                {verificationLocked ? (
+                  <div className="privacy-note">
+                    You've reached the verification email
+                    resend limit. Please contact TenderFans
+                    customer service for help verifying your
+                    account.
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="landing-action"
+                      disabled={
+                        resendSeconds > 0 || resending
+                      }
+                      onClick={handleResendVerification}
+                    >
+                      {resending
+                        ? "Sending..."
+                        : resendSeconds > 0
+                          ? `Resend available in ${formattedCountdown}`
+                          : "Resend verification email"}
+                    </button>
+
+                    <div className="privacy-note">
+                      {resendRemaining} automatic resend
+                      attempt
+                      {resendRemaining === 1 ? "" : "s"}{" "}
+                      remaining.
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </form>
         </div>
@@ -110,7 +323,6 @@ function LoginContent() {
     </section>
   );
 }
-
 
 export default function LoginPage() {
   return (
