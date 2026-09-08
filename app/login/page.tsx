@@ -177,102 +177,93 @@ function LoginContent() {
       return;
     }
 
-    if (continuingClaim) {
-      try {
-        const saved = localStorage.getItem(
-          "tf_pending_claim"
-        );
+    try {
+      const saved = localStorage.getItem(
+        "tf_pending_claim"
+      );
 
-        if (saved) {
-          const pending = JSON.parse(saved);
+      if (saved) {
+        const pending = JSON.parse(saved);
 
-          /*
-           * Spot claims already contain everything needed to
-           * create the claim. Once email/password authentication
-           * succeeds, submit it directly instead of sending the
-           * user back through the Claim form.
-           */
+        /*
+         * A saved Spot claim belongs to the authenticated user
+         * regardless of whether Login was opened with ?claim=1.
+         */
+        if (
+          pending?.type === "venue" &&
+          typeof pending?.selectedId === "string"
+        ) {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+
+          if (!user) {
+            setMessage(
+              "We could not verify your signed-in account."
+            );
+            setLoading(false);
+            return;
+          }
+
+          const { error: claimError } = await supabase
+            .from("entity_claims")
+            .insert({
+              entity_kind: "venue",
+              bartender_id: null,
+              venue_id: pending.selectedId,
+              claimant_user_id: user.id,
+              claimant_name:
+                typeof pending.claimantName === "string"
+                  ? pending.claimantName.trim()
+                  : "",
+              claimant_role:
+                typeof pending.claimantRole === "string"
+                  ? pending.claimantRole
+                  : "",
+              business_email:
+                typeof pending.businessEmail === "string"
+                  ? pending.businessEmail.trim().toLowerCase()
+                  : "",
+              role_start_date:
+                typeof pending.roleStartDate === "string" &&
+                pending.roleStartDate
+                  ? pending.roleStartDate
+                  : null,
+              verifying_venue_id: null,
+              status: "pending",
+            });
+
           if (
-            pending?.type === "venue" &&
-            typeof pending?.selectedId === "string"
+            claimError &&
+            claimError.code !== "23505" &&
+            !claimError.message
+              .toLowerCase()
+              .includes("duplicate")
           ) {
-            const {
-              data: { user },
-            } = await supabase.auth.getUser();
-
-            if (!user) {
-              setMessage(
-                "We could not verify your signed-in account."
-              );
-              setLoading(false);
-              return;
-            }
-
-            const { error: claimError } = await supabase
-              .from("entity_claims")
-              .insert({
-                entity_kind: "venue",
-                bartender_id: null,
-                venue_id: pending.selectedId,
-                claimant_user_id: user.id,
-                claimant_name:
-                  typeof pending.claimantName === "string"
-                    ? pending.claimantName.trim()
-                    : "",
-                claimant_role:
-                  typeof pending.claimantRole === "string"
-                    ? pending.claimantRole
-                    : "",
-                business_email:
-                  typeof pending.businessEmail === "string"
-                    ? pending.businessEmail.trim().toLowerCase()
-                    : "",
-                role_start_date:
-                  typeof pending.roleStartDate === "string" &&
-                  pending.roleStartDate
-                    ? pending.roleStartDate
-                    : null,
-                verifying_venue_id: null,
-                status: "pending",
-              });
-
-            if (
-              claimError &&
-              claimError.code !== "23505" &&
-              !claimError.message
-                .toLowerCase()
-                .includes("duplicate")
-            ) {
-              setMessage(
-                "Your account is verified, but we couldn't submit your Spot claim: " +
-                  claimError.message
-              );
-              setLoading(false);
-              return;
-            }
-
-            localStorage.removeItem("tf_pending_claim");
-
-            router.push("/claim/submitted?type=venue");
+            setMessage(
+              "Your account is verified, but we couldn't submit your Spot claim: " +
+                claimError.message
+            );
+            setLoading(false);
             return;
           }
 
-          /*
-           * Keep the existing Tender resume behavior for now,
-           * because Tender claims also depend on the verifying
-           * Spot relationship loaded by the Claim page.
-           */
-          if (pending?.type === "bartender") {
-            router.push("/claim?type=bartender&resume=1");
-            return;
-          }
+          localStorage.removeItem("tf_pending_claim");
+
+          router.push("/claim/submitted?type=venue");
+          return;
         }
-      } catch (error) {
-        console.error(
-          "Could not resume saved claim:",
-          error
-        );
+
+        if (pending?.type === "bartender") {
+          router.push("/claim?type=bartender&resume=1");
+          return;
+        }
       }
+    } catch (error) {
+      console.error(
+        "Could not resume saved claim:",
+        error
+      );
     }
 
     router.push("/account");
