@@ -220,8 +220,10 @@ export default function ClaimPage() {
           }
         } catch {}
       } else {
-        // A normal Claim visit always starts a fresh form.
-        localStorage.removeItem("tf_pending_claim");
+        // Start the visible form fresh, but preserve any saved
+        // pending claim until it is successfully submitted,
+        // deliberately abandoned via sign-out, or overwritten
+        // by a new claim submission.
         setQuery("");
         setSelectedId(null);
         setClaimantName("");
