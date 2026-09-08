@@ -182,23 +182,62 @@ export default function SpotAccountPage() {
                       </div>
                     </Link>
 
-                    <Link
-                      href={`/account/spot/${spot.id}/events`}
+                    <div
                       style={{
-                        display: "block",
-                        padding: "13px 12px",
+                        padding: "10px 12px",
                         border: "1px solid #d7d1c6",
                         borderRadius: "14px",
-                        textDecoration: "none",
-                        color: "inherit",
                         textAlign: "center",
                       }}
                     >
-                      <strong>Events</strong>
-                      <div style={{ marginTop: "4px", fontSize: "0.78rem", color: "#697177" }}>
-                        Approved calendar events
-                      </div>
-                    </Link>
+                      <Link
+                        href={`/account/spot/${spot.id}/events/new`}
+                        style={{
+                          display: "block",
+                          paddingBottom: "8px",
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
+                      >
+                        <strong>Submit Event</strong>
+                        <div
+                          style={{
+                            marginTop: "4px",
+                            fontSize: "0.78rem",
+                            color: "#697177",
+                          }}
+                        >
+                          Send for verification
+                        </div>
+                      </Link>
+
+                      <div
+                        style={{
+                          borderTop: "1px solid #e3ded4",
+                          margin: "0 -2px 8px",
+                        }}
+                      />
+
+                      <Link
+                        href={`/account/spot/${spot.id}/events`}
+                        style={{
+                          display: "block",
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
+                      >
+                        <strong>Manage Events</strong>
+                        <div
+                          style={{
+                            marginTop: "4px",
+                            fontSize: "0.78rem",
+                            color: "#697177",
+                          }}
+                        >
+                          Approved calendar events
+                        </div>
+                      </Link>
+                    </div>
 
                     <Link
                       href={`/s/${spot.slug}`}
