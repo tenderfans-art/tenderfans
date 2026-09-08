@@ -269,48 +269,41 @@ function LoginContent() {
               {loading ? "Signing in..." : "Sign in"}
             </button>
 
-            {message && (
-              <div
-                className="privacy-note"
-                style={{
-                  padding: needsVerification ? "12px 14px" : undefined,
-                  margin: needsVerification ? 0 : undefined,
-                }}
-              >
+            {!needsVerification && message && (
+              <div className="privacy-note">
                 {message}
               </div>
             )}
 
             {needsVerification && (
               <div
+                className="privacy-note"
                 style={{
+                  margin: 0,
+                  padding: "12px 14px",
                   display: "grid",
                   gap: "8px",
-                  marginTop: 0,
                 }}
               >
+                <div>
+                  <strong>Email verification required.</strong>{" "}
+                  Check your inbox for the verification email we already sent.
+                </div>
+
                 {verificationLocked ? (
-                  <div
-                    className="privacy-note"
-                    style={{
-                      padding: "10px 14px",
-                      margin: 0,
-                    }}
-                  >
-                    You've reached the verification email
-                    resend limit. Please contact TenderFans
-                    customer service for help verifying your
-                    account.
+                  <div>
+                    You've reached the verification email resend
+                    limit. Please contact TenderFans customer
+                    service for help verifying your account.
                   </div>
                 ) : (
                   <>
                     <button
                       type="button"
                       className="landing-action"
-                      disabled={
-                        resendSeconds > 0 || resending
-                      }
+                      disabled={resendSeconds > 0 || resending}
                       onClick={handleResendVerification}
+                      style={{ margin: 0 }}
                     >
                       {resending
                         ? "Sending..."
@@ -319,17 +312,9 @@ function LoginContent() {
                           : "Resend verification email"}
                     </button>
 
-                    <div
-                      className="privacy-note"
-                      style={{
-                        padding: "10px 14px",
-                        margin: 0,
-                      }}
-                    >
-                      {resendRemaining} automatic resend
-                      attempt
-                      {resendRemaining === 1 ? "" : "s"}{" "}
-                      remaining.
+                    <div style={{ fontSize: "0.82rem" }}>
+                      {resendRemaining} automatic resend attempt
+                      {resendRemaining === 1 ? "" : "s"} remaining.
                     </div>
                   </>
                 )}
