@@ -209,9 +209,9 @@ function LoginContent() {
     `${minutes}:${String(seconds).padStart(2, "0")}`;
 
   return (
-    <section className="flow-page">
+    <section className="flow-page login-page">
       <div className="shell narrow">
-        <div className="flow-card">
+        <div className="flow-card login-card">
           <div className="eyebrow">
             Tender / Spot Login
           </div>
