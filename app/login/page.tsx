@@ -270,7 +270,13 @@ function LoginContent() {
             </button>
 
             {message && (
-              <div className="privacy-note">
+              <div
+                className="privacy-note"
+                style={{
+                  padding: needsVerification ? "12px 14px" : undefined,
+                  margin: needsVerification ? 0 : undefined,
+                }}
+              >
                 {message}
               </div>
             )}
@@ -279,12 +285,18 @@ function LoginContent() {
               <div
                 style={{
                   display: "grid",
-                  gap: "10px",
-                  marginTop: "4px",
+                  gap: "8px",
+                  marginTop: 0,
                 }}
               >
                 {verificationLocked ? (
-                  <div className="privacy-note">
+                  <div
+                    className="privacy-note"
+                    style={{
+                      padding: "10px 14px",
+                      margin: 0,
+                    }}
+                  >
                     You've reached the verification email
                     resend limit. Please contact TenderFans
                     customer service for help verifying your
@@ -307,7 +319,13 @@ function LoginContent() {
                           : "Resend verification email"}
                     </button>
 
-                    <div className="privacy-note">
+                    <div
+                      className="privacy-note"
+                      style={{
+                        padding: "10px 14px",
+                        margin: 0,
+                      }}
+                    >
                       {resendRemaining} automatic resend
                       attempt
                       {resendRemaining === 1 ? "" : "s"}{" "}
