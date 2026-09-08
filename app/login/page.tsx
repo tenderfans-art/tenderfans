@@ -286,8 +286,12 @@ function LoginContent() {
                 }}
               >
                 <div>
-                  <strong>Email verification required.</strong>{" "}
-                  Check your inbox for the verification email we already sent.
+                  <strong style={{ display: "block" }}>
+                    Email verification required.
+                  </strong>
+                  <span style={{ display: "block", marginTop: "3px" }}>
+                    Check your inbox for the verification email we already sent.
+                  </span>
                 </div>
 
                 {verificationLocked ? (

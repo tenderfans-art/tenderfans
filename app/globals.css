@@ -2149,3 +2149,19 @@
 .login-card .privacy-note{
   text-align:center;
 }
+
+
+/* --- Final login sizing and alignment --- */
+.login-page .shell.narrow{
+  max-width:600px;
+}
+
+.login-card input{
+  text-align:center;
+}
+
+@media (max-width:640px){
+  .login-page .shell.narrow{
+    max-width:100%;
+  }
+}
