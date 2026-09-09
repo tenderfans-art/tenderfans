@@ -2499,3 +2499,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Restore calendar day breathing room */
+.events-day {
+  height: auto;
+  min-height: 132px;
+}
+
+.events-day-items {
+  height: 84px;
+  min-height: 0;
+  overflow: hidden;
+}
