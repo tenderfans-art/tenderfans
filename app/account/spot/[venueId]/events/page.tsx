@@ -188,7 +188,7 @@ export default function SpotEventsPage() {
       <div className="shell">
         <section
           className="flow-card"
-          style={{ maxWidth: "1200px", margin: "0 auto" }}
+          style={{ maxWidth: "920px", margin: "0 auto" }}
         >
           <div className="eyebrow">SPOT OWNER PORTAL</div>
 
@@ -242,7 +242,7 @@ export default function SpotEventsPage() {
                       style={{
                         display: "grid",
                         gridTemplateColumns:
-                          "285px minmax(0, 1fr) 110px 110px",
+                          "250px minmax(180px, 1fr) 90px 100px",
                         alignItems: "center",
                         gap: "16px",
                       }}
@@ -273,7 +273,6 @@ export default function SpotEventsPage() {
                           }}
                         >
                           <strong>{event.title}</strong>
-                          <span>{venue.name}</span>
                         </div>
 
                         <div
