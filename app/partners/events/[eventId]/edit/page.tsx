@@ -261,8 +261,12 @@ export default function EditPartnerEventPage() {
         return;
       }
 
-      if (end <= start) {
-        setMessage("End time must be after the start time.");
+      if (end < start) {
+        end.setDate(end.getDate() + 1);
+      }
+
+      if (end.getTime() === start.getTime()) {
+        setMessage("End time must be different from the start time.");
         return;
       }
     }
