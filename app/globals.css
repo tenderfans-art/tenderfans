@@ -1176,6 +1176,9 @@
   border:1px solid var(--line);
   border-radius:20px;
   box-shadow:0 24px 80px rgba(0,0,0,.32);
+
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
 }
 
 .events-modal h2{
@@ -1298,6 +1301,9 @@
   font-weight:800;
   text-transform:uppercase;
   letter-spacing:.1em;
+
+  height: min(42vh, 420px);
+  min-height: 0;
 }
 
 .events-modal-actions{
