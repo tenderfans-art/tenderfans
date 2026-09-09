@@ -2394,3 +2394,44 @@
   white-space: nowrap;
 }
 
+
+/* Final calendar tile spacing refinement */
+.events-day-items {
+  margin-top: 2px;
+}
+
+.events-day-items:has(.events-calendar-event-compact:nth-child(3))
+  .events-calendar-event-compact {
+  padding: 1px 5px 2px;
+}
+
+.events-day-items:has(.events-calendar-event-compact:nth-child(3))
+  .events-calendar-event-line strong {
+  font-size: 8.5px;
+}
+
+.events-day-items:has(.events-calendar-event-compact:nth-child(3))
+  .events-calendar-event-compact small {
+  display: block;
+  margin-top: 1px;
+  font-size: 7.5px;
+  line-height: 1;
+}
+
+.events-day-items:has(.events-calendar-more)
+  .events-calendar-event-compact {
+  padding: 1px 5px 2px;
+}
+
+.events-day-items:has(.events-calendar-more)
+  .events-calendar-event-line strong {
+  font-size: 8.5px;
+}
+
+.events-day-items:has(.events-calendar-more)
+  .events-calendar-event-compact small {
+  display: block;
+  margin-top: 1px;
+  font-size: 7.5px;
+  line-height: 1;
+}
