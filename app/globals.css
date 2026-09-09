@@ -1179,6 +1179,11 @@
 
   max-height: calc(100vh - 40px);
   overflow: hidden;
+
+  height: calc(100vh - 40px);
+  max-height: 760px;
+  display: flex;
+  flex-direction: column;
 }
 
 .events-modal h2{
@@ -1253,11 +1258,17 @@
   gap:15px;
   padding:2px 42px 22px;
   text-align:center;
+
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-bottom: 12px;
 }
 
 .events-detail-group{
   width:100%;
   text-align:center;
+
+  gap: 2px;
 }
 
 .events-detail-label{
@@ -1302,8 +1313,12 @@
   text-transform:uppercase;
   letter-spacing:.1em;
 
-  height: min(42vh, 420px);
+  flex: 1 1 auto;
   min-height: 0;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .events-modal-actions{
@@ -1311,6 +1326,10 @@
   justify-content:center;
   width:100%;
   margin-top:22px;
+
+  flex: 0 0 auto;
+  margin-top: 10px;
+  margin-bottom: -4px;
 }
 
 .events-modal-actions .events-modal-spot{
