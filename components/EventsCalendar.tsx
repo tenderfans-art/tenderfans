@@ -35,6 +35,10 @@ export default function EventsCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedDayEvents, setSelectedDayEvents] =
+    useState<CalendarEvent[] | null>(null);
+  const [selectedDayDate, setSelectedDayDate] =
+    useState<Date | null>(null);
 
   const calendarDays = useMemo(() => {
     if (!month) return [];
@@ -237,23 +241,42 @@ export default function EventsCalendar() {
                 .filter(Boolean)
                 .join(" ")}
             >
-              <span className="events-day-number">{date.getDate()}</span>
+              <div className="events-day-header">
+                <span className="events-day-number">{date.getDate()}</span>
 
-              <div className="events-day-items">
-                {dayEvents.map((event) => (
+                {dayEvents.length > 3 && (
                   <button
                     type="button"
-                    className="events-calendar-event"
+                    className="events-calendar-more events-calendar-more-header"
+                    onClick={() => {
+                      setSelectedDayDate(date);
+                      setSelectedDayEvents(dayEvents);
+                    }}
+                  >
+                    + {dayEvents.length - 3} more
+                  </button>
+                )}
+              </div>
+
+              <div className="events-day-items">
+                {dayEvents.slice(0, 3).map((event) => (
+                  <button
+                    type="button"
+                    className="events-calendar-event events-calendar-event-compact"
                     key={event.id}
                     onClick={() => setSelectedEvent(event)}
                   >
-                    <span className="events-calendar-event-time">
-                      {eventTime(event.starts_at)}
+                    <span className="events-calendar-event-line">
+                      <span className="events-calendar-event-time">
+                        {eventTime(event.starts_at)}
+                      </span>
+                      <strong>{event.title}</strong>
                     </span>
-                    <strong>{event.title}</strong>
+
                     <small>{event.venue_name}</small>
                   </button>
                 ))}
+
               </div>
             </div>
           );
@@ -270,6 +293,73 @@ export default function EventsCalendar() {
       {loading && (
         <div className="events-empty">
           <span>Loading events...</span>
+        </div>
+      )}
+
+      {selectedDayEvents && selectedDayDate && (
+        <div
+          className="events-modal-backdrop"
+          role="presentation"
+          onClick={() => {
+            setSelectedDayEvents(null);
+            setSelectedDayDate(null);
+          }}
+        >
+          <div
+            className="events-day-list-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="events-day-list-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="events-modal-close"
+              aria-label="Close daily events"
+              onClick={() => {
+                setSelectedDayEvents(null);
+                setSelectedDayDate(null);
+              }}
+            >
+              ×
+            </button>
+
+            <div className="events-day-list-header">
+              <span className="events-detail-label">Events</span>
+
+              <h2 id="events-day-list-title">
+                {selectedDayDate.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </h2>
+            </div>
+
+            <div className="events-day-list">
+              {selectedDayEvents.map((event) => (
+                <button
+                  type="button"
+                  className="events-day-list-event"
+                  key={event.id}
+                  onClick={() => {
+                    setSelectedDayEvents(null);
+                    setSelectedDayDate(null);
+                    setSelectedEvent(event);
+                  }}
+                >
+                  <span className="events-day-list-time">
+                    {eventTime(event.starts_at)}
+                  </span>
+
+                  <span className="events-day-list-main">
+                    <strong>{event.title}</strong>
+                    <small>{event.venue_name}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
