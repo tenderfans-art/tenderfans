@@ -2301,3 +2301,82 @@
 .events-day-list-main small {
   color: #737b7e;
 }
+
+/* V1 adaptive calendar day event stack */
+.events-day {
+  height: 112px;
+  min-height: 112px;
+  overflow: hidden;
+}
+
+.events-day-items {
+  height: 68px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Default: a single event keeps the comfortable card presentation */
+.events-day-items .events-calendar-event-compact {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+}
+
+/* Two events: tighten both slightly */
+.events-day-items:has(.events-calendar-event-compact:nth-child(2))
+  .events-calendar-event-compact {
+  padding: 3px 6px;
+}
+
+.events-day-items:has(.events-calendar-event-compact:nth-child(2))
+  .events-calendar-event-compact small {
+  margin-top: 0;
+  font-size: 8px;
+}
+
+/* Three events: compact presentation */
+.events-day-items:has(.events-calendar-event-compact:nth-child(3))
+  .events-calendar-event-compact {
+  padding: 2px 5px;
+  line-height: 1;
+}
+
+.events-day-items:has(.events-calendar-event-compact:nth-child(3))
+  .events-calendar-event-time {
+  font-size: 8px;
+  margin-bottom: 0;
+}
+
+.events-day-items:has(.events-calendar-event-compact:nth-child(3))
+  .events-calendar-event-line strong {
+  font-size: 9px;
+}
+
+.events-day-items:has(.events-calendar-event-compact:nth-child(3))
+  .events-calendar-event-compact small {
+  display: none;
+}
+
+/* When +X more is present, reserve the fourth/final slot for it */
+.events-day-items:has(.events-calendar-more) {
+  gap: 2px;
+}
+
+.events-day-items:has(.events-calendar-more)
+  .events-calendar-event-compact {
+  padding: 1px 5px;
+  line-height: 1;
+}
+
+.events-day-items:has(.events-calendar-more)
+  .events-calendar-event-compact small {
+  display: none;
+}
+
+.events-day-items:has(.events-calendar-more)
+  .events-calendar-more {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  line-height: 1.05;
+  font-size: 10px;
+}
+
