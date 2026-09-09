@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export default function AccountPage() {
@@ -67,7 +68,7 @@ export default function AccountPage() {
       }
 
       setMessage(
-        "Your account does not have an approved Tender, Spot or Partner role yet."
+        "If you recently submitted a Tender or Spot claim, it is currently awaiting TenderFans approval. Once approved, your account will automatically gain access to the appropriate management portal. No further action is needed at this time."
       );
     }
 
@@ -79,8 +80,12 @@ export default function AccountPage() {
       <div className="shell narrow">
         <div className="flow-card">
           <div className="eyebrow">TenderFans Account</div>
-          <h1>Your account</h1>
+          <h1>Your account is awaiting verification.</h1>
           <p className="lead-copy">{message}</p>
+
+          <Link className="landing-action" href="/">
+            Return to TenderFans
+          </Link>
         </div>
       </div>
     </main>
