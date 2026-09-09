@@ -2473,3 +2473,29 @@
   line-height: 1.05;
   font-weight: 800;
 }
+
+/* Prevent calendar event time from ever wrapping */
+.events-calendar-event-line {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.events-calendar-event-line .events-calendar-event-time {
+  display: block;
+  width: auto;
+  min-width: max-content;
+  white-space: nowrap;
+  flex: none;
+  margin: 0;
+}
+
+.events-calendar-event-line small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
