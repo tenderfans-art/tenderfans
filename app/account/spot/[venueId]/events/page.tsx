@@ -188,29 +188,42 @@ export default function SpotEventsPage() {
       <div className="shell">
         <section
           className="flow-card"
-          style={{ maxWidth: "920px", margin: "0 auto" }}
+          style={{ maxWidth: "820px", margin: "0 auto" }}
         >
-          <div className="eyebrow">SPOT OWNER PORTAL</div>
+          <div className="eyebrow">
+            SPOT OWNER PORTAL · {venue.name}
+          </div>
 
           <h1>Manage Events</h1>
 
-          <p className="lead-copy">
-            {venue.name}
-          </p>
-
           <div
-            className="partner-dashboard-tabs"
-            style={{ marginBottom: "24px" }}
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginBottom: "24px",
+              flexWrap: "wrap",
+            }}
           >
             <Link
               className="landing-action"
               href={`/account/spot/${venueId}/events/new`}
+              style={{
+                width: "auto",
+                padding: "8px 16px",
+              }}
             >
               Submit Event
             </Link>
 
-            <Link href="/account/spot">
-              Back to Spot Dashboard
+            <Link
+              className="landing-action secondary"
+              href="/account/spot"
+              style={{
+                width: "auto",
+                padding: "8px 16px",
+              }}
+            >
+              Return to Spot Dashboard
             </Link>
           </div>
 
