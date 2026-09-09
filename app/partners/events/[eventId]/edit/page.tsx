@@ -40,6 +40,7 @@ export default function EditPartnerEventPage() {
 
   const [title, setTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
@@ -178,6 +179,14 @@ export default function EditPartnerEventPage() {
         String(start.getMinutes()).padStart(2, "0"),
       ].join(":");
 
+      const localEndDate = end
+        ? [
+            end.getFullYear(),
+            String(end.getMonth() + 1).padStart(2, "0"),
+            String(end.getDate()).padStart(2, "0"),
+          ].join("-")
+        : localDate;
+
       const localEndTime = end
         ? [
             String(end.getHours()).padStart(2, "0"),
@@ -189,6 +198,7 @@ export default function EditPartnerEventPage() {
       setQuery(venue?.name || "");
       setTitle(event.title);
       setEventDate(localDate);
+      setEndDate(localEndDate);
       setStartTime(localStartTime);
       setEndTime(localEndTime);
 
@@ -254,19 +264,20 @@ export default function EditPartnerEventPage() {
     let end: Date | null = null;
 
     if (endTime) {
-      end = new Date(`${eventDate}T${endTime}`);
+      const effectiveEndDate = endDate || eventDate;
+      end = new Date(`${effectiveEndDate}T${endTime}`);
 
       if (Number.isNaN(end.getTime())) {
         setMessage("Enter a valid end time.");
         return;
       }
 
-      if (end < start) {
+      if (end < start && (!endDate || endDate === eventDate)) {
         end.setDate(end.getDate() + 1);
       }
 
-      if (end.getTime() === start.getTime()) {
-        setMessage("End time must be different from the start time.");
+      if (end <= start) {
+        setMessage("Event end must be after the event start.");
         return;
       }
     }
@@ -578,17 +589,33 @@ export default function EditPartnerEventPage() {
                   />
                 </label>
 
-                <label>
-                  <strong>Event Date</strong>
-
-                  <input
-                    type="date"
+                <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+              }}
+            >
+              <label>
+                <strong>Start Date</strong>
+                <input                    type="date"
                     value={eventDate}
                     onChange={(e) =>
                       setEventDate(e.target.value)
                     }
-                  />
-                </label>
+                />
+              </label>
+
+              <label>
+                <strong>End Date</strong>
+                <input                    type="date"
+                    value={endDate || eventDate}
+                    onChange={(e) =>
+                      setEventDate(e.target.value)
+                    }
+                />
+              </label>
+            </div>
 
                 <div
                   style={{

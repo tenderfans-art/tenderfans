@@ -50,6 +50,7 @@ export default function EditSpotEventPage() {
 
   const [title, setTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
@@ -158,6 +159,14 @@ export default function EditSpotEventPage() {
         String(start.getMinutes()).padStart(2, "0"),
       ].join(":");
 
+      const localEndDate = end
+        ? [
+            end.getFullYear(),
+            String(end.getMonth() + 1).padStart(2, "0"),
+            String(end.getDate()).padStart(2, "0"),
+          ].join("-")
+        : localDate;
+
       const localEndTime = end
         ? [
             String(end.getHours()).padStart(2, "0"),
@@ -168,6 +177,7 @@ export default function EditSpotEventPage() {
       setVenue(venueResult.data as Venue);
       setTitle(event.title);
       setEventDate(localDate);
+      setEndDate(localEndDate);
       setStartTime(localStartTime);
       setEndTime(localEndTime);
       setCurrentFlyerUrl(event.flyer_url || "");
@@ -251,7 +261,7 @@ export default function EditSpotEventPage() {
 
       // Early-morning end times belong to the
       // following calendar day.
-      if (end < start) {
+      if (end < start && (!endDate || endDate === eventDate)) {
         end.setDate(end.getDate() + 1);
       }
 
@@ -453,18 +463,40 @@ export default function EditSpotEventPage() {
               />
             </label>
 
-            <label>
-              <strong>Event Date</strong>
-              <input
-                className="field"
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+              }}
+            >
+              <label>
+                <strong>Start Date</strong>
+                <input                className="field"
                 type="date"
                 value={eventDate}
-                onChange={(e) =>
-                  setEventDate(e.target.value)
-                }
+                onChange={(e) => {
+                  const nextDate = e.target.value;
+                  setEventDate(nextDate);
+
+                  if (!endDate || endDate < nextDate) {
+                    setEndDate(nextDate);
+                  }
+                }}
                 required
-              />
-            </label>
+                />
+              </label>
+
+              <label>
+                <strong>End Date</strong>
+                <input                className="field"
+                type="date"
+                value={endDate || eventDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+                />
+              </label>
+            </div>
 
             <div
               style={{
