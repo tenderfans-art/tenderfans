@@ -338,8 +338,8 @@ export default function SpotEventsPage() {
             onClick={(e) => e.stopPropagation()}
             style={{
               width: "min(560px, 100%)",
-              maxHeight: "90vh",
-              overflowY: "auto",
+              maxHeight: "calc(100vh - 40px)",
+              overflow: "hidden",
               background: "#fffdf8",
               borderRadius: "20px",
               padding: "24px",
@@ -379,7 +379,8 @@ export default function SpotEventsPage() {
                   style={{
                     display: "block",
                     width: "100%",
-                    maxHeight: "520px",
+                    height: "auto",
+                    maxHeight: "calc(100vh - 330px)",
                     objectFit: "contain",
                   }}
                 />
