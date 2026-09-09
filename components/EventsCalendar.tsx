@@ -270,10 +270,12 @@ export default function EventsCalendar() {
                       <span className="events-calendar-event-time">
                         {eventTime(event.starts_at)}
                       </span>
-                      <strong>{event.title}</strong>
+                      <small>{event.venue_name}</small>
                     </span>
 
-                    <small>{event.venue_name}</small>
+                    <strong className="events-calendar-event-title">
+                      {event.title}
+                    </strong>
                   </button>
                 ))}
 

@@ -2435,3 +2435,41 @@
   font-size: 7.5px;
   line-height: 1;
 }
+
+/* Compact calendar hierarchy: Spot first, Event title second */
+.events-calendar-event-content small {
+  font-size: 7px !important;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.events-calendar-event-content strong {
+  font-size: 8.5px;
+  line-height: 1.05;
+  font-weight: 800;
+}
+
+/* Compact calendar tile hierarchy */
+.events-calendar-event-line small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 7px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.events-calendar-event-title {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+  font-size: 8.5px;
+  line-height: 1.05;
+  font-weight: 800;
+}
