@@ -244,6 +244,13 @@ export default function SpotEventsPage() {
                     <div
                       className="partner-event-row"
                       key={event.id}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "225px minmax(260px, 1fr) 110px 110px",
+                        alignItems: "center",
+                        gap: "16px",
+                      }}
                     >
                       <button
                         type="button"
@@ -253,11 +260,23 @@ export default function SpotEventsPage() {
                           color: "inherit",
                         }}
                       >
-                        <div className="partner-event-when">
+                        <div
+                          className="partner-event-when"
+                          style={{
+                            whiteSpace: "nowrap",
+                            minWidth: 0,
+                          }}
+                        >
                           {formatDateTime(event)}
                         </div>
 
-                        <div className="partner-event-main">
+                        <div
+                          className="partner-event-main"
+                          style={{
+                            minWidth: 0,
+                            overflow: "hidden",
+                          }}
+                        >
                           <strong>{event.title}</strong>
                           <span>{venue.name}</span>
                         </div>
