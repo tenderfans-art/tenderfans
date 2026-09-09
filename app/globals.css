@@ -2511,3 +2511,8 @@
   min-height: 0;
   overflow: hidden;
 }
+
+/* Final breathing room for three calendar events */
+.events-day-items {
+  height: 87px;
+}
