@@ -205,23 +205,15 @@ export default function SpotEventsPage() {
             }}
           >
             <Link
-              className="landing-action"
+              className="btn primary"
               href={`/account/spot/${venueId}/events/new`}
-              style={{
-                width: "auto",
-                padding: "8px 16px",
-              }}
             >
               Submit Event
             </Link>
 
             <Link
-              className="landing-action secondary"
+              className="btn outline"
               href="/account/spot"
-              style={{
-                width: "auto",
-                padding: "8px 16px",
-              }}
             >
               Return to Spot Dashboard
             </Link>
@@ -230,7 +222,6 @@ export default function SpotEventsPage() {
           <div className="partner-events-section">
             <div className="partner-events-heading">
               <div>
-                <div className="eyebrow">SPOT EVENTS</div>
                 <h2>Submitted Events</h2>
               </div>
 
