@@ -156,12 +156,7 @@ export default function SpotEventsPage() {
       minute: "2-digit",
     });
 
-    const crossesDay =
-      start.toDateString() !== end.toDateString();
-
-    return crossesDay
-      ? `${date} · ${startTime}–${endTime} NEXT DAY`
-      : `${date} · ${startTime}–${endTime}`;
+    return `${date} · ${startTime}–${endTime}`;
   }
 
   if (loading) {
@@ -247,7 +242,7 @@ export default function SpotEventsPage() {
                       style={{
                         display: "grid",
                         gridTemplateColumns:
-                          "225px minmax(260px, 1fr) 110px 110px",
+                          "285px minmax(0, 1fr) 110px 110px",
                         alignItems: "center",
                         gap: "16px",
                       }}
