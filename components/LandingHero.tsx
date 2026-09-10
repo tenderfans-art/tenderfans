@@ -92,7 +92,7 @@ export default function LandingHero() {
         <Link href="/how-it-works" className="landing-hotspot how-it-works-hotspot" aria-label="Learn how TenderFans works"><span className="sr-only">Learn how TenderFans works</span></Link>
         
         {/* Right silhouette: invisible form controls sit exactly over the fields shown in the artwork. */}
-        <form className="owner-hotspot" onSubmit={handleLogin} aria-label="Bartender or owner login">
+        <form className="owner-hotspot" onSubmit={handleLogin} aria-label="Tender or owner login">
           <label className="art-input email-hotspot">
             <span className="sr-only">Email address</span>
             <input
@@ -154,7 +154,7 @@ export default function LandingHero() {
           </button>
 
           <Link className="art-button bartender-claim-hotspot" href="/claim?type=bartender" aria-label="Claim your Tender profile">
-            <span className="sr-only">Claim your bartender profile</span>
+            <span className="sr-only">Claim your Tender profile</span>
           </Link>
 
           <Link className="art-button venue-claim-hotspot" href="/claim?type=venue" aria-label="Claim your Spot">
@@ -180,7 +180,7 @@ export default function LandingHero() {
           </Link>
         </div>
         <div className="mobile-action-card">
-          <span className="panel-kicker">BARTENDER / OWNER</span>
+          <span className="panel-kicker">TENDER / OWNER</span>
           <h2>Make your profile yours.</h2>
           <Link className="landing-action secondary" href="/claim">Login or Claim</Link>
         </div>

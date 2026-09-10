@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "TenderFans — Find your favorite. Give them a shout.",
-  description: "Positive-only bartender and bar discovery powered by community shout-outs."
+  description: "Positive-only Tender and Spot discovery powered by community shout-outs."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

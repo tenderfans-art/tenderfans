@@ -15,7 +15,7 @@ const tools = [
   },
   {
     title: "Manage Tenders",
-    description: "Search, edit, hide or remove bartender profiles.",
+    description: "Search, edit, hide or remove Tender profiles.",
     href: null,
     status: "COMING SOON",
   },

@@ -399,8 +399,8 @@ export default function HomeSearch({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search bartenders, bars or city..."
-            aria-label="Search bartenders, bars or city"
+            placeholder="Search Tenders, Spots or city..."
+            aria-label="Search Tenders, Spots or city"
           />
         </div>
       )}

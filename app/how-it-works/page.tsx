@@ -33,7 +33,7 @@ export default function HowItWorksPage() {
             <div>
               <h2>Find your Tender.</h2>
               <p>
-                Choose the bartender who deserves the recognition. If they're
+                Choose the Tender who deserves the recognition. If they're
                 new to TenderFans, you can help get their profile started.
               </p>
             </div>
@@ -73,7 +73,7 @@ export default function HowItWorksPage() {
             puts the spotlight on the people creating the experience.
           </p>
           <p>
-            Bartenders can claim their profiles, add their own bio and
+            Tenders can claim their profiles, add their own bio and
             imagery, and build a presence around the reputation their guests
             are already creating.
           </p>
