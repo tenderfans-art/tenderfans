@@ -324,7 +324,7 @@ export default function ClaimPage() {
           item: venue,
         }));
 
-      return [...tenderMatches, ...spotMatches].slice(0, 10);
+      return [...spotMatches, ...tenderMatches].slice(0, 10);
     }
 
     return venues
