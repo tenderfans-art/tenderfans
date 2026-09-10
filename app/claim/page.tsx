@@ -22,8 +22,16 @@ type VenueOption = {
   address: string;
 };
 
+type TenderTypeOption = {
+  key: string;
+  label: string;
+  description: string | null;
+};
+
 export default function ClaimPage() {
   const [type, setType] = useState<ClaimType | null>(null);
+  const [tenderType, setTenderType] = useState("bartender");
+  const [tenderTypes, setTenderTypes] = useState<TenderTypeOption[]>([]);
   const [query, setQuery] = useState("");
   const [tenders, setTenders] = useState<TenderOption[]>([]);
   const [venues, setVenues] = useState<VenueOption[]>([]);
@@ -68,8 +76,13 @@ export default function ClaimPage() {
     async function loadData() {
       setLoading(true);
 
-      const [bartenderResult, venueResult, relationshipResult, claimedResult] =
-        await Promise.all([
+      const [
+        bartenderResult,
+        venueResult,
+        relationshipResult,
+        claimedResult,
+        tenderTypeResult,
+      ] = await Promise.all([
           supabase
             .from("bartenders")
             .select("id, display_name")
@@ -86,6 +99,12 @@ export default function ClaimPage() {
             .eq("is_current", true),
 
           supabase.rpc("public_approved_claimed_entities"),
+
+          supabase
+            .from("tender_types")
+            .select("key, label, description")
+            .eq("active", true)
+            .order("sort_order"),
         ]);
 
       if (bartenderResult.error) {
@@ -111,6 +130,16 @@ export default function ClaimPage() {
         setLoading(false);
         return;
       }
+
+      if (tenderTypeResult.error) {
+        setMessage(tenderTypeResult.error.message);
+        setLoading(false);
+        return;
+      }
+
+      setTenderTypes(
+        (tenderTypeResult.data ?? []) as TenderTypeOption[]
+      );
 
       const claimedEntities = (claimedResult.data ?? []) as {
         entity_kind: string;
@@ -205,6 +234,10 @@ export default function ClaimPage() {
                 setHireDate(parsed.hireDate);
               }
 
+              if (typeof parsed?.tenderType === "string") {
+                setTenderType(parsed.tenderType);
+              }
+
               if (typeof parsed?.claimantRole === "string") {
                 setClaimantRole(parsed.claimantRole);
               }
@@ -228,6 +261,7 @@ export default function ClaimPage() {
         setSelectedId(null);
         setClaimantName("");
         setHireDate("");
+        setTenderType("bartender");
         setClaimantRole("");
         setBusinessEmail("");
         setRoleStartDate("");
@@ -288,6 +322,7 @@ export default function ClaimPage() {
             claimant_user_id: claimantUserId,
             claimant_name: claimantName.trim(),
             claimed_hire_date: hireDate || null,
+            requested_tender_type: tenderType,
             verifying_venue_id: selectedTender?.venueId ?? null,
             status: "pending",
           }
@@ -337,6 +372,12 @@ export default function ClaimPage() {
 
     if (claimantName.trim().length < 2) {
       setMessage("Enter your first and last name.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (type === "bartender" && !tenderType) {
+      setMessage("Select how you Tender.");
       setSubmitting(false);
       return;
     }
@@ -396,6 +437,7 @@ export default function ClaimPage() {
         selectedId,
         claimantName: claimantName.trim(),
         hireDate,
+        tenderType,
         claimantRole,
         businessEmail: businessEmail.trim(),
         roleStartDate,
@@ -669,6 +711,48 @@ export default function ClaimPage() {
                   Used only to verify your relationship with the profile you are claiming.
                 </span>
               </div>
+
+              {type === "bartender" && (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "8px",
+                    marginTop: "18px",
+                  }}
+                >
+                  <strong>How do you Tender?</strong>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                      gap: "10px",
+                    }}
+                  >
+                    {tenderTypes.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        className="claim-card"
+                        onClick={() => setTenderType(option.key)}
+                        style={{
+                          textAlign: "left",
+                          cursor: "pointer",
+                          outline:
+                            tenderType === option.key
+                              ? "2px solid currentColor"
+                              : "none",
+                        }}
+                      >
+                        <strong>{option.label}</strong>
+                        {option.description && (
+                          <span>{option.description}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {type === "bartender" && (
                 <div

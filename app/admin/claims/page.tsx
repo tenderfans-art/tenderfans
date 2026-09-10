@@ -20,6 +20,7 @@ type Claim = {
   claimant_role: string | null;
   business_email: string | null;
   role_start_date: string | null;
+  requested_tender_type: string | null;
 };
 
 type SpotRequest = {
@@ -337,6 +338,15 @@ export default function AdminClaimsPage() {
 
                       {claim.entity_kind === "bartender" && (
                         <>
+                          <div>
+                            <strong>Tender Type:</strong>{" "}
+                            {claim.requested_tender_type
+                              ? claim.requested_tender_type
+                                  .replaceAll("_", " ")
+                                  .replace(/\b\w/g, (c) => c.toUpperCase())
+                              : "Bartender"}
+                          </div>
+
                           <div>
                             <strong>Verification Spot:</strong>{" "}
                             {claim.verifying_spot_name ||
