@@ -4,8 +4,6 @@ import PopularSpots from "@/components/PopularSpots";
 
 export default function Home() {
   return <>
-    <LandingHero />
-
     <section className="partner-home-banner">
       <div className="shell partner-home-banner-inner">
         <span>
@@ -18,6 +16,8 @@ export default function Home() {
         </div>
       </div>
     </section>
+
+    <LandingHero />
 
     <TrendingTenders />
 
