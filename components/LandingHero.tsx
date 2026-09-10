@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 export default function LandingHero() {
   const router = useRouter();
   const [loginMessage, setLoginMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,7 +29,20 @@ export default function LandingHero() {
     }
  
     setLoginMessage("Signed in.");
-    try { const saved = localStorage.getItem("tf_pending_claim"); const pending = saved ? JSON.parse(saved) : null; if (pending?.type === "bartender" || pending?.type === "venue") { router.push(`/claim?type=${pending.type}`); return; } } catch {} router.push("/admin/claims");
+
+    try {
+      const saved = localStorage.getItem("tf_pending_claim");
+      const pending = saved ? JSON.parse(saved) : null;
+
+      if (pending?.type === "bartender" || pending?.type === "venue") {
+        router.push(`/claim?type=${pending.type}`);
+        return;
+      }
+    } catch {}
+
+    // Let the central account router determine Admin, Partner,
+    // Spot Owner, Tender, or pending-account destination.
+    router.push("/account");
   }
 
   return (
@@ -86,13 +100,31 @@ export default function LandingHero() {
           <label className="art-input password-hotspot">
             <span className="sr-only">Password</span>
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               name="password"
               autoComplete="current-password"
               aria-label="Password"
               required
             />
+
+            <button
+              type="button"
+              className="password-eye-hotspot"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((value) => !value)}
+            >
+              <span aria-hidden="true">{showPassword ? "◉" : "◉"}</span>
+            </button>
           </label>
+
+          <Link
+            href="/forgot-password"
+            className="forgot-password-hotspot"
+            aria-label="Forgot password"
+          >
+            <span className="sr-only">Forgot password</span>
+          </Link>
 
           <button className="art-button login-hotspot" type="submit" aria-label="Log in">
             <span className="sr-only">Log in</span>
