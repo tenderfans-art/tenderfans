@@ -21,6 +21,8 @@ type Claim = {
   business_email: string | null;
   role_start_date: string | null;
   requested_tender_type: string | null;
+  requested_tender_name: string | null;
+  requested_venue_id: string | null;
 };
 
 type SpotRequest = {
@@ -338,6 +340,13 @@ export default function AdminClaimsPage() {
 
                       {claim.entity_kind === "bartender" && (
                         <>
+                          {claim.requested_tender_name && (
+                            <div>
+                              <strong>Request:</strong>{" "}
+                              New Tender profile
+                            </div>
+                          )}
+
                           <div>
                             <strong>Tender Type:</strong>{" "}
                             {claim.requested_tender_type

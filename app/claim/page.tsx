@@ -36,6 +36,9 @@ export default function ClaimPage() {
   const [tenders, setTenders] = useState<TenderOption[]>([]);
   const [venues, setVenues] = useState<VenueOption[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedKind, setSelectedKind] =
+    useState<"tender" | "spot" | null>(null);
+  const [requestedTenderName, setRequestedTenderName] = useState("");
 
   const [userId, setUserId] = useState<string | null>(null);
   const [claimantName, setClaimantName] = useState("");
@@ -226,6 +229,19 @@ export default function ClaimPage() {
             ) {
               setSelectedId(parsed.selectedId);
 
+              if (
+                parsed?.selectedKind === "tender" ||
+                parsed?.selectedKind === "spot"
+              ) {
+                setSelectedKind(parsed.selectedKind);
+              } else {
+                setSelectedKind("tender");
+              }
+
+              if (typeof parsed?.requestedTenderName === "string") {
+                setRequestedTenderName(parsed.requestedTenderName);
+              }
+
               if (typeof parsed?.claimantName === "string") {
                 setClaimantName(parsed.claimantName);
               }
@@ -259,6 +275,8 @@ export default function ClaimPage() {
         // by a new claim submission.
         setQuery("");
         setSelectedId(null);
+        setSelectedKind(null);
+        setRequestedTenderName("");
         setClaimantName("");
         setHireDate("");
         setTenderType("bartender");
@@ -282,13 +300,29 @@ export default function ClaimPage() {
     if (!q) return [];
 
     if (type === "bartender") {
-      return tenders
+      const tenderMatches = tenders
         .filter((tender) =>
           `${tender.name} ${tender.venueName} ${tender.city} ${tender.state}`
             .toLowerCase()
             .includes(q)
         )
-        .slice(0, 10);
+        .map((tender) => ({
+          kind: "tender" as const,
+          item: tender,
+        }));
+
+      const spotMatches = venues
+        .filter((venue) =>
+          `${venue.name} ${venue.city} ${venue.state} ${venue.address}`
+            .toLowerCase()
+            .includes(q)
+        )
+        .map((venue) => ({
+          kind: "spot" as const,
+          item: venue,
+        }));
+
+      return [...tenderMatches, ...spotMatches].slice(0, 10);
     }
 
     return venues
@@ -301,12 +335,12 @@ export default function ClaimPage() {
   }, [query, tenders, venues, type]);
 
   const selectedTender =
-    type === "bartender"
+    type === "bartender" && selectedKind === "tender"
       ? tenders.find((tender) => tender.id === selectedId)
       : undefined;
 
   const selectedVenue =
-    type === "venue"
+    (type === "venue" || selectedKind === "spot")
       ? venues.find((venue) => venue.id === selectedId)
       : undefined;
 
@@ -315,17 +349,33 @@ export default function ClaimPage() {
 
     const claim: Record<string, string | null> =
       type === "bartender"
-        ? {
-            entity_kind: "bartender",
-            bartender_id: selectedId,
-            venue_id: null,
-            claimant_user_id: claimantUserId,
-            claimant_name: claimantName.trim(),
-            claimed_hire_date: hireDate || null,
-            requested_tender_type: tenderType,
-            verifying_venue_id: selectedTender?.venueId ?? null,
-            status: "pending",
-          }
+        ? selectedKind === "spot"
+          ? {
+              entity_kind: "bartender",
+              bartender_id: null,
+              venue_id: null,
+              claimant_user_id: claimantUserId,
+              claimant_name: claimantName.trim(),
+              claimed_hire_date: hireDate || null,
+              requested_tender_type: tenderType,
+              requested_tender_name: requestedTenderName.trim(),
+              requested_venue_id: selectedId,
+              verifying_venue_id: selectedId,
+              status: "pending",
+            }
+          : {
+              entity_kind: "bartender",
+              bartender_id: selectedId,
+              venue_id: null,
+              claimant_user_id: claimantUserId,
+              claimant_name: claimantName.trim(),
+              claimed_hire_date: hireDate || null,
+              requested_tender_type: tenderType,
+              requested_tender_name: null,
+              requested_venue_id: null,
+              verifying_venue_id: selectedTender?.venueId ?? null,
+              status: "pending",
+            }
         : {
             entity_kind: "venue",
             bartender_id: null,
@@ -378,6 +428,16 @@ export default function ClaimPage() {
 
     if (type === "bartender" && !tenderType) {
       setMessage("Select how you Tender.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (
+      type === "bartender" &&
+      selectedKind === "spot" &&
+      requestedTenderName.trim().length < 2
+    ) {
+      setMessage("Enter the name you use as a Tender.");
       setSubmitting(false);
       return;
     }
@@ -435,6 +495,8 @@ export default function ClaimPage() {
       JSON.stringify({
         type,
         selectedId,
+        selectedKind,
+        requestedTenderName: requestedTenderName.trim(),
         claimantName: claimantName.trim(),
         hireDate,
         tenderType,
@@ -611,37 +673,67 @@ export default function ClaimPage() {
               }}
             >
               {type === "bartender"
-                ? (results as TenderOption[]).map((tender) => (
-                    <button
-                      key={tender.id}
-                      type="button"
-                      className="claim-card"
-                      onClick={() => setSelectedId(tender.id)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        cursor: "pointer",
-                        outline:
-                          selectedId === tender.id
-                            ? "2px solid currentColor"
-                            : "none",
-                      }}
-                    >
-                      <strong>{tender.name}</strong>
-                      <span>
-                        {tender.venueName}
-                        {tender.city
-                          ? ` · ${tender.city}, ${tender.state}`
-                          : ""}
-                      </span>
-                    </button>
-                  ))
+                ? (
+                    results as {
+                      kind: "tender" | "spot";
+                      item: TenderOption | VenueOption;
+                    }[]
+                  ).map((result) => {
+                    const isTender = result.kind === "tender";
+                    const item = result.item;
+
+                    return (
+                      <button
+                        key={`${result.kind}-${item.id}`}
+                        type="button"
+                        className="claim-card"
+                        onClick={() => {
+                          setSelectedId(item.id);
+                          setSelectedKind(result.kind);
+                          setRequestedTenderName("");
+                        }}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          outline:
+                            selectedId === item.id &&
+                            selectedKind === result.kind
+                              ? "2px solid currentColor"
+                              : "none",
+                        }}
+                      >
+                        <strong>
+                          {isTender
+                            ? (item as TenderOption).name
+                            : (item as VenueOption).name}
+                        </strong>
+
+                        <span>
+                          {isTender
+                            ? `${(item as TenderOption).venueName}${
+                                (item as TenderOption).city
+                                  ? ` · ${(item as TenderOption).city}, ${
+                                      (item as TenderOption).state
+                                    }`
+                                  : ""
+                              }`
+                            : `Spot · ${(item as VenueOption).city}, ${
+                                (item as VenueOption).state
+                              }`}
+                        </span>
+                      </button>
+                    );
+                  })
                 : (results as VenueOption[]).map((venue) => (
                     <button
                       key={venue.id}
                       type="button"
                       className="claim-card"
-                      onClick={() => setSelectedId(venue.id)}
+                      onClick={() => {
+                        setSelectedId(venue.id);
+                        setSelectedKind("spot");
+                      }}
                       style={{
                         width: "100%",
                         textAlign: "left",
@@ -669,9 +761,53 @@ export default function ClaimPage() {
               <div className="privacy-note">
                 <strong>Selected:</strong>{" "}
                 {type === "bartender"
-                  ? `${selectedTender?.name} — ${selectedTender?.venueName}`
+                  ? selectedKind === "spot"
+                    ? `${selectedVenue?.name} — create a new Tender profile here`
+                    : `${selectedTender?.name} — ${selectedTender?.venueName}`
                   : selectedVenue?.name}
               </div>
+
+              {type === "bartender" && selectedKind === "spot" && (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "6px",
+                    marginTop: "18px",
+                  }}
+                >
+                  <label htmlFor="requested-tender-name">
+                    <strong>Your Tender name</strong>
+                  </label>
+
+                  <input
+                    id="requested-tender-name"
+                    type="text"
+                    value={requestedTenderName}
+                    onChange={(e) =>
+                      setRequestedTenderName(e.target.value)
+                    }
+                    placeholder="Name guests know you by"
+                    minLength={2}
+                    maxLength={100}
+                    required
+                    style={{
+                      padding: "14px 16px",
+                      borderRadius: "10px",
+                      border: "1px solid #d7d2c7",
+                      fontSize: "16px",
+                    }}
+                  />
+
+                  <span
+                    style={{
+                      fontSize: "0.82rem",
+                      opacity: 0.65,
+                    }}
+                  >
+                    We’ll create this Tender profile only after your claim is approved.
+                  </span>
+                </div>
+              )}
 
               <div
                 style={{
