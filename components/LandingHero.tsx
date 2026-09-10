@@ -69,6 +69,52 @@ export default function LandingHero() {
 
         <div className="hide-start-line" aria-hidden="true" />
 
+        {/* Draft-board Easter egg links */}
+        <a
+          href="#"
+          onClick={(e) => e.preventDefault()}
+          className="draft-beer-hotspot draft-beer-hotspot-1"
+          aria-label="3 Daughters Beach Blonde"
+        >
+          <span className="sr-only">3 Daughters Beach Blonde</span>
+        </a>
+
+        <a
+          href="#"
+          onClick={(e) => e.preventDefault()}
+          className="draft-beer-hotspot draft-beer-hotspot-2"
+          aria-label="Motorworks IPA"
+        >
+          <span className="sr-only">Motorworks IPA</span>
+        </a>
+
+        <a
+          href="#"
+          onClick={(e) => e.preventDefault()}
+          className="draft-beer-hotspot draft-beer-hotspot-3"
+          aria-label="Green Bench Postcard Pils"
+        >
+          <span className="sr-only">Green Bench Postcard Pils</span>
+        </a>
+
+        <a
+          href="#"
+          onClick={(e) => e.preventDefault()}
+          className="draft-beer-hotspot draft-beer-hotspot-4"
+          aria-label="Cigar City Jai Alai"
+        >
+          <span className="sr-only">Cigar City Jai Alai</span>
+        </a>
+
+        <a
+          href="#"
+          onClick={(e) => e.preventDefault()}
+          className="draft-beer-hotspot draft-beer-hotspot-5"
+          aria-label="Cycle Brewing Cloud 9"
+        >
+          <span className="sr-only">Cycle Brewing Cloud 9</span>
+        </a>
+
         {/* Left silhouette: the artwork carries the visual design; this is the real click target. */}
         <Link
           href="/shout"

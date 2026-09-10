@@ -2715,3 +2715,31 @@
   outline:2px solid currentColor;
   outline-offset:2px;
 }
+
+/* --- Draft-board Easter egg hotspots --- */
+.draft-beer-hotspot{
+  position:absolute;
+  z-index:6;
+  left:6.2%;
+  width:14.7%;
+  height:3.4%;
+  display:block;
+  background:transparent;
+  border-radius:3px;
+}
+
+/* Evenly spaced over the five baked-in draft lines */
+.draft-beer-hotspot-1{top:26.6%}
+.draft-beer-hotspot-2{top:30.4%}
+.draft-beer-hotspot-3{top:34.2%}
+.draft-beer-hotspot-4{top:38.0%}
+.draft-beer-hotspot-5{top:41.8%}
+
+.draft-beer-hotspot:focus-visible{
+  outline:2px solid #e0a433;
+  outline-offset:2px;
+}
+
+@media (max-width:900px){
+  .draft-beer-hotspot{display:none}
+}
