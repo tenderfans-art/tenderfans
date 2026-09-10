@@ -5,7 +5,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export default function AccountPage() {
-  const [message, setMessage] = useState("Loading your account...");
+  const [message, setMessage] = useState("Opening your account...");
+  const [routingComplete, setRoutingComplete] = useState(false);
 
   useEffect(() => {
     async function routeAccount() {
@@ -70,6 +71,7 @@ export default function AccountPage() {
       setMessage(
         "If you recently submitted a Tender or Spot claim, it is currently awaiting TenderFans approval. Once approved, your account will automatically gain access to the appropriate management portal. No further action is needed at this time."
       );
+      setRoutingComplete(true);
     }
 
     routeAccount();
@@ -80,12 +82,22 @@ export default function AccountPage() {
       <div className="shell narrow">
         <div className="flow-card">
           <div className="eyebrow">TenderFans Account</div>
-          <h1>Your account is awaiting verification.</h1>
-          <p className="lead-copy">{message}</p>
 
-          <Link className="landing-action" href="/">
-            Return to TenderFans
-          </Link>
+          {routingComplete ? (
+            <>
+              <h1>Your account is awaiting verification.</h1>
+              <p className="lead-copy">{message}</p>
+
+              <Link className="landing-action" href="/">
+                Return to TenderFans
+              </Link>
+            </>
+          ) : (
+            <>
+              <h1>Opening your account...</h1>
+              <p className="lead-copy">{message}</p>
+            </>
+          )}
         </div>
       </div>
     </main>
