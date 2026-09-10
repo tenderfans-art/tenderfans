@@ -15,6 +15,16 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
 
   if (!bartender) notFound();
 
+  const { data: approvedClaims } = await supabase.rpc(
+    "public_approved_claimed_entities"
+  );
+
+  const isClaimed = (approvedClaims ?? []).some(
+    (claim: { entity_kind: string; entity_id: string }) =>
+      claim.entity_kind === "bartender" &&
+      claim.entity_id === bartender.id
+  );
+
   const tenderTypeLabel =
     bartender.tender_type
       ? bartender.tender_type
@@ -163,6 +173,10 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
 
             {bartender.bio ? (
               <p className="bio">{bartender.bio}</p>
+            ) : isClaimed ? (
+              <p className="bio muted">
+                This Tender hasn&apos;t added a bio yet.
+              </p>
             ) : (
               <p className="bio muted">
                 This profile is community-added and waiting to be claimed.
