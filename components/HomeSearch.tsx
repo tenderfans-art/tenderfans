@@ -246,7 +246,7 @@ export default function HomeSearch({
         `)
         .eq("status", "published")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(5);
 
       if (error) {
         console.error("TenderFans recent shouts:", error);
@@ -298,7 +298,7 @@ export default function HomeSearch({
             return { ...spot, distance };
           })
           .sort((a, b) => a.distance - b.distance)
-          .slice(0, 8);
+          .slice(0, 10);
 
         setNearbySpots(ranked);
         setLocationStatus("ready");
@@ -320,7 +320,7 @@ export default function HomeSearch({
 
     const q = normalize(query);
 
-    if (!q) return view === "trending" ? spots.slice(0, 8) : [];
+    if (!q) return view === "trending" ? spots.slice(0, 5) : [];
 
     return spots
       .filter((spot) =>
