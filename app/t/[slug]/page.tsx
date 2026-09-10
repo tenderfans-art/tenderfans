@@ -8,12 +8,19 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
 
   const { data: bartender } = await supabase
     .from("bartenders")
-    .select("id, slug, display_name, bio, status")
+    .select("id, slug, display_name, bio, status, tender_type")
     .eq("slug", slug)
     .eq("status", "active")
     .single();
 
   if (!bartender) notFound();
+
+  const tenderTypeLabel =
+    bartender.tender_type
+      ? bartender.tender_type
+          .replaceAll("_", " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase())
+      : "Bartender";
 
   const { data: relationships } = await supabase
     .from("bartender_venues")
@@ -171,6 +178,10 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
                 <div className="tender-current-spot-list">
                   {currentSpots.map((spot) => (
                     <div className="tender-current-spot-row" key={spot.id}>
+                      <span>{tenderTypeLabel}</span>
+
+                      <span>·</span>
+
                       <Link href={`/s/${spot.slug}`}>{spot.name}</Link>
 
                       {spot.city && (
