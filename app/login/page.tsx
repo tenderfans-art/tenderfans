@@ -270,54 +270,100 @@ function LoginContent() {
             return;
           }
 
-          /*
-           * A saved Tender claim may either be an unfinished claim
-           * that should resume, or stale browser state from a claim
-           * that was already successfully submitted.
-           *
-           * Check the database before sending the user back through
-           * the claim flow.
-           */
-          const { data: pendingTenderClaims, error: pendingClaimError } =
-            await supabase
-              .from("entity_claims")
-              .select(
-                "id, bartender_id, requested_venue_id, requested_tender_name, status"
-              )
-              .eq("claimant_user_id", user.id)
-              .eq("entity_kind", "bartender")
-              .eq("status", "pending");
+          const isNewTenderAtSpot =
+            pending?.selectedKind === "spot";
 
-          if (pendingClaimError) {
-            console.error(
-              "Could not check submitted Tender claims:",
-              pendingClaimError
-            );
-          } else {
-            const submitted = (pendingTenderClaims ?? []).some(
-              (claim) => {
-                if (pending.selectedKind === "spot") {
-                  return (
-                    claim.requested_venue_id === pending.selectedId
-                  );
-                }
+          let verifyingVenueId: string | null =
+            isNewTenderAtSpot
+              ? pending.selectedId
+              : null;
 
-                return claim.bartender_id === pending.selectedId;
-              }
-            );
+          // Existing Tender claims still need the current Spot
+          // relationship for Admin verification.
+          if (!isNewTenderAtSpot) {
+            const { data: relationship, error: relationshipError } =
+              await supabase
+                .from("bartender_venues")
+                .select("venue_id")
+                .eq("bartender_id", pending.selectedId)
+                .eq("is_current", true)
+                .limit(1)
+                .maybeSingle();
 
-            if (submitted) {
-              localStorage.removeItem("tf_pending_claim");
-              router.push("/account");
-              return;
+            if (relationshipError) {
+              console.error(
+                "Could not load Tender verification Spot:",
+                relationshipError
+              );
             }
+
+            verifyingVenueId =
+              relationship?.venue_id ?? null;
           }
 
-          /*
-           * No matching submitted claim exists, so this really is
-           * an interrupted claim and should resume where it left off.
-           */
-          router.push("/claim?type=bartender&resume=1");
+          const { error: claimError } = await supabase
+            .from("entity_claims")
+            .insert({
+              entity_kind: "bartender",
+
+              bartender_id: isNewTenderAtSpot
+                ? null
+                : pending.selectedId,
+
+              venue_id: null,
+
+              claimant_user_id: user.id,
+
+              claimant_name:
+                typeof pending.claimantName === "string"
+                  ? pending.claimantName.trim()
+                  : "",
+
+              claimed_hire_date:
+                typeof pending.hireDate === "string" &&
+                pending.hireDate
+                  ? pending.hireDate
+                  : null,
+
+              requested_tender_type:
+                typeof pending.tenderType === "string"
+                  ? pending.tenderType
+                  : "bartender",
+
+              requested_tender_name:
+                isNewTenderAtSpot &&
+                typeof pending.requestedTenderName === "string"
+                  ? pending.requestedTenderName.trim()
+                  : null,
+
+              requested_venue_id:
+                isNewTenderAtSpot
+                  ? pending.selectedId
+                  : null,
+
+              verifying_venue_id: verifyingVenueId,
+
+              status: "pending",
+            });
+
+          if (
+            claimError &&
+            claimError.code !== "23505" &&
+            !claimError.message
+              .toLowerCase()
+              .includes("duplicate")
+          ) {
+            setMessage(
+              "Your account is verified, but we couldn't submit your Tender claim: " +
+                claimError.message
+            );
+            setLoading(false);
+            return;
+          }
+
+          localStorage.removeItem("tf_pending_claim");
+
+          router.push("/account");
           return;
         }
       }
