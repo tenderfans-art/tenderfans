@@ -19,7 +19,7 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
     bartender.tender_type
       ? bartender.tender_type
           .replaceAll("_", " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase())
+          .replace(/\b\w/g, (c: string) => c.toUpperCase())
       : "Bartender";
 
   const { data: relationships } = await supabase
