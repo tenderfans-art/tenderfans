@@ -254,7 +254,69 @@ function LoginContent() {
           return;
         }
 
-        if (pending?.type === "bartender") {
+        if (
+          pending?.type === "bartender" &&
+          typeof pending?.selectedId === "string"
+        ) {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+
+          if (!user) {
+            setMessage(
+              "We could not verify your signed-in account."
+            );
+            setLoading(false);
+            return;
+          }
+
+          /*
+           * A saved Tender claim may either be an unfinished claim
+           * that should resume, or stale browser state from a claim
+           * that was already successfully submitted.
+           *
+           * Check the database before sending the user back through
+           * the claim flow.
+           */
+          const { data: pendingTenderClaims, error: pendingClaimError } =
+            await supabase
+              .from("entity_claims")
+              .select(
+                "id, bartender_id, requested_venue_id, requested_tender_name, status"
+              )
+              .eq("claimant_user_id", user.id)
+              .eq("entity_kind", "bartender")
+              .eq("status", "pending");
+
+          if (pendingClaimError) {
+            console.error(
+              "Could not check submitted Tender claims:",
+              pendingClaimError
+            );
+          } else {
+            const submitted = (pendingTenderClaims ?? []).some(
+              (claim) => {
+                if (pending.selectedKind === "spot") {
+                  return (
+                    claim.requested_venue_id === pending.selectedId
+                  );
+                }
+
+                return claim.bartender_id === pending.selectedId;
+              }
+            );
+
+            if (submitted) {
+              localStorage.removeItem("tf_pending_claim");
+              router.push("/account");
+              return;
+            }
+          }
+
+          /*
+           * No matching submitted claim exists, so this really is
+           * an interrupted claim and should resume where it left off.
+           */
           router.push("/claim?type=bartender&resume=1");
           return;
         }
