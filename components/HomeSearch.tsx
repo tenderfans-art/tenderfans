@@ -51,27 +51,26 @@ export default function HomeSearch({
 
   useEffect(() => {
     async function loadSpots() {
-      const { data, error } = await supabase
-        .from("bartender_venues")
+      // Start with every active TenderFans Spot.
+      // A Spot should remain discoverable even if it does not yet
+      // have a current Tender attached to it.
+      const { data: venueRows, error: venueError } = await supabase
+        .from("venues")
         .select(`
-          venue_id,
-          venues!inner(
-            id,
-            slug,
-            name,
-            city,
-            state_region,
-            venue_type,
-            latitude,
-            longitude,
-            status
-          )
+          id,
+          slug,
+          name,
+          city,
+          state_region,
+          venue_type,
+          latitude,
+          longitude,
+          status
         `)
-        .eq("is_current", true)
-        .eq("venues.status", "active");
+        .eq("status", "active");
 
-      if (error) {
-        console.error("TenderFans discovery search:", error);
+      if (venueError) {
+        console.error("TenderFans discovery search:", venueError);
         setSpots([]);
         setLoading(false);
         return;
@@ -79,32 +78,35 @@ export default function HomeSearch({
 
       const venueMap = new Map<string, SpotResult>();
 
-      for (const row of data ?? []) {
-        const venueData = (row as any).venues;
-        const venue = Array.isArray(venueData)
-          ? venueData[0]
-          : venueData;
+      for (const venue of venueRows ?? []) {
+        venueMap.set(venue.id, {
+          id: venue.id,
+          slug: venue.slug,
+          name: venue.name,
+          city: venue.city ?? "",
+          state_region: venue.state_region ?? "",
+          venue_type: venue.venue_type ?? "bar",
+          tenderCount: 0,
+          shoutCount: 0,
+          latitude: venue.latitude ?? null,
+          longitude: venue.longitude ?? null,
+        });
+      }
 
-        if (!venue) continue;
+      // Count current Tenders separately so the Spot itself is not
+      // dependent on having a Tender association.
+      const { data: tenderVenueRows, error: tenderVenueError } = await supabase
+        .from("bartender_venues")
+        .select("venue_id")
+        .eq("is_current", true);
 
-        const existing = venueMap.get(venue.id);
+      if (tenderVenueError) {
+        console.error("TenderFans Tender counts:", tenderVenueError);
+      }
 
-        if (existing) {
-          existing.tenderCount += 1;
-        } else {
-          venueMap.set(venue.id, {
-            id: venue.id,
-            slug: venue.slug,
-            name: venue.name,
-            city: venue.city ?? "",
-            state_region: venue.state_region ?? "",
-            venue_type: venue.venue_type ?? "bar",
-            tenderCount: 1,
-            shoutCount: 0,
-            latitude: venue.latitude ?? null,
-            longitude: venue.longitude ?? null,
-          });
-        }
+      for (const row of tenderVenueRows ?? []) {
+        const spot = venueMap.get(row.venue_id);
+        if (spot) spot.tenderCount += 1;
       }
       
       const { data: shoutRows, error: shoutError } = await supabase
