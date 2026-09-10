@@ -38,10 +38,6 @@ export default function HowItWorksPage() {
   deserves the recognition. If they&apos;re new to TenderFans, you can help get their
   profile started.
 </p>
-              <p>
-                Choose the Tender who deserves the recognition. If they're
-                new to TenderFans, you can help get their profile started.
-              </p>
             </div>
           </div>
 
