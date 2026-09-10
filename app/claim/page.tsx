@@ -636,6 +636,7 @@ export default function ClaimPage() {
               : "Search for the Spot you are authorized to represent."}
           </p>
 
+          {!selectedId && (
           <input
             type="search"
             value={query}
@@ -654,10 +655,12 @@ export default function ClaimPage() {
               marginBottom: "14px",
             }}
           />
+          )}
 
-          {loading && <p>Loading...</p>}
+          {!selectedId && loading && <p>Loading...</p>}
 
-          {!loading &&
+          {!selectedId &&
+            !loading &&
             query.trim() &&
             results.length === 0 && (
               <div className="privacy-note">
@@ -666,7 +669,7 @@ export default function ClaimPage() {
               </div>
             )}
 
-          {results.length > 0 && (
+          {!selectedId && results.length > 0 && (
             <div
               style={{
                 display: "grid",
@@ -759,7 +762,22 @@ export default function ClaimPage() {
           )}
 
           {selectedId && (
-            <form onSubmit={handleSubmit}>
+            <>
+              <button
+                type="button"
+                className="back"
+                onClick={() => {
+                  setSelectedId(null);
+                  setSelectedKind(null);
+                  setRequestedTenderName("");
+                  setQuery("");
+                }}
+                style={{ marginBottom: "16px" }}
+              >
+                ← Choose a different Tender or Spot
+              </button>
+
+              <form onSubmit={handleSubmit}>
               <div className="privacy-note">
                 <strong>Selected:</strong>{" "}
                 {type === "bartender"
@@ -1100,6 +1118,7 @@ export default function ClaimPage() {
                 </div>
               )}
             </form>
+            </>
           )}
         </div>
       </div>
