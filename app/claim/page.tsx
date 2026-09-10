@@ -186,9 +186,11 @@ export default function ClaimPage() {
       }
 
       setVenues(
-        [...venueMap.values()].filter(
-          (venue) => !claimedVenueIds.has(venue.id)
-        )
+        type === "venue"
+          ? [...venueMap.values()].filter(
+              (venue) => !claimedVenueIds.has(venue.id)
+            )
+          : [...venueMap.values()]
       );
 
       setTenders(
