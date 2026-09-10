@@ -9,6 +9,7 @@ export default function LandingHero() {
   const router = useRouter();
   const [loginMessage, setLoginMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -17,6 +18,12 @@ export default function LandingHero() {
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
+
+    if (rememberMe) {
+      localStorage.setItem("tf_remember_me", "1");
+    } else {
+      localStorage.removeItem("tf_remember_me");
+    }
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -129,6 +136,18 @@ export default function LandingHero() {
           >
             <span className="sr-only">Forgot password</span>
           </Link>
+
+          <button
+            type="button"
+            className={`remember-me-hotspot${rememberMe ? " active" : ""}`}
+            aria-label="Remember me"
+            aria-pressed={rememberMe}
+            onClick={() => setRememberMe((value) => !value)}
+          >
+            <span className="sr-only">
+              {rememberMe ? "Remember me enabled" : "Remember me disabled"}
+            </span>
+          </button>
 
           <button className="art-button login-hotspot" type="submit" aria-label="Log in">
             <span className="sr-only">Log in</span>

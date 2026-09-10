@@ -2638,3 +2638,51 @@
   border-color:#bd8e39;
   background:#1c2226;
 }
+
+
+/* Hero Remember Me control */
+.remember-me-hotspot{
+  position:absolute;
+  z-index:7;
+  left:5%;
+  top:41.0%;
+  width:40%;
+  height:6%;
+  padding:0;
+  margin:0;
+  border:0;
+  outline:0;
+  background:transparent;
+  cursor:pointer;
+}
+
+/* Active indicator sits only over the checkbox baked into the artwork. */
+.remember-me-hotspot::after{
+  content:"";
+  position:absolute;
+  left:1.5%;
+  top:50%;
+  width:13px;
+  height:13px;
+  transform:translateY(-50%);
+  border-radius:50%;
+  background:transparent;
+  box-shadow:none;
+  transition:background .14s ease, box-shadow .14s ease;
+}
+
+.remember-me-hotspot.active::after{
+  background:radial-gradient(
+    circle,
+    #e0a433 0%,
+    #e0a433 58%,
+    rgba(224,164,51,.72) 59%,
+    rgba(224,164,51,.20) 78%,
+    transparent 80%
+  );
+  box-shadow:0 0 5px rgba(224,164,51,.55);
+}
+
+.remember-me-hotspot:focus-visible::after{
+  box-shadow:0 0 0 2px rgba(224,164,51,.9);
+}
