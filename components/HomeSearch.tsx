@@ -349,24 +349,24 @@ export default function HomeSearch({
   const curatedNav = (
     <div className="discover-view-nav">
       <Link href="/discover" className="discover-view-nav-link">
-        Discover
+        Find New Spots
       </Link>
 
       {!isTrending && (
         <Link href="/discover?view=trending" className="discover-view-nav-link">
-          Trending
+          Trending Spots
         </Link>
       )}
 
       {!isNearby && (
         <Link href="/discover?view=nearby" className="discover-view-nav-link">
-          Nearby
+          Nearby Spots
         </Link>
       )}
 
       {!isRecent && (
         <Link href="/discover?view=recent" className="discover-view-nav-link">
-          Recent
+          Recent Shouts
         </Link>
       )}
     </div>
