@@ -346,6 +346,32 @@ export default function HomeSearch({
       .slice(0, 8);
   }, [query, tenders, isTrending, isNearby, isRecent]);
 
+  const curatedNav = (
+    <div className="discover-view-nav">
+      <Link href="/discover" className="discover-view-nav-link">
+        Discover
+      </Link>
+
+      {!isTrending && (
+        <Link href="/discover?view=trending" className="discover-view-nav-link">
+          Trending
+        </Link>
+      )}
+
+      {!isNearby && (
+        <Link href="/discover?view=nearby" className="discover-view-nav-link">
+          Nearby
+        </Link>
+      )}
+
+      {!isRecent && (
+        <Link href="/discover?view=recent" className="discover-view-nav-link">
+          Recent
+        </Link>
+      )}
+    </div>
+  );
+
   return (
     <div className="search-wrap">
       {isTrending && (
@@ -423,6 +449,8 @@ export default function HomeSearch({
               <div className="search-empty">No recent shouts yet.</div>
             )}
           </div>
+
+          {curatedNav}
         </>
       )}
 
@@ -477,7 +505,10 @@ export default function HomeSearch({
         </div>
       )}
 
+      {isNearby && curatedNav}
+
       {(query.trim() || view === "trending") && (
+        <>
         <div className="search-results">
           {loading ? (
             <div className="search-empty">
@@ -554,6 +585,9 @@ export default function HomeSearch({
             </div>
           )}
         </div>
+
+        {isTrending && curatedNav}
+        </>
       )}
     </div>
   );

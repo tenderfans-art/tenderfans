@@ -2608,3 +2608,33 @@
 .events-day-items {
   height: 87px;
 }
+
+/* Curated Discover view navigation */
+.discover-view-nav{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px;
+  margin-top:18px;
+}
+
+.discover-view-nav-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:92px;
+  padding:8px 14px;
+  border-radius:7px;
+  border:1px solid rgba(189,142,57,.55);
+  background:#15191c;
+  color:#fff;
+  text-decoration:none;
+  font-size:.86rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+
+.discover-view-nav-link:hover{
+  border-color:#bd8e39;
+  background:#1c2226;
+}
