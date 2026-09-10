@@ -114,7 +114,9 @@ export default function LandingHero() {
               aria-pressed={showPassword}
               onClick={() => setShowPassword((value) => !value)}
             >
-              <span aria-hidden="true">{showPassword ? "◉" : "◉"}</span>
+              <span className="sr-only">
+                {showPassword ? "Hide password" : "Show password"}
+              </span>
             </button>
           </label>
 
