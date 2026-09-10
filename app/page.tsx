@@ -1,21 +1,11 @@
 import LandingHero from "@/components/LandingHero";
 import TrendingTenders from "@/components/TrendingTenders";
 import PopularSpots from "@/components/PopularSpots";
+import PartnerHomeBanner from "@/components/PartnerHomeBanner";
 
 export default function Home() {
   return <>
-    <section className="partner-home-banner">
-      <div className="shell partner-home-banner-inner">
-        <span>
-          Promoters &amp; Brand Reps — bring your events to TenderFans.
-        </span>
-
-        <div className="partner-home-banner-links">
-          <a href="/partners/login">Partner Login</a>
-          <a href="/partners">About Partners</a>
-        </div>
-      </div>
-    </section>
+    <PartnerHomeBanner />
 
     <LandingHero />
 
