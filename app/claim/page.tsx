@@ -52,6 +52,7 @@ export default function ClaimPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -540,10 +541,7 @@ export default function ClaimPage() {
       return;
     }
 
-    setMessage(
-      "Account created. Check your email to confirm your account. Then return here and sign in to finish your claim."
-    );
-
+    setAccountCreated(true);
     setSubmitting(false);
   }
 
@@ -578,6 +576,42 @@ export default function ClaimPage() {
               >
                 <strong>Login</strong>
                 <span>Already have an account? Sign in here.</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (accountCreated) {
+    return (
+      <section className="flow-page">
+        <div className="shell narrow">
+          <div className="flow-card">
+            <div className="eyebrow">Account created</div>
+
+            <h1>Check your email.</h1>
+
+            <p className="lead-copy">
+              We sent you a confirmation email. Confirm your account, then sign
+              in to continue your {type === "venue" ? "Spot" : "Tender"} claim.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                flexWrap: "wrap",
+                marginTop: "24px",
+              }}
+            >
+              <a className="btn primary" href="/login?claim=1">
+                Go to Login
+              </a>
+
+              <a className="btn" href="/">
+                Return to TenderFans
               </a>
             </div>
           </div>
