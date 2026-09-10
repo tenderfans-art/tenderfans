@@ -32,6 +32,12 @@ export default function HowItWorksPage() {
             <span className="how-number">02</span>
             <div>
               <h2>Find your Tender.</h2>
+<p>
+  A Tender is anyone who makes your experience better from their side of the counter —
+  Bartenders, Tabletenders (Servers), Budtenders, and more. Choose the Tender who
+  deserves the recognition. If they&apos;re new to TenderFans, you can help get their
+  profile started.
+</p>
               <p>
                 Choose the Tender who deserves the recognition. If they're
                 new to TenderFans, you can help get their profile started.
