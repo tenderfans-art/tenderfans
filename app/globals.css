@@ -25,27 +25,53 @@
 }
 
 .art-input input{
-  position:relative;
+  position:absolute;
   z-index:1;
   box-sizing:border-box;
-  width:100%;
+  top:0;
+  left:11%;
+  width:77%;
   height:100%;
   border:0;
   outline:0;
   background:transparent !important;
   color:#fff;
-  padding:0 14%;
+  padding:0 6px;
   font-size:clamp(10px,1vw,15px);
   caret-color:#e0a433;
-  border-radius:5px;
+  border-radius:2px;
+}
+
+/* Once text exists, cover the label baked into the hero artwork. */
+.art-input input:not(:placeholder-shown){
+  background:#050505 !important;
+}
+
+/* Chrome autofill should behave the same way. */
+.art-input input:-webkit-autofill,
+.art-input input:-webkit-autofill:hover,
+.art-input input:-webkit-autofill:focus{
+  -webkit-text-fill-color:#fff !important;
+  -webkit-box-shadow:0 0 0 1000px #050505 inset !important;
+  box-shadow:0 0 0 1000px #050505 inset !important;
+  caret-color:#e0a433;
+}
+
+
+.email-hotspot input{
+  width:84%;
+}
+
+.password-hotspot input{
+  width:72%;
 }
 
 .art-input input:focus{
   box-shadow:inset 0 0 0 2px rgba(224,164,51,.75);
 }
 
-.email-hotspot{top:19.5%}
-.password-hotspot{top:30.9%}
+.email-hotspot{top:19.0%}
+.password-hotspot{top:30.4%}
 
 .password-eye-hotspot{
   position:absolute;

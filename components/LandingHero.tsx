@@ -91,6 +91,7 @@ export default function LandingHero() {
             <input
               type="email"
               name="email"
+              placeholder=" "
               autoComplete="email"
               aria-label="Email address"
               required
@@ -102,6 +103,7 @@ export default function LandingHero() {
             <input
               type={showPassword ? "text" : "password"}
               name="password"
+              placeholder=" "
               autoComplete="current-password"
               aria-label="Password"
               required
