@@ -3169,3 +3169,26 @@
     gap:12px;
   }
 }
+
+
+/* ------------------------------------------------------------
+   Contest flyer Give 'em a Shout hotspot
+   Covers the gold CTA graphic near the bottom of the flyer.
+   ------------------------------------------------------------ */
+
+.contest-shout-hotspot{
+  position:absolute;
+  z-index:6;
+  left:27%;
+  top:82.1%;
+  width:45%;
+  height:5.2%;
+  display:block;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.contest-shout-hotspot:hover{
+  background:rgba(255,255,255,.06);
+}
+

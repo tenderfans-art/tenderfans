@@ -289,6 +289,13 @@ export default function ContestPage() {
           </div>
         )}
 
+        <Link
+          href="/shout"
+          className="contest-shout-hotspot"
+          aria-label="Find your Tender and give them a Shout"
+          title="Find your Tender and give them a Shout"
+        />
+
         <button
           type="button"
           className="contest-details-hotspot"
