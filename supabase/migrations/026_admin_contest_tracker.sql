@@ -41,3 +41,7 @@ using (
     where pa.user_id = auth.uid()
   )
 );
+
+-- Table-level SELECT privilege required before the Admin RLS policy
+-- can authorize individual rows.
+grant select on table public.contest_shout_entries to authenticated;
