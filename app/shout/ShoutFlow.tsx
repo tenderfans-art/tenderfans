@@ -441,17 +441,16 @@ export default function ShoutFlow({
   return <div className="flow-card">
     {step === 1 && <div className="flow-step">
       <div className="eyebrow">Step 1</div>
-      <h1>Find their Tender or Spot.</h1>
+      <h1>Where do they work?</h1>
       <p>
-        Search TenderFans by Tender name or Spot. If the Spot is new,
-        you can add the real location through Google Places.
+        We search TenderFans first. If the spot is new, the production version will fall through to Google Places to select the real business and address.
       </p>
 
       <input
         className="field"
         value={venueQuery}
         onChange={e => setVenueQuery(e.target.value)}
-        placeholder="Search a Tender, bar, brewery or spot..."
+        placeholder="Start typing a bar, brewery or spot..."
       />
 
       <div className="choice-list">
@@ -485,7 +484,6 @@ export default function ShoutFlow({
 
                 setBartenderId(tender.id);
                 setBartenderQuery(tender.display_name);
-                setStep(3);
               }}
             >
               <span className="mini-avatar">
@@ -512,10 +510,8 @@ export default function ShoutFlow({
               setVenueId(v.id);
               setBartenderId("");
               setBartenderQuery("");
-              setStep(2);
             }}
           >
-            <small>SPOT</small>
             <strong>{v.name}</strong>
             <span>
               {[v.street_address, v.city, v.state_region]
@@ -530,11 +526,8 @@ export default function ShoutFlow({
        !venueMatches.length &&
        !tenderMatches.length && (
         <div className="new-entity">
-          <strong>No TenderFans match found.</strong>
-          <span>
-            If you're looking for a new Spot, search Google for the
-            exact location:
-          </span>
+          <strong>We don't have this spot yet.</strong>
+          <span>Search Google for the exact location:</span>
 
           <GooglePlacePicker onSelect={async (place:any) => {
         try {
@@ -577,17 +570,18 @@ export default function ShoutFlow({
             <div>
               <strong>{googleVenue.name}</strong>
               <span>{googleVenue.address}</span>
-              <button
-                type="button"
-                className="btn primary"
-                onClick={() => setStep(2)}
-              >
-                Continue with this Spot
-              </button>
             </div>
           )}
         </div>
       )}
+
+      <button
+        className="btn primary"
+        disabled={!venueId}
+        onClick={() => setStep(bartenderId ? 3 : 2)}
+      >
+        Continue
+      </button>
     </div>}
     {step === 2 && <div className="flow-step"><button className="back" onClick={()=>setStep(1)}>← Change spot</button><div className="eyebrow">Step 2</div><h1>Who deserves the shout?</h1><p>{selectedVenue?.name} selected. Existing profiles at this spot appear before we allow a new Tender to be created.</p><input className="field" value={bartenderQuery} onChange={e=>setBartenderQuery(e.target.value)} placeholder="Tender name..."/>
       <div className="choice-list">{bartenderMatches.map(b => <button key={b.id} className={`choice person-choice ${bartenderId===b.id?"selected":""}`} onClick={()=>setBartenderId(b.id)}><span className="mini-avatar">{b.display_name[0]}</span><span><strong>{b.display_name}</strong><small>Current Tender at {selectedVenue?.name}</small></span></button>)}</div>
