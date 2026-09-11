@@ -26,11 +26,11 @@ type ContestTender = {
 function flyerSpotName(name: string) {
   const trimmed = name.trim();
 
-  if (trimmed.length <= 10) {
+  if (trimmed.length <= 15) {
     return trimmed;
   }
 
-  return trimmed.slice(0, 10).trimEnd();
+  return trimmed.slice(0, 15).trimEnd();
 }
 
 export default function ContestPage() {
