@@ -33,6 +33,8 @@ export default function ContestPage() {
     setContestUrl(`${window.location.origin}/contest`);
 
     async function loadContest() {
+      const now = new Date().toISOString();
+
       const [contestResult, bartenderResult, shoutResult] =
         await Promise.all([
           supabase
@@ -41,6 +43,8 @@ export default function ContestPage() {
               "id, title, prize_text, starts_at, ends_at, flyer_url, rules_text"
             )
             .eq("is_active", true)
+            .lte("starts_at", now)
+            .gte("ends_at", now)
             .maybeSingle(),
 
           supabase

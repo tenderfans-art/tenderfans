@@ -25,6 +25,7 @@ export default function TenderAccountPage() {
   const [contestUrl, setContestUrl] = useState("");
   const [contestActionMessage, setContestActionMessage] = useState("");
   const [showContestTools, setShowContestTools] = useState(false);
+  const [contestActive, setContestActive] = useState(false);
 
   const [instagramHandle, setInstagramHandle] = useState("");
   const [facebookHandle, setFacebookHandle] = useState("");
@@ -76,6 +77,25 @@ export default function TenderAccountPage() {
       }
 
       setTender(bartender as TenderProfile);
+
+      const contestNow = new Date().toISOString();
+
+      const { data: liveContest, error: contestError } =
+        await supabase
+          .from("contests")
+          .select("id")
+          .eq("is_active", true)
+          .lte("starts_at", contestNow)
+          .gte("ends_at", contestNow)
+          .maybeSingle();
+
+      if (contestError) {
+        setMessage(contestError.message);
+        setLoading(false);
+        return;
+      }
+
+      setContestActive(Boolean(liveContest));
 
       const { data: socialRows, error: socialError } =
         await supabase
@@ -433,7 +453,7 @@ export default function TenderAccountPage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "repeat(5, minmax(0, 1fr))",
+                    `repeat(${contestActive ? 5 : 4}, minmax(0, 1fr))`,
                   gap: "10px",
                 }}
               >
@@ -477,25 +497,27 @@ export default function TenderAccountPage() {
                   </div>
                 </Link>
 
-                <button
-                  type="button"
-                  onClick={() => setShowContestTools(true)}
-                  style={{
-                    ...cardStyle,
-                    background: "#fff",
-                    font: "inherit",
-                    cursor: "pointer",
-                    width: "100%",
-                  }}
-                >
-                  <strong>Contest</strong>
-                  <div style={descriptionStyle}>
-                    QR code &amp; share tools
-                  </div>
-                </button>
+                {contestActive && (
+                  <button
+                    type="button"
+                    onClick={() => setShowContestTools(true)}
+                    style={{
+                      ...cardStyle,
+                      background: "#fff",
+                      font: "inherit",
+                      cursor: "pointer",
+                      width: "100%",
+                    }}
+                  >
+                    <strong>Contest</strong>
+                    <div style={descriptionStyle}>
+                      QR code &amp; share tools
+                    </div>
+                  </button>
+                )}
               </div>
 
-              {showContestTools && (
+              {contestActive && showContestTools && (
               <div
                 id="contest-tools"
                 style={{

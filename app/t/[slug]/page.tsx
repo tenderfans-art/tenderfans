@@ -32,6 +32,16 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
           .replace(/\b\w/g, (c: string) => c.toUpperCase())
       : "Bartender";
 
+  const contestNow = new Date().toISOString();
+
+  const { data: activeContest } = await supabase
+    .from("contests")
+    .select("id")
+    .eq("is_active", true)
+    .lte("starts_at", contestNow)
+    .gte("ends_at", contestNow)
+    .maybeSingle();
+
   const { data: relationships } = await supabase
     .from("bartender_venues")
     .select("venue_id, is_primary")
@@ -146,7 +156,14 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
             </div>
 
             <div className="tender-shout-action">
-              <Link className="btn primary" href="/shout">
+              <Link
+                className="btn primary"
+                href={
+                  activeContest
+                    ? `/contest/t/${bartender.slug}`
+                    : "/shout"
+                }
+              >
                 Give {bartender.display_name} a Shout
               </Link>
             </div>

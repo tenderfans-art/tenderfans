@@ -7,8 +7,10 @@ import GooglePlacePicker from "@/components/GooglePlacePicker";
 
 export default function ShoutFlow({
   initialTenderSlug,
+  contestMode = false,
 }: {
   initialTenderSlug?: string;
+  contestMode?: boolean;
 }) {
   const [step, setStep] = useState(1);
   const [venueQuery, setVenueQuery] = useState("");
