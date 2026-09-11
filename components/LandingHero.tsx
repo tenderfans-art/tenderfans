@@ -74,7 +74,6 @@ export default function LandingHero() {
           href="https://untappd.com/b/3-daughters-brewing-beach-blonde-ale/527325"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => e.preventDefault()}
           className="draft-beer-hotspot draft-beer-hotspot-1"
           aria-label="3 Daughters Beach Blonde"
         >
@@ -85,7 +84,6 @@ export default function LandingHero() {
           href="https://www.beeradvocate.com/beer/profile/33802/123786/"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => e.preventDefault()}
           className="draft-beer-hotspot draft-beer-hotspot-2"
           aria-label="Motorworks IPA"
         >
@@ -96,7 +94,6 @@ export default function LandingHero() {
           href="https://www.greenbenchbrewing.com/our-beers/postcard-pilsner"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => e.preventDefault()}
           className="draft-beer-hotspot draft-beer-hotspot-3"
           aria-label="Green Bench Postcard Pils"
         >
@@ -107,7 +104,6 @@ export default function LandingHero() {
           href="https://cigarcitybrewing.com/beer/jai-alai/"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => e.preventDefault()}
           className="draft-beer-hotspot draft-beer-hotspot-4"
           aria-label="Cigar City Jai Alai"
         >
@@ -118,7 +114,6 @@ export default function LandingHero() {
           href="https://www.seadogbrewing.com/blood-orange/"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => e.preventDefault()}
           className="draft-beer-hotspot draft-beer-hotspot-5"
           aria-label="Cycle Brewing Cloud 9"
         >
