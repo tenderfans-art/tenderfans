@@ -432,7 +432,7 @@ export default function TenderAccountPage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "repeat(4, minmax(120px, 1fr))",
+                    "repeat(5, minmax(0, 1fr))",
                   gap: "10px",
                 }}
               >
@@ -496,7 +496,27 @@ export default function TenderAccountPage() {
                   borderRadius: "18px",
                 }}
               >
-                <div className="eyebrow">Contest Tools</div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "12px",
+                  }}
+                >
+                  <div className="eyebrow">Contest Tools</div>
+
+                  <a
+                    href="#"
+                    className="back"
+                    style={{
+                      padding: 0,
+                      textDecoration: "none",
+                    }}
+                  >
+                    Close
+                  </a>
+                </div>
 
                 <h2 style={{ margin: "6px 0 8px" }}>
                   Share your TenderFans contest link.
