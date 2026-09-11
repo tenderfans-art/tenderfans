@@ -3262,3 +3262,67 @@
   font-size:.8rem;
 }
 
+
+/* ------------------------------------------------------------
+   Give a Shout universal search — refined Tender results
+   ------------------------------------------------------------ */
+
+.shout-search-tender{
+  display:block;
+  text-align:left;
+}
+
+.shout-search-tender .mini-avatar{
+  display:none !important;
+}
+
+.shout-search-tender-copy{
+  min-width:0;
+  display:grid;
+  gap:5px;
+  width:100%;
+}
+
+.shout-search-tender-topline{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  min-width:0;
+}
+
+.shout-search-tender-topline strong{
+  color:#111;
+  font-size:1rem;
+}
+
+.shout-search-job-type{
+  color:#697177;
+  font-size:.88rem;
+  font-weight:700;
+}
+
+.shout-search-type{
+  display:none !important;
+}
+
+.shout-search-spotline{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  min-width:0;
+  color:#697177;
+  font-size:.88rem;
+}
+
+.shout-search-spot-name{
+  font-weight:700;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.shout-search-city{
+  flex:0 0 auto;
+  color:#8a9095;
+}
+

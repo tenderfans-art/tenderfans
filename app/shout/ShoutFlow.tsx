@@ -55,7 +55,8 @@ export default function ShoutFlow({
               id,
               slug,
               display_name,
-              status
+              status,
+              tender_type
             ),
             venues!inner(
               id,
@@ -468,7 +469,7 @@ export default function ShoutFlow({
           return (
             <button
               key={`tender-${tender.id}`}
-              className="choice person-choice shout-search-tender"
+              className="choice shout-search-tender"
               onClick={() => {
                 setVenueId(spot.id);
 
@@ -486,25 +487,33 @@ export default function ShoutFlow({
                 setBartenderQuery(tender.display_name);
               }}
             >
-              <span className="mini-avatar">
-                {tender.display_name?.[0]}
-              </span>
-
               <span className="shout-search-tender-copy">
                 <span className="shout-search-tender-topline">
                   <strong>{tender.display_name}</strong>
-                  <small className="shout-search-type">TENDER</small>
-                </span>
 
-                <span className="shout-search-spot-name">
-                  {spot.name}
-                </span>
-
-                {spot.city && (
-                  <span className="shout-search-city">
-                    {spot.city}
+                  <span className="shout-search-job-type">
+                    ·{" "}
+                    {tender.tender_type
+                      ? tender.tender_type
+                          .replaceAll("_", " ")
+                          .replace(/\b\w/g, (c: string) =>
+                            c.toUpperCase()
+                          )
+                      : "Bartender"}
                   </span>
-                )}
+                </span>
+
+                <span className="shout-search-spotline">
+                  <span className="shout-search-spot-name">
+                    {spot.name}
+                  </span>
+
+                  {spot.city && (
+                    <span className="shout-search-city">
+                      · {spot.city}
+                    </span>
+                  )}
+                </span>
               </span>
             </button>
           );
