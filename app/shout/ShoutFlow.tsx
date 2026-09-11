@@ -468,7 +468,7 @@ export default function ShoutFlow({
           return (
             <button
               key={`tender-${tender.id}`}
-              className="choice person-choice"
+              className="choice person-choice shout-search-tender"
               onClick={() => {
                 setVenueId(spot.id);
 
@@ -490,13 +490,21 @@ export default function ShoutFlow({
                 {tender.display_name?.[0]}
               </span>
 
-              <span>
-                <small>TENDER</small>
-                <strong>{tender.display_name}</strong>
-                <small>
+              <span className="shout-search-tender-copy">
+                <span className="shout-search-tender-topline">
+                  <strong>{tender.display_name}</strong>
+                  <small className="shout-search-type">TENDER</small>
+                </span>
+
+                <span className="shout-search-spot-name">
                   {spot.name}
-                  {spot.city ? ` · ${spot.city}` : ""}
-                </small>
+                </span>
+
+                {spot.city && (
+                  <span className="shout-search-city">
+                    {spot.city}
+                  </span>
+                )}
               </span>
             </button>
           );
