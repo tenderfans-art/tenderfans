@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import VenueVisual from "@/components/VenueVisual";
@@ -5,6 +6,75 @@ import { supabase } from "@/lib/supabase";
 import SpotTenderList from "@/components/SpotTenderList";
 import PublicSpotMedia from "@/components/spot/PublicSpotMedia";
 import NotificationSignup from "@/components/NotificationSignup";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+
+  const { data: venue } = await supabase
+    .from("venues")
+    .select(`
+      slug,
+      name,
+      venue_type,
+      description,
+      city,
+      state_region
+    `)
+    .eq("slug", slug)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!venue) {
+    return {
+      title: "Spot Profile | TenderFans",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const location = [
+    venue.city,
+    venue.state_region,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const title = location
+    ? `${venue.name} — Tenders & Shouts in ${location} | TenderFans`
+    : `${venue.name} — Tenders & Shouts | TenderFans`;
+
+  const description = venue.description
+    ? `${venue.description.slice(0, 150)}${venue.description.length > 150 ? "…" : ""}`
+    : `Discover the Tenders at ${venue.name}${location ? ` in ${location}` : ""}. Find hospitality professionals, view profiles and give them a Shout on TenderFans.`;
+
+  const canonical = `/s/${venue.slug}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: "website",
+      siteName: "TenderFans",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function SpotPage({
   params,

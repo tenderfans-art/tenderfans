@@ -1,7 +1,102 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import NotificationSignup from "@/components/NotificationSignup";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+
+  const { data: bartender } = await supabase
+    .from("bartenders")
+    .select("id, slug, display_name, bio, tender_type")
+    .eq("slug", slug)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!bartender) {
+    return {
+      title: "Tender Profile | TenderFans",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const tenderTypeLabel = bartender.tender_type
+    ? bartender.tender_type
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (c: string) => c.toUpperCase())
+    : "Bartender";
+
+  const { data: relationships } = await supabase
+    .from("bartender_venues")
+    .select("venue_id, is_primary")
+    .eq("bartender_id", bartender.id)
+    .eq("is_current", true)
+    .order("is_primary", { ascending: false })
+    .limit(1);
+
+  let spotName = "";
+  let city = "";
+  let state = "";
+
+  const primaryRelationship = relationships?.[0];
+
+  if (primaryRelationship?.venue_id) {
+    const { data: venue } = await supabase
+      .from("venues")
+      .select("name, city, state_region")
+      .eq("id", primaryRelationship.venue_id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (venue) {
+      spotName = venue.name ?? "";
+      city = venue.city ?? "";
+      state = venue.state_region ?? "";
+    }
+  }
+
+  const title = spotName
+    ? `${bartender.display_name} — ${tenderTypeLabel} at ${spotName} | TenderFans`
+    : `${bartender.display_name} — ${tenderTypeLabel} | TenderFans`;
+
+  const location = [city, state].filter(Boolean).join(", ");
+
+  const description = bartender.bio
+    ? `${bartender.bio.slice(0, 150)}${bartender.bio.length > 150 ? "…" : ""}`
+    : spotName
+      ? `Discover ${bartender.display_name}, a ${tenderTypeLabel.toLowerCase()} at ${spotName}${location ? ` in ${location}` : ""}. See Shouts, badges and profile details on TenderFans.`
+      : `Discover ${bartender.display_name}, a ${tenderTypeLabel.toLowerCase()} on TenderFans. See Shouts, badges and profile details.`;
+
+  const canonical = `/t/${bartender.slug}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: "profile",
+      siteName: "TenderFans",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function TenderPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
