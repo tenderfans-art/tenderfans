@@ -165,7 +165,7 @@ export default function TenderEditProfilePage() {
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                maxLength={500}
+                maxLength={300}
                 rows={6}
                 placeholder="Tell your guests a little about yourself..."
                 style={{
@@ -188,7 +188,7 @@ export default function TenderEditProfilePage() {
                   fontSize: "0.8rem",
                 }}
               >
-                {bio.length}/500
+                {bio.length}/300
               </div>
 
               {message && allowed && (
