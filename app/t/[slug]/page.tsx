@@ -170,35 +170,25 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
           </div>
 
           <div className="tender-profile-copy">
-            <div className="profile-title-actions">
-              <h1>{bartender.display_name}</h1>
+            <div className="tender-profile-heading-row">
+              <div className="profile-title-actions">
+                <h1>{bartender.display_name}</h1>
 
-              <NotificationSignup
-                mode="follow"
-                entityKind="bartender"
-                entityId={bartender.id}
-                entityName={bartender.display_name}
-              />
+                <NotificationSignup
+                  mode="follow"
+                  entityKind="bartender"
+                  entityId={bartender.id}
+                  entityName={bartender.display_name}
+                />
+              </div>
+
+              <div className="tender-cheers-inline">
+                <strong>{cheerCount ?? 0}</strong>
+                <span>
+                  {(cheerCount ?? 0) === 1 ? "Cheer" : "Cheers"}
+                </span>
+              </div>
             </div>
-
-            <div className="tender-cheers-inline">
-              <strong>{cheerCount ?? 0}</strong>
-              <span>
-                {(cheerCount ?? 0) === 1 ? "Cheer" : "Cheers"}
-              </span>
-            </div>
-
-            {bartender.bio ? (
-              <p className="bio">{bartender.bio}</p>
-            ) : isClaimed ? (
-              <p className="bio muted">
-                This Tender hasn&apos;t added a bio yet.
-              </p>
-            ) : (
-              <p className="bio muted">
-                This profile is community-added and waiting to be claimed.
-              </p>
-            )}
 
             {currentSpots.length > 0 && (
               <div className="tender-current-spots">
@@ -227,6 +217,22 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
                 </div>
               </div>
             )}
+
+            <div className="tender-about">
+              <div className="tender-detail-label">About</div>
+
+              {bartender.bio ? (
+                <p className="bio">{bartender.bio}</p>
+              ) : isClaimed ? (
+                <p className="bio muted">
+                  This Tender hasn&apos;t added a bio yet.
+                </p>
+              ) : (
+                <p className="bio muted">
+                  This profile is community-added and waiting to be claimed.
+                </p>
+              )}
+            </div>
 
             {topTraits.length > 0 && (
               <div className="tender-badges">

@@ -2961,3 +2961,38 @@
     font-size:clamp(7px,2vw,11px);
   }
 }
+
+/* ------------------------------------------------------------
+   Tender profile heading / About layout
+   ------------------------------------------------------------ */
+
+.tender-profile-heading-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+}
+
+.tender-profile-heading-row .profile-title-actions{
+  min-width:0;
+}
+
+.tender-profile-heading-row .tender-cheers-inline{
+  margin:0 0 0 auto;
+  flex:0 0 auto;
+}
+
+.tender-about{
+  margin-top:22px;
+}
+
+.tender-about .bio{
+  margin-top:8px;
+}
+
+@media (max-width:700px){
+  .tender-profile-heading-row{
+    align-items:flex-start;
+    gap:12px;
+  }
+}
