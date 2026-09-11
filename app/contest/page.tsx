@@ -19,7 +19,8 @@ type ContestTender = {
   id: string;
   slug: string;
   name: string;
-  cheers: number;
+  spotName: string;
+  entries: number;
 };
 
 export default function ContestPage() {
@@ -35,28 +36,40 @@ export default function ContestPage() {
     async function loadContest() {
       const now = new Date().toISOString();
 
-      const [contestResult, bartenderResult, shoutResult] =
-        await Promise.all([
-          supabase
-            .from("contests")
-            .select(
-              "id, title, prize_text, starts_at, ends_at, flyer_url, rules_text"
+      const [
+        contestResult,
+        bartenderResult,
+        venueResult,
+        leaderboardResult,
+      ] = await Promise.all([
+        supabase
+          .from("contests")
+          .select(
+            "id, title, prize_text, starts_at, ends_at, flyer_url, rules_text"
+          )
+          .eq("is_active", true)
+          .lte("starts_at", now)
+          .gte("ends_at", now)
+          .maybeSingle(),
+
+        supabase
+          .from("bartenders")
+          .select("id, slug, display_name")
+          .eq("status", "active"),
+
+        supabase
+          .from("bartender_venues")
+          .select(`
+            bartender_id,
+            is_primary,
+            venues(
+              name
             )
-            .eq("is_active", true)
-            .lte("starts_at", now)
-            .gte("ends_at", now)
-            .maybeSingle(),
+          `)
+          .eq("is_current", true),
 
-          supabase
-            .from("bartenders")
-            .select("id, slug, display_name")
-            .eq("status", "active"),
-
-          supabase
-            .from("shoutouts")
-            .select("id, bartender_id")
-            .eq("status", "published"),
-        ]);
+        supabase.rpc("public_active_contest_leaderboard"),
+      ]);
 
       if (contestResult.error) {
         console.error("Contest:", contestResult.error);
@@ -65,39 +78,114 @@ export default function ContestPage() {
       }
 
       if (bartenderResult.error) {
-        console.error("Contest Tenders:", bartenderResult.error);
+        console.error(
+          "Contest Tenders:",
+          bartenderResult.error
+        );
         setLoading(false);
         return;
       }
 
-      if (shoutResult.error) {
-        console.error("Contest Shouts:", shoutResult.error);
-      }
-
-      setContest(contestResult.data as Contest | null);
-
-      const shoutCounts = new Map<string, number>();
-
-      for (const shout of shoutResult.data ?? []) {
-        shoutCounts.set(
-          shout.bartender_id,
-          (shoutCounts.get(shout.bartender_id) ?? 0) + 1
+      if (venueResult.error) {
+        console.error(
+          "Contest Tender Spots:",
+          venueResult.error
         );
       }
 
-      const ranked: ContestTender[] = (bartenderResult.data ?? [])
-        .map((tender) => ({
-          id: tender.id,
-          slug: tender.slug,
-          name: tender.display_name,
-          cheers: shoutCounts.get(tender.id) ?? 0,
-        }))
-        .sort(
+      if (leaderboardResult.error) {
+        console.error(
+          "Contest leaderboard:",
+          leaderboardResult.error
+        );
+      }
+
+      const activeContest =
+        contestResult.data as Contest | null;
+
+      setContest(activeContest);
+
+      if (!activeContest) {
+        setLeaders([]);
+        setLoading(false);
+        return;
+      }
+
+      const entryCounts = new Map<string, number>();
+
+      for (const row of leaderboardResult.data ?? []) {
+        if (row.contest_id !== activeContest.id) continue;
+
+        entryCounts.set(
+          row.bartender_id,
+          Number(row.entry_count ?? 0)
+        );
+      }
+
+      const venueMap = new Map<
+        string,
+        {
+          name: string;
+          isPrimary: boolean;
+        }[]
+      >();
+
+      for (const row of venueResult.data ?? []) {
+        const venueData = (row as any).venues;
+
+        const venue = Array.isArray(venueData)
+          ? venueData[0]
+          : venueData;
+
+        if (!venue) continue;
+
+        const current =
+          venueMap.get(row.bartender_id) ?? [];
+
+        current.push({
+          name: venue.name,
+          isPrimary: Boolean(
+            (row as any).is_primary
+          ),
+        });
+
+        venueMap.set(
+          row.bartender_id,
+          current
+        );
+      }
+
+      for (const [, spots] of venueMap) {
+        spots.sort(
           (a, b) =>
-            b.cheers - a.cheers ||
-            a.name.localeCompare(b.name)
-        )
-        .slice(0, 5);
+            Number(b.isPrimary) -
+            Number(a.isPrimary)
+        );
+      }
+
+      const ranked: ContestTender[] =
+        (bartenderResult.data ?? [])
+          .map((tender) => ({
+            id: tender.id,
+            slug: tender.slug,
+            name: tender.display_name,
+            spotName:
+              venueMap.get(tender.id)?.[0]?.name ??
+              "TenderFans",
+            entries:
+              entryCounts.get(tender.id) ?? 0,
+          }))
+          /*
+           * Do not put zero-entry Tenders onto the public
+           * contest leaderboard.
+           */
+          .filter((tender) => tender.entries > 0)
+          .sort(
+            (a, b) =>
+              b.entries - a.entries ||
+              a.name.localeCompare(b.name)
+          )
+          .slice(0, 5);
 
       setLeaders(ranked);
       setLoading(false);
@@ -109,7 +197,9 @@ export default function ContestPage() {
   if (loading) {
     return (
       <main className="contest-public-page">
-        <p className="contest-loading">Loading contest...</p>
+        <p className="contest-loading">
+          Loading contest...
+        </p>
       </main>
     );
   }
@@ -118,8 +208,12 @@ export default function ContestPage() {
     return (
       <main className="contest-public-page">
         <div className="contest-empty">
-          <div className="eyebrow">TenderFans Contest</div>
+          <div className="eyebrow">
+            TenderFans Contest
+          </div>
+
           <h1>No contest is active right now.</h1>
+
           <Link className="btn primary" href="/">
             Return to TenderFans
           </Link>
@@ -153,8 +247,7 @@ export default function ContestPage() {
                 </span>
 
                 <span className="contest-leader-count">
-                  {tender.cheers.toLocaleString()}{" "}
-                  {tender.cheers === 1 ? "Shout" : "Shouts"}
+                  {tender.spotName}
                 </span>
               </Link>
             ) : (
@@ -211,7 +304,9 @@ export default function ContestPage() {
               ×
             </button>
 
-            <div className="eyebrow">TenderFans Contest</div>
+            <div className="eyebrow">
+              TenderFans Contest
+            </div>
 
             <h2 id="contest-details-title">
               {contest.title}
@@ -223,8 +318,13 @@ export default function ContestPage() {
 
             <p>
               Contest period:{" "}
-              {new Date(contest.starts_at).toLocaleDateString()} through{" "}
-              {new Date(contest.ends_at).toLocaleDateString()}.
+              {new Date(
+                contest.starts_at
+              ).toLocaleDateString()}{" "}
+              through{" "}
+              {new Date(
+                contest.ends_at
+              ).toLocaleDateString()}.
             </p>
 
             {contest.rules_text && (
@@ -234,10 +334,10 @@ export default function ContestPage() {
             )}
 
             <div className="privacy-note">
-              TenderFans may remove duplicate, automated, fraudulent,
-              manipulated or otherwise ineligible Shouts from contest
-              totals. Final results are subject to review before a winner
-              is certified.
+              TenderFans may remove duplicate, automated,
+              fraudulent, manipulated or otherwise ineligible
+              Shouts from contest totals. Final results are
+              subject to review before a winner is certified.
             </div>
 
             <button
