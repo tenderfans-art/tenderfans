@@ -2906,8 +2906,8 @@
 
 .contest-details-modal{
   position:relative;
-  width:min(700px,100%);
-  max-height:88vh;
+  width:min(860px,100%);
+  max-height:90vh;
   overflow:auto;
   background:#fff;
   color:var(--ink);
@@ -2940,6 +2940,174 @@
   margin:22px 0;
 }
 
+.contest-info-center{
+  padding:34px 38px;
+}
+
+.contest-info-period{
+  color:#697177;
+  font-size:.88rem;
+  font-weight:700;
+  margin:-4px 0 22px;
+}
+
+.contest-info-tabs{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin:0 0 26px;
+  padding:6px;
+  background:#f3f0e8;
+  border:1px solid #d7d1c6;
+  border-radius:14px;
+}
+
+.contest-info-tab{
+  border:0;
+  border-radius:10px;
+  padding:12px 10px;
+  background:transparent;
+  color:#697177;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:900;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+
+.contest-info-tab.active{
+  background:#172735;
+  color:#fff;
+  box-shadow:0 4px 12px rgba(23,39,53,.18);
+}
+
+.contest-info-content{
+  min-height:360px;
+  line-height:1.65;
+}
+
+.contest-info-content h3{
+  font-family:Georgia,serif;
+  font-size:1.7rem;
+  margin:0 0 16px;
+}
+
+.contest-info-content h4{
+  color:#172735;
+  font-size:1rem;
+  margin:0 0 6px;
+}
+
+.contest-info-content p{
+  margin:0 0 14px;
+}
+
+.contest-info-callout{
+  margin:20px 0;
+  padding:16px 18px;
+  border-left:4px solid #172735;
+  background:#f7f5ef;
+  border-radius:0 12px 12px 0;
+}
+
+.contest-info-callout p{
+  margin:5px 0 0;
+}
+
+.contest-prize-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin:22px 0;
+}
+
+.contest-prize-grid > div{
+  display:grid;
+  gap:3px;
+  padding:15px;
+  border:1px solid #d7d1c6;
+  border-radius:14px;
+  background:#faf9f5;
+}
+
+.contest-prize-grid span{
+  color:#697177;
+  font-size:.78rem;
+  font-weight:800;
+}
+
+.contest-prize-grid strong{
+  color:#172735;
+}
+
+.contest-prize-grid small{
+  color:#697177;
+}
+
+.contest-info-special-note{
+  margin-top:22px;
+  padding:16px 18px;
+  border:1px solid #d7d1c6;
+  border-radius:14px;
+  background:#faf9f5;
+}
+
+.contest-info-special-note > div{
+  white-space:pre-wrap;
+  margin-top:7px;
+}
+
+.contest-rules-sections section,
+.contest-disclaimer-sections section{
+  padding:16px 0;
+  border-top:1px solid #e4dfd5;
+}
+
+.contest-rules-sections section:first-of-type,
+.contest-disclaimer-sections section:first-of-type{
+  border-top:0;
+  padding-top:0;
+}
+
+.contest-rules-sections ul{
+  margin:8px 0 14px;
+  padding-left:22px;
+}
+
+.contest-info-footer{
+  margin-top:26px;
+  padding-top:20px;
+  border-top:1px solid #d7d1c6;
+  display:flex;
+  justify-content:flex-end;
+}
+
+
+@media(max-width:700px){
+  .contest-info-center{
+    padding:28px 18px 22px;
+  }
+
+  .contest-info-tabs{
+    gap:5px;
+    padding:5px;
+  }
+
+  .contest-info-tab{
+    padding:10px 5px;
+    font-size:.66rem;
+    letter-spacing:.025em;
+  }
+
+  .contest-prize-grid{
+    grid-template-columns:1fr;
+  }
+
+  .contest-info-content{
+    min-height:0;
+  }
+}
 
 /* Keep entire flyer visible on small screens. */
 @media(max-width:900px){

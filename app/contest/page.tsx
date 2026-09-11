@@ -38,6 +38,9 @@ export default function ContestPage() {
   const [leaders, setLeaders] = useState<ContestTender[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
+  const [contestInfoTab, setContestInfoTab] = useState<
+    "details" | "rules" | "disclaimers"
+  >("details");
   const [contestUrl, setContestUrl] = useState("");
 
   useEffect(() => {
@@ -302,7 +305,7 @@ export default function ContestPage() {
           onClick={() => setShowDetails(false)}
         >
           <section
-            className="contest-details-modal"
+            className="contest-details-modal contest-info-center"
             role="dialog"
             aria-modal="true"
             aria-labelledby="contest-details-title"
@@ -312,56 +315,635 @@ export default function ContestPage() {
               type="button"
               className="contest-details-close"
               onClick={() => setShowDetails(false)}
-              aria-label="Close contest details"
+              aria-label="Close contest information"
             >
               ×
             </button>
 
             <div className="eyebrow">
-              TenderFans Contest
+              TENDERFANS CONTEST
             </div>
 
             <h2 id="contest-details-title">
               {contest.title}
             </h2>
 
-            <p>
-              <strong>{contest.prize_text}</strong>
-            </p>
-
-            <p>
-              Contest period:{" "}
+            <div
+              className="contest-info-period"
+            >
               {new Date(
                 contest.starts_at
               ).toLocaleDateString()}{" "}
               through{" "}
               {new Date(
                 contest.ends_at
-              ).toLocaleDateString()}.
-            </p>
-
-            {contest.rules_text && (
-              <div className="contest-rules-copy">
-                {contest.rules_text}
-              </div>
-            )}
-
-            <div className="privacy-note">
-              TenderFans may remove duplicate, automated,
-              fraudulent, manipulated or otherwise ineligible
-              Shouts from contest totals. Final results are
-              subject to review before a winner is certified.
+              ).toLocaleDateString()}
             </div>
 
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => setShowDetails(false)}
+            <div
+              className="contest-info-tabs"
+              role="tablist"
+              aria-label="Contest information"
             >
-              Back to Contest
-            </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={
+                  contestInfoTab === "details"
+                }
+                className={
+                  contestInfoTab === "details"
+                    ? "contest-info-tab active"
+                    : "contest-info-tab"
+                }
+                onClick={() =>
+                  setContestInfoTab("details")
+                }
+              >
+                Details
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={
+                  contestInfoTab === "rules"
+                }
+                className={
+                  contestInfoTab === "rules"
+                    ? "contest-info-tab active"
+                    : "contest-info-tab"
+                }
+                onClick={() =>
+                  setContestInfoTab("rules")
+                }
+              >
+                Official Rules
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={
+                  contestInfoTab === "disclaimers"
+                }
+                className={
+                  contestInfoTab === "disclaimers"
+                    ? "contest-info-tab active"
+                    : "contest-info-tab"
+                }
+                onClick={() =>
+                  setContestInfoTab("disclaimers")
+                }
+              >
+                Disclaimers
+              </button>
+            </div>
+
+            <div className="contest-info-content">
+              {contestInfoTab === "details" && (
+                <div>
+                  <h3>How TenderFans Contests Work</h3>
+
+                  <p>
+                    TenderFans contests celebrate the
+                    hospitality professionals who make our
+                    favorite Spots worth coming back to.
+                  </p>
+
+                  <p>
+                    Give a participating Tender a Shout during
+                    the Contest Period. To create a qualifying
+                    Contest Entry, you&apos;ll verify your mobile
+                    number and accept the contest terms.
+                  </p>
+
+                  <div className="contest-info-callout">
+                    <strong>Entry Limit</strong>
+
+                    <p>
+                      One verified participant may submit one
+                      qualifying Contest Entry for the same Tender
+                      every 7 days. You may support different
+                      Tenders during that same period.
+                    </p>
+                  </div>
+
+                  <p>
+                    Rankings are based only on qualifying Contest
+                    Entries associated with the current contest.
+                    A Tender&apos;s lifetime TenderFans Shout total
+                    is separate and does not determine contest
+                    standings.
+                  </p>
+
+                  <div className="contest-prize-grid">
+                    <div>
+                      <span>🥇 1st Place</span>
+                      <strong>$750 cash</strong>
+                    </div>
+
+                    <div>
+                      <span>🥈 2nd Place</span>
+                      <strong>$250 cash</strong>
+                    </div>
+
+                    <div>
+                      <span>🥉 3rd Place</span>
+                      <strong>
+                        TenderFans Swag Bag
+                      </strong>
+                      <small>ARV $150</small>
+                    </div>
+                  </div>
+
+                  <p>
+                    No purchase is necessary. Joining TenderFans
+                    marketing messages is optional and does not
+                    affect your ability to participate or the value
+                    of your Shout.
+                  </p>
+
+                  <p>
+                    Current standings are unofficial until
+                    TenderFans reviews and certifies the final
+                    results.
+                  </p>
+
+                  {contest.rules_text && (
+                    <div className="contest-info-special-note">
+                      <strong>
+                        Special Contest Notes
+                      </strong>
+
+                      <div>
+                        {contest.rules_text}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {contestInfoTab === "rules" && (
+                <div className="contest-rules-sections">
+                  <h3>Official Rules</h3>
+
+                  <section>
+                    <h4>1. Sponsor</h4>
+                    <p>
+                      The Contest is sponsored and administered
+                      by TenderFans LLC, a Florida limited
+                      liability company (&quot;TenderFans&quot;
+                      or &quot;Sponsor&quot;).
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>2. Eligibility</h4>
+                    <p>
+                      Participation is open to legal residents of
+                      the United States who are 18 years of age
+                      or older at the time of entry.
+                    </p>
+
+                    <p>
+                      A prize-winning Tender must also be at least
+                      18 years old, be legally eligible to receive
+                      the applicable prize, and provide information
+                      reasonably required by TenderFans to verify
+                      identity, eligibility, and satisfy applicable
+                      tax or reporting requirements. Void where
+                      prohibited by law.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>3. Contest Period</h4>
+                    <p>
+                      This Contest runs from{" "}
+                      <strong>
+                        {new Date(
+                          contest.starts_at
+                        ).toLocaleString()}
+                      </strong>{" "}
+                      through{" "}
+                      <strong>
+                        {new Date(
+                          contest.ends_at
+                        ).toLocaleString()}
+                      </strong>.
+                    </p>
+
+                    <p>
+                      Entries received outside the Contest Period
+                      do not qualify except during an officially
+                      announced overtime period.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>4. How to Participate</h4>
+                    <p>
+                      No purchase is necessary. A participant
+                      selects an eligible Tender, completes
+                      TenderFans&apos; mobile-number verification,
+                      accepts the contest terms, and submits a
+                      Shout. A successfully verified and eligible
+                      submission creates a qualifying Contest
+                      Entry.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>5. Entry Limit</h4>
+                    <p>
+                      A verified participant may submit one
+                      qualifying Contest Entry for the same Tender
+                      during each rolling 7-day period.
+                    </p>
+
+                    <p>
+                      A participant may submit qualifying entries
+                      for different Tenders during that same
+                      period.
+                    </p>
+
+                    <p>
+                      Attempts to circumvent this restriction
+                      through additional numbers, automated
+                      systems, fabricated identities, or other
+                      means may result in disqualification of
+                      affected entries.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>6. Eligible Tenders</h4>
+                    <p>
+                      A Tender must represent a genuine hospitality
+                      professional associated with a legitimate
+                      Spot or hospitality establishment and
+                      otherwise satisfy TenderFans&apos;
+                      eligibility requirements.
+                    </p>
+
+                    <p>
+                      A Tender does not need to own, claim, or
+                      administer a TenderFans profile to receive
+                      qualifying Contest Entries.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>7. Scoring and Standings</h4>
+                    <p>
+                      Rankings are determined by the number of
+                      qualifying Contest Entries received by each
+                      Tender for the applicable contest.
+                    </p>
+
+                    <p>
+                      Lifetime TenderFans Shout totals are separate
+                      and do not determine contest standings.
+                      Public standings are preliminary and subject
+                      to verification.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>8. Standard Prizes</h4>
+                    <p>
+                      Subject to the tie provisions below:
+                    </p>
+
+                    <ul>
+                      <li>
+                        First Place: $750 cash.
+                      </li>
+                      <li>
+                        Second Place: $250 cash.
+                      </li>
+                      <li>
+                        Third Place: one TenderFans Swag Bag,
+                        ARV $150.
+                      </li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <h4>9. First-Place Overtime</h4>
+                    <p>
+                      If two or more Tenders are tied for first
+                      place when the scheduled Contest Period ends,
+                      the Tenders tied for first enter a 48-hour
+                      overtime period.
+                    </p>
+
+                    <p>
+                      Existing contest totals carry forward.
+                      Qualifying Contest Entries continue to
+                      accumulate under the same entry restrictions,
+                      including the rolling 7-day limit.
+                    </p>
+
+                    <p>
+                      If the tie is broken during overtime, final
+                      first- and second-place awards are determined
+                      by the resulting standings.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>
+                      10. First-Place Tie Remaining After Overtime
+                    </h4>
+
+                    <p>
+                      If a first-place tie remains when the 48-hour
+                      overtime period expires, the Tenders
+                      remaining tied for first will divide the
+                      $1,000 cash prize pool equally.
+                    </p>
+
+                    <p>
+                      The next-ranked Tender will receive a
+                      TenderFans Swag Bag. If multiple Tenders are
+                      tied at that next position, each will receive
+                      a Swag Bag.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>11. Other Ties</h4>
+
+                    <p>
+                      If first place is undisputed and exactly two
+                      Tenders tie for second place, each receives
+                      $125 cash and each receives a TenderFans
+                      Swag Bag.
+                    </p>
+
+                    <p>
+                      If first place is undisputed and three or
+                      more Tenders tie for second place, each
+                      Tender tied for second will receive a
+                      TenderFans Swag Bag in lieu of the $250
+                      second-place cash prize.
+                    </p>
+
+                    <p>
+                      If first and second places are undisputed and
+                      multiple Tenders tie for third place, each
+                      Tender tied for third will receive a
+                      TenderFans Swag Bag.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>12. Winner Verification</h4>
+                    <p>
+                      Results are not final until reviewed and
+                      certified by TenderFans. Potential winners
+                      may be required to verify identity, age,
+                      eligibility, and other information reasonably
+                      necessary to award a prize.
+                    </p>
+
+                    <p>
+                      Failure to provide requested information
+                      within a reasonable period specified by
+                      TenderFans may result in forfeiture, subject
+                      to applicable law.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>13. Fraud, Manipulation and Abuse</h4>
+                    <p>
+                      Automated entries, bots, fabricated
+                      identities, unauthorized use of another
+                      person&apos;s mobile number, coordinated
+                      manipulation, attempts to circumvent entry
+                      limits, or other fraudulent or abusive
+                      activity are prohibited.
+                    </p>
+
+                    <p>
+                      TenderFans may investigate and exclude
+                      entries reasonably determined to violate
+                      these Official Rules. Entries will not be
+                      arbitrarily removed.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>14. Technical Problems</h4>
+                    <p>
+                      TenderFans is not responsible for entries
+                      that cannot be completed because of network
+                      outages, telecommunications failures,
+                      corrupted transmissions, service-provider
+                      failures, or other technical conditions
+                      outside TenderFans&apos; reasonable control.
+                    </p>
+
+                    <p>
+                      TenderFans may suspend, extend, modify, or
+                      cancel a contest when fraud, technical
+                      failure, force majeure, or another
+                      circumstance materially compromises the
+                      integrity or operation of the contest,
+                      subject to applicable law.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>15. Taxes and Prize Conditions</h4>
+                    <p>
+                      Winners are responsible for taxes, fees, or
+                      other obligations associated with receipt of
+                      a prize.
+                    </p>
+
+                    <p>
+                      Cash prizes will be paid using a method
+                      selected by TenderFans after winner
+                      verification. Prizes are nontransferable
+                      before award except as expressly permitted by
+                      TenderFans.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>16. Publicity</h4>
+                    <p>
+                      Where permitted by law, winners agree that
+                      TenderFans may identify their Tender name,
+                      TenderFans profile, associated Spot,
+                      placement, and prize in TenderFans&apos;
+                      website, social media, and contest-related
+                      promotional materials without additional
+                      compensation.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>17. Privacy</h4>
+                    <p>
+                      Mobile-number verification information may be
+                      used to administer the contest, verify
+                      participation, enforce entry limits,
+                      investigate abuse, and maintain contest
+                      integrity.
+                    </p>
+
+                    <p>
+                      Promotional SMS enrollment is separate,
+                      optional, and is not required to participate.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>18. Governing Law</h4>
+                    <p>
+                      The Contest and these Official Rules are
+                      governed by applicable federal law and the
+                      laws of the State of Florida, without regard
+                      to conflict-of-law principles.
+                    </p>
+
+                    <p>
+                      Any dispute shall be handled in an
+                      appropriate court having jurisdiction in
+                      Florida unless applicable law requires
+                      otherwise.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>19. Sponsor Decisions</h4>
+                    <p>
+                      TenderFans&apos; good-faith determinations
+                      regarding eligibility, qualifying entries,
+                      standings, and application of these Official
+                      Rules are final to the extent permitted by
+                      law.
+                    </p>
+                  </section>
+                </div>
+              )}
+
+              {contestInfoTab === "disclaimers" && (
+                <div className="contest-disclaimer-sections">
+                  <h3>
+                    Important Disclosures
+                  </h3>
+
+                  <section>
+                    <h4>No Purchase Necessary</h4>
+
+                    <p>
+                      Making a purchase, creating a paid
+                      relationship with TenderFans, or opting into
+                      promotional messages does not improve a
+                      participant&apos;s chances or give a Tender
+                      additional contest credit.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>
+                      Contest Verification and Marketing Are Separate
+                    </h4>
+
+                    <p>
+                      A mobile number submitted solely for contest
+                      verification is used for contest
+                      administration, eligibility enforcement, and
+                      integrity purposes.
+                    </p>
+
+                    <p>
+                      It is not enrolled in TenderFans promotional
+                      SMS marketing unless the participant
+                      separately and affirmatively opts in.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>Optional SMS Marketing</h4>
+
+                    <p>
+                      If you separately consent to TenderFans
+                      marketing texts, you agree to receive
+                      promotional SMS messages from TenderFans at
+                      the number provided.
+                    </p>
+
+                    <p>
+                      Consent is not a condition of contest
+                      participation. Message frequency may vary.
+                      Message and data rates may apply. You may
+                      withdraw consent, including by replying STOP
+                      to a TenderFans marketing message.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>Leaderboard Disclaimer</h4>
+
+                    <p>
+                      Public leaderboard standings are unofficial
+                      and may change as qualifying entries are
+                      received, reviewed, or determined to be
+                      ineligible.
+                    </p>
+
+                    <p>
+                      Final winners are established only after
+                      TenderFans certifies the results.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>Independent Establishments</h4>
+
+                    <p>
+                      A Tender&apos;s association with a bar,
+                      restaurant, venue, or other Spot does not
+                      mean that establishment sponsors,
+                      administers, endorses, or is affiliated with
+                      the Contest unless TenderFans expressly
+                      states otherwise.
+                    </p>
+                  </section>
+
+                  <section>
+                    <h4>TenderFans Administration</h4>
+
+                    <p>
+                      TenderFans may investigate suspected fraud
+                      or manipulation and apply the Official Rules
+                      to protect participants and the integrity of
+                      the Contest.
+                    </p>
+                  </section>
+                </div>
+              )}
+            </div>
+
+            <div className="contest-info-footer">
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => setShowDetails(false)}
+              >
+                Back to Contest
+              </button>
+            </div>
           </section>
         </div>
+      )}
       )}
     </main>
   );
