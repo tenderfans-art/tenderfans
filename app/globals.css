@@ -2969,17 +2969,22 @@
 .tender-profile-heading-row{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  gap:20px;
+  justify-content:flex-start;
+  gap:24px;
 }
 
 .tender-profile-heading-row .profile-title-actions{
   min-width:0;
+  flex:0 1 auto;
 }
 
 .tender-profile-heading-row .tender-cheers-inline{
-  margin:0 0 0 auto;
+  margin:0;
   flex:0 0 auto;
+}
+
+.tender-profile-copy .tender-current-spots{
+  margin-top:8px;
 }
 
 .tender-about{
