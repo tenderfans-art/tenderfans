@@ -3327,17 +3327,3 @@
 }
 
 
-/* Give-a-Shout Tender search result alignment */
-.shout-tender-result-name-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-start !important;
-  gap: 6px;
-  width: 100%;
-}
-
-.shout-tender-result-name-row .shout-tender-result-type {
-  margin-left: 0 !important;
-  width: auto !important;
-  flex: 0 0 auto;
-}
