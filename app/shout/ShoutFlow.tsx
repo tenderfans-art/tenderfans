@@ -23,6 +23,14 @@ export default function ShoutFlow({
   const [liveVenues, setLiveVenues] = useState<any[]>([]);
   const [liveBartenders, setLiveBartenders] = useState<any[]>([]);
   const [googleVenue, setGoogleVenue] = useState<any>(null);
+
+  const [contestPhone, setContestPhone] = useState("");
+  const [contestCode, setContestCode] = useState("");
+  const [contestChallengeId, setContestChallengeId] = useState("");
+  const [contestPendingVoice, setContestPendingVoice] = useState("");
+  const [contestMessage, setContestMessage] = useState("");
+  const [contestSubmitting, setContestSubmitting] = useState(false);
+  const [developmentCode, setDevelopmentCode] = useState("");
   useEffect(() => {
     const loadOptions = async () => {
       const { data: traitData } = await supabase.from("traits").select("label").eq("audience", "bartender").eq("active", true).order("id");
@@ -133,6 +141,202 @@ export default function ShoutFlow({
   const bartenderMatches = useMemo(() => liveBartenders.filter(b => b.display_name.toLowerCase().includes(bartenderQuery.toLowerCase())).slice(0,5), [liveBartenders, bartenderQuery]);
   const toggleTrait = (trait:string) => setTraits(current => current.includes(trait) ? current.filter(t=>t!==trait) : current.length < 5 ? [...current, trait] : current);
 
+  async function submitContestShout(
+    voiceOverride?: string
+  ) {
+    if (!selectedBartender || !selectedVenue) return false;
+
+    const voice =
+      voiceOverride ||
+      contestPendingVoice ||
+      (document.querySelector(
+        ".voice-row select"
+      ) as HTMLSelectElement | null)?.value ||
+      "";
+
+    if (!voice) {
+      setContestMessage("Select a Shout style.");
+      return false;
+    }
+
+    setContestPendingVoice(voice);
+    setContestSubmitting(true);
+    setContestMessage("");
+
+    try {
+      const response = await fetch("/api/contest/shout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bartenderId: selectedBartender.id,
+          venueId: selectedVenue.id,
+          voiceName: voice,
+          traits,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setContestSubmitting(false);
+        setStep(4);
+        return true;
+      }
+
+      if (result?.needsVerification) {
+        setContestSubmitting(false);
+        setStep(5);
+        return false;
+      }
+
+      if (result?.cooldown) {
+        let message =
+          result.error ||
+          "You already gave this Tender a contest Shout within the last 7 days.";
+
+        if (result.nextEligibleAt) {
+          const next = new Date(result.nextEligibleAt);
+
+          if (!Number.isNaN(next.getTime())) {
+            message += ` You can Shout this Tender again ${next.toLocaleString()}.`;
+          }
+        }
+
+        setContestMessage(message);
+        setContestSubmitting(false);
+        return false;
+      }
+
+      setContestMessage(
+        result?.error ||
+          "Could not save your contest Shout."
+      );
+      setContestSubmitting(false);
+      return false;
+    } catch (error) {
+      console.error("Contest Shout failed:", error);
+
+      setContestMessage(
+        "Could not save your contest Shout."
+      );
+      setContestSubmitting(false);
+      return false;
+    }
+  }
+
+  async function sendContestVerification() {
+    setContestSubmitting(true);
+    setContestMessage("");
+    setDevelopmentCode("");
+
+    try {
+      const response = await fetch(
+        "/api/contest/verification/send",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            phone: contestPhone,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setContestMessage(
+          result?.error ||
+            "Could not send the verification code."
+        );
+        setContestSubmitting(false);
+        return;
+      }
+
+      setContestChallengeId(result.challengeId);
+      setDevelopmentCode(
+        result.developmentCode || ""
+      );
+      setContestCode("");
+      setStep(6);
+      setContestSubmitting(false);
+    } catch (error) {
+      console.error(
+        "Contest verification send failed:",
+        error
+      );
+
+      setContestMessage(
+        "Could not send the verification code."
+      );
+      setContestSubmitting(false);
+    }
+  }
+
+  async function verifyContestPhone() {
+    if (!contestChallengeId) {
+      setContestMessage(
+        "Request a new verification code."
+      );
+      return;
+    }
+
+    setContestSubmitting(true);
+    setContestMessage("");
+
+    try {
+      const response = await fetch(
+        "/api/contest/verification/check",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            phone: contestPhone,
+            challengeId: contestChallengeId,
+            code: contestCode,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setContestMessage(
+          result?.error ||
+            "That verification code could not be confirmed."
+        );
+        setContestSubmitting(false);
+        return;
+      }
+
+      setContestSubmitting(false);
+
+      /*
+       * The successful verification response installs the
+       * HttpOnly contest cookie. Submit the pending Shout
+       * immediately using that newly verified identity.
+       */
+      await submitContestShout(
+        contestPendingVoice
+      );
+    } catch (error) {
+      console.error(
+        "Contest verification check failed:",
+        error
+      );
+
+      setContestMessage(
+        "Could not verify that phone number."
+      );
+      setContestSubmitting(false);
+    }
+  }
+
   return <div className="flow-card">
     {step === 1 && <div className="flow-step"><div className="eyebrow">Step 1</div><h1>Where do they work?</h1><p>We search TenderFans first. If the spot is new, the production version will fall through to Google Places to select the real business and address.</p><input className="field" value={venueQuery} onChange={e=>setVenueQuery(e.target.value)} placeholder="Start typing a bar, brewery or spot..."/>
       <div className="choice-list">{venueMatches.map(v => <button key={v.id} className={`choice ${venueId===v.id?"selected":""}`} onClick={()=>setVenueId(v.id)}><strong>{v.name}</strong><span>{[v.street_address, v.city, v.state_region].filter(Boolean).join(", ")}</span></button>)}</div>
@@ -179,7 +383,268 @@ export default function ShoutFlow({
       {bartenderQuery && !bartenderMatches.length && <div className="new-entity"><strong>No close match found.</strong><span>Create {bartenderQuery} as a Tender at {selectedVenue?.name}.</span><button className="btn secondary" onClick={async()=>{const { data, error } = await supabase.rpc("create_bartender_at_venue",{p_display_name: bartenderQuery,p_venue_id: venueId});if(error){console.error(error);return;}const { data:newBartender } = await supabase.from("bartenders").select("id, slug, display_name, status").eq("id",data).single();if(newBartender){setLiveBartenders(current=>[...current,newBartender]);setBartenderId(newBartender.id);}}}>Add this Tender</button></div>}
       <button className="btn primary" disabled={!bartenderId} onClick={()=>setStep(3)}>That's them</button>
     </div>}
-    {step === 3 && <div className="flow-step"><button className="back" onClick={()=>setStep(2)}>← Change tender</button><div className="eyebrow">Step 3</div><h1>What makes {selectedBartender?.name} great?</h1><p>Choose up to five. There is intentionally no public free-text review box.</p><div className="trait-grid">{liveTraits.map(t=><button className={`trait-button ${traits.includes(t)?"selected":""}`} key={t} onClick={()=>toggleTrait(t)}>{traits.includes(t)?"✓ ":""}{t}</button>)}</div><div className="voice-row"><label>Shout style</label><select className="field">{voices.map(v => <option key={v}>{v}</option>)}</select></div><button className="btn primary" disabled={!traits.length || !selectedBartender || !selectedVenue} onClick={async()=>{if(!selectedBartender||!selectedVenue)return;const voice=(document.querySelector(".voice-row select") as HTMLSelectElement)?.value??"";const{error}=await supabase.rpc("create_shoutout",{p_bartender_id:selectedBartender.id,p_venue_id:selectedVenue.id,p_voice_name:voice,p_traits:traits});if(error){console.error(error);alert("Could not save shoutout.");return;}setStep(4);}}>Give 'em a Shout</button></div>}
-    {step === 4 && <div className="success"><span className="success-mark">T</span><div className="eyebrow">Shout sent</div><h1>Props delivered.</h1><p>Your selections add to {selectedBartender?.display_name}&apos;s TenderFans profile.</p><Link href={`/t/${selectedBartender?.slug}`} className="btn primary">View their bio card</Link></div>}
+    {step === 3 && <div className="flow-step">
+      {!contestMode && (
+        <button className="back" onClick={()=>setStep(2)}>
+          ← Change tender
+        </button>
+      )}
+
+      <div className="eyebrow">
+        {contestMode ? "Contest Shout" : "Step 3"}
+      </div>
+
+      <h1>What makes {selectedBartender?.name} great?</h1>
+
+      <p>
+        Choose up to five. There is intentionally no public free-text review box.
+      </p>
+
+      <div className="trait-grid">
+        {liveTraits.map(t => (
+          <button
+            className={`trait-button ${traits.includes(t) ? "selected" : ""}`}
+            key={t}
+            onClick={()=>toggleTrait(t)}
+          >
+            {traits.includes(t) ? "✓ " : ""}{t}
+          </button>
+        ))}
+      </div>
+
+      <div className="voice-row">
+        <label>Shout style</label>
+        <select className="field">
+          {voices.map(v => <option key={v}>{v}</option>)}
+        </select>
+      </div>
+
+      <button
+        className="btn primary"
+        disabled={
+          !traits.length ||
+          !selectedBartender ||
+          !selectedVenue ||
+          contestSubmitting
+        }
+        onClick={async()=>{
+          if(!selectedBartender || !selectedVenue) return;
+
+          const voice =
+            (document.querySelector(
+              ".voice-row select"
+            ) as HTMLSelectElement)?.value ?? "";
+
+          if (contestMode) {
+            setContestPendingVoice(voice);
+            await submitContestShout(voice);
+            return;
+          }
+
+          const { error } = await supabase.rpc(
+            "create_shoutout",
+            {
+              p_bartender_id: selectedBartender.id,
+              p_venue_id: selectedVenue.id,
+              p_voice_name: voice,
+              p_traits: traits
+            }
+          );
+
+          if(error){
+            console.error(error);
+            alert("Could not save shoutout.");
+            return;
+          }
+
+          setStep(4);
+        }}
+      >
+        {contestSubmitting
+          ? "Submitting..."
+          : "Give 'em a Shout"}
+      </button>
+
+      {contestMode && contestMessage && (
+        <div
+          className="privacy-note"
+          style={{ marginTop: "14px" }}
+        >
+          {contestMessage}
+        </div>
+      )}
+    </div>}
+    {step === 4 && <div className="success">
+      <span className="success-mark">T</span>
+
+      <div className="eyebrow">
+        {contestMode ? "Contest Shout counted" : "Shout sent"}
+      </div>
+
+      <h1>Props delivered.</h1>
+
+      <p>
+        {contestMode
+          ? `Your verified Shout counts toward ${selectedBartender?.display_name}'s contest total.`
+          : `Your selections add to ${selectedBartender?.display_name}'s TenderFans profile.`}
+      </p>
+
+      <Link
+        href={`/t/${selectedBartender?.slug}`}
+        className="btn primary"
+      >
+        View their bio card
+      </Link>
+    </div>}
+    {contestMode && step === 5 && (
+      <div className="flow-step">
+        <button
+          className="back"
+          type="button"
+          onClick={() => {
+            setContestMessage("");
+            setStep(3);
+          }}
+        >
+          ← Back to Shout
+        </button>
+
+        <div className="eyebrow">Contest Verification</div>
+
+        <h1>Verify your Shout.</h1>
+
+        <p>
+          Enter your mobile number to verify this contest Shout.
+          No TenderFans account is required.
+        </p>
+
+        <label>
+          <strong>Mobile number</strong>
+
+          <input
+            className="field"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={contestPhone}
+            onChange={(e) =>
+              setContestPhone(e.target.value)
+            }
+            placeholder="(727) 555-1234"
+          />
+        </label>
+
+        <p
+          className="privacy-note"
+          style={{ marginTop: "12px" }}
+        >
+          Your number is used to verify contest participation.
+          Verifying a Shout does not sign you up for promotional
+          text messages.
+        </p>
+
+        {contestMessage && (
+          <div
+            className="privacy-note"
+            style={{ marginTop: "12px" }}
+          >
+            {contestMessage}
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="btn primary"
+          disabled={
+            !contestPhone.trim() ||
+            contestSubmitting
+          }
+          onClick={sendContestVerification}
+        >
+          {contestSubmitting
+            ? "Sending..."
+            : "Send Verification Code"}
+        </button>
+      </div>
+    )}
+
+    {contestMode && step === 6 && (
+      <div className="flow-step">
+        <button
+          className="back"
+          type="button"
+          onClick={() => {
+            setContestMessage("");
+            setContestCode("");
+            setStep(5);
+          }}
+        >
+          ← Change phone number
+        </button>
+
+        <div className="eyebrow">Contest Verification</div>
+
+        <h1>Enter your code.</h1>
+
+        <p>
+          Enter the 6-digit verification code sent to
+          your mobile number.
+        </p>
+
+        {developmentCode && (
+          <div
+            className="privacy-note"
+            style={{ marginBottom: "14px" }}
+          >
+            Development verification code:{" "}
+            <strong>{developmentCode}</strong>
+          </div>
+        )}
+
+        <label>
+          <strong>Verification code</strong>
+
+          <input
+            className="field"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={contestCode}
+            onChange={(e) =>
+              setContestCode(
+                e.target.value
+                  .replace(/\D/g, "")
+                  .slice(0, 6)
+              )
+            }
+            placeholder="000000"
+          />
+        </label>
+
+        {contestMessage && (
+          <div
+            className="privacy-note"
+            style={{ marginTop: "12px" }}
+          >
+            {contestMessage}
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="btn primary"
+          disabled={
+            contestCode.length !== 6 ||
+            contestSubmitting
+          }
+          onClick={verifyContestPhone}
+        >
+          {contestSubmitting
+            ? "Verifying..."
+            : "Verify & Count My Shout"}
+        </button>
+      </div>
+    )}
   </div>;
 }
