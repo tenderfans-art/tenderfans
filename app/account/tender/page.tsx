@@ -24,6 +24,13 @@ export default function TenderAccountPage() {
   const [message, setMessage] = useState("");
   const [contestUrl, setContestUrl] = useState("");
   const [contestActionMessage, setContestActionMessage] = useState("");
+
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [facebookHandle, setFacebookHandle] = useState("");
+  const [tiktokHandle, setTiktokHandle] = useState("");
+  const [socialTagConsent, setSocialTagConsent] = useState(false);
+  const [socialMessage, setSocialMessage] = useState("");
+
   const contestQrRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -68,6 +75,36 @@ export default function TenderAccountPage() {
       }
 
       setTender(bartender as TenderProfile);
+
+      const { data: socialRows, error: socialError } =
+        await supabase
+          .from("tender_social_permissions")
+          .select("platform, social_handle, tag_permission")
+          .eq("bartender_id", bartenderId);
+
+      if (socialError) {
+        setMessage(socialError.message);
+        setLoading(false);
+        return;
+      }
+
+      for (const row of socialRows ?? []) {
+        if (row.platform === "instagram") {
+          setInstagramHandle(row.social_handle ?? "");
+        }
+
+        if (row.platform === "facebook") {
+          setFacebookHandle(row.social_handle ?? "");
+        }
+
+        if (row.platform === "tiktok") {
+          setTiktokHandle(row.social_handle ?? "");
+        }
+
+        if (row.tag_permission === true) {
+          setSocialTagConsent(true);
+        }
+      }
 
       const { data: relationships, error: relationshipError } =
         await supabase
@@ -187,6 +224,92 @@ export default function TenderAccountPage() {
     link.href = pngUrl;
     link.download = `${tender.slug}-tenderfans-contest-qr.png`;
     link.click();
+  }
+
+  async function saveSocialPermissions() {
+    if (!tender) return;
+
+    setSocialMessage("");
+
+    const entries = [
+      {
+        platform: "instagram",
+        social_handle: instagramHandle.trim(),
+      },
+      {
+        platform: "facebook",
+        social_handle: facebookHandle.trim(),
+      },
+      {
+        platform: "tiktok",
+        social_handle: tiktokHandle.trim(),
+      },
+    ].filter((entry) => entry.social_handle);
+
+    if (entries.length === 0) {
+      setSocialMessage(
+        "Add at least one social account before saving."
+      );
+      return;
+    }
+
+    if (!socialTagConsent) {
+      setSocialMessage(
+        "Please confirm permission for TenderFans to tag the account(s) you provide."
+      );
+      return;
+    }
+
+    const consentedAt = new Date().toISOString();
+
+    const { error: deleteError } = await supabase
+      .from("tender_social_permissions")
+      .delete()
+      .eq("bartender_id", tender.id);
+
+    if (deleteError) {
+      setSocialMessage(deleteError.message);
+      return;
+    }
+
+    const { error: insertError } = await supabase
+      .from("tender_social_permissions")
+      .insert(
+        entries.map((entry) => ({
+          bartender_id: tender.id,
+          platform: entry.platform,
+          social_handle: entry.social_handle,
+          tag_permission: true,
+          consented_at: consentedAt,
+        }))
+      );
+
+    if (insertError) {
+      setSocialMessage(insertError.message);
+      return;
+    }
+
+    setSocialMessage("Social tagging preferences saved.");
+  }
+
+  async function removeSocialPermissions() {
+    if (!tender) return;
+
+    const { error } = await supabase
+      .from("tender_social_permissions")
+      .delete()
+      .eq("bartender_id", tender.id);
+
+    if (error) {
+      setSocialMessage(error.message);
+      return;
+    }
+
+    setInstagramHandle("");
+    setFacebookHandle("");
+    setTiktokHandle("");
+    setSocialTagConsent(false);
+    setSocialMessage("Social tagging permission removed.");
   }
 
   const cardStyle = {
@@ -488,6 +611,157 @@ export default function TenderAccountPage() {
                     </div>
                   </div>
                 )}
+
+                <div
+                  style={{
+                    marginTop: "28px",
+                    paddingTop: "24px",
+                    borderTop: "1px solid #d7d1c6",
+                  }}
+                >
+                  <div className="eyebrow">
+                    Social Sharing Permissions
+                  </div>
+
+                  <h3 style={{ margin: "6px 0 8px" }}>
+                    Let TenderFans tag you in contest promotions.
+                  </h3>
+
+                  <p
+                    style={{
+                      margin: "0 0 18px",
+                      color: "#697177",
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    Social account information is optional and private.
+                    It is used only by TenderFans staff for authorized
+                    social-media tagging and will never be displayed on
+                    your public Tender profile.
+                  </p>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: "12px",
+                    }}
+                  >
+                    <label>
+                      <strong>Instagram</strong>
+                      <input
+                        className="field"
+                        type="text"
+                        value={instagramHandle}
+                        onChange={(e) =>
+                          setInstagramHandle(e.target.value)
+                        }
+                        placeholder="@handle or profile URL"
+                      />
+                    </label>
+
+                    <label>
+                      <strong>Facebook</strong>
+                      <input
+                        className="field"
+                        type="text"
+                        value={facebookHandle}
+                        onChange={(e) =>
+                          setFacebookHandle(e.target.value)
+                        }
+                        placeholder="Profile or page URL"
+                      />
+                    </label>
+
+                    <label>
+                      <strong>TikTok</strong>
+                      <input
+                        className="field"
+                        type="text"
+                        value={tiktokHandle}
+                        onChange={(e) =>
+                          setTiktokHandle(e.target.value)
+                        }
+                        placeholder="@handle or profile URL"
+                      />
+                    </label>
+
+                    <label
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "flex-start",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={socialTagConsent}
+                        onChange={(e) =>
+                          setSocialTagConsent(e.target.checked)
+                        }
+                        style={{ marginTop: "4px" }}
+                      />
+
+                      <span>
+                        I give TenderFans permission to tag or mention the
+                        social account(s) I provide in TenderFans contest
+                        standings, Tender spotlights, milestones, winner
+                        announcements and other TenderFans promotional posts.
+                      </span>
+                    </label>
+
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.82rem",
+                        color: "#697177",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Providing social information is optional and is not
+                      required to participate in contests. You may remove
+                      your social information and revoke future tagging
+                      permission at any time.
+                    </p>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "10px",
+                        marginTop: "6px",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn primary"
+                        onClick={saveSocialPermissions}
+                      >
+                        Save Social Permissions
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn outline"
+                        onClick={removeSocialPermissions}
+                      >
+                        Remove Social Information
+                      </button>
+                    </div>
+
+                    {socialMessage && (
+                      <p
+                        style={{
+                          margin: "4px 0 0",
+                          color: "#697177",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        {socialMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </section>
           )}
