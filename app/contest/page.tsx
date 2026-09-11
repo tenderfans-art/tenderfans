@@ -944,7 +944,6 @@ export default function ContestPage() {
           </section>
         </div>
       )}
-      )}
     </main>
   );
 }
