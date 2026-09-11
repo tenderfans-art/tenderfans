@@ -45,3 +45,8 @@ using (
 -- Table-level SELECT privilege required before the Admin RLS policy
 -- can authorize individual rows.
 grant select on table public.contest_shout_entries to authenticated;
+
+-- Table-level privileges required before Admin RLS policies can
+-- authorize reads from the private contest tracker tables.
+grant select on table public.marketing_sms_subscribers to authenticated;
+grant select on table public.tender_social_permissions to authenticated;
