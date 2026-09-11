@@ -3544,3 +3544,14 @@
   }
 
 }
+
+.tender-profile-photo-preview-empty{
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,.035),
+      rgba(255,255,255,.075)
+    );
+  cursor:default;
+}
+

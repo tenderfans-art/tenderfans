@@ -45,12 +45,7 @@ export default function TenderProfilePhotos({
   return (
     <>
       <div
-        className={[
-          "tender-profile-photo-layout",
-          previewPhotos.length
-            ? "has-gallery"
-            : "no-gallery",
-        ].join(" ")}
+        className="tender-profile-photo-layout has-gallery"
       >
         <div className="tender-profile-photo-primary">
           {heroPhotoUrl ? (
@@ -66,39 +61,47 @@ export default function TenderProfilePhotos({
           )}
         </div>
 
-        {previewPhotos.length > 0 && (
-          <div className="tender-profile-photo-previews">
-            {previewPhotos.map((photo, index) => {
-              const isLast =
-                index === previewPhotos.length - 1;
+        <div className="tender-profile-photo-previews">
+          {Array.from({ length: 3 }).map((_, index) => {
+            const photo = previewPhotos[index];
 
+            if (!photo) {
               return (
-                <button
-                  type="button"
-                  className="tender-profile-photo-preview"
-                  key={photo.id}
-                  onClick={() => setGalleryOpen(true)}
-                  aria-label={`View ${tenderName} photo gallery`}
-                >
-                  <img
-                    src={photo.url}
-                    alt={`${tenderName} gallery photo ${
-                      index + 1
-                    }`}
-                  />
-
-                  {isLast && (
-                    <span className="tender-gallery-plus">
-                      {remainingCount > 0
-                        ? `+${remainingCount}`
-                        : "+"}
-                    </span>
-                  )}
-                </button>
+                <div
+                  className="tender-profile-photo-preview tender-profile-photo-preview-empty"
+                  key={`empty-${index}`}
+                  aria-hidden="true"
+                />
               );
-            })}
-          </div>
-        )}
+            }
+
+            const isLastVisible =
+              index === previewPhotos.length - 1;
+
+            return (
+              <button
+                type="button"
+                className="tender-profile-photo-preview"
+                key={photo.id}
+                onClick={() => setGalleryOpen(true)}
+                aria-label={`View ${tenderName} photo gallery`}
+              >
+                <img
+                  src={photo.url}
+                  alt={`${tenderName} gallery photo ${index + 1}`}
+                />
+
+                {isLastVisible && (
+                  <span className="tender-gallery-plus">
+                    {remainingCount > 0
+                      ? `+${remainingCount}`
+                      : "+"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {galleryOpen && (
