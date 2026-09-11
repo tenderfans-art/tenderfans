@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { QRCodeCanvas } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
 
 type TenderProfile = {
@@ -21,6 +22,9 @@ export default function TenderAccountPage() {
   const [spots, setSpots] = useState<(TenderSpot & { is_primary: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [contestUrl, setContestUrl] = useState("");
+  const [contestActionMessage, setContestActionMessage] = useState("");
+  const contestQrRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     async function loadTender() {
@@ -123,6 +127,67 @@ export default function TenderAccountPage() {
 
     loadTender();
   }, []);
+
+  useEffect(() => {
+    if (!tender) {
+      setContestUrl("");
+      return;
+    }
+
+    setContestUrl(
+      `${window.location.origin}/contest/t/${tender.slug}`
+    );
+  }, [tender]);
+
+  async function copyContestLink() {
+    if (!contestUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(contestUrl);
+      setContestActionMessage("Contest link copied.");
+    } catch {
+      setContestActionMessage(
+        "Could not copy automatically. You can copy the link above."
+      );
+    }
+  }
+
+  async function shareContestLink() {
+    if (!contestUrl || !tender) return;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${tender.display_name} on TenderFans`,
+          text: `Give ${tender.display_name} a Shout on TenderFans.`,
+          url: contestUrl,
+        });
+        return;
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+      }
+    }
+
+    await copyContestLink();
+  }
+
+  function downloadContestQr() {
+    const canvas = contestQrRef.current;
+
+    if (!canvas || !tender) return;
+
+    const pngUrl = canvas.toDataURL("image/png");
+
+    const link = document.createElement("a");
+    link.href = pngUrl;
+    link.download = `${tender.slug}-tenderfans-contest-qr.png`;
+    link.click();
+  }
 
   const cardStyle = {
     display: "block",
@@ -287,6 +352,142 @@ export default function TenderAccountPage() {
                     View public Tender page
                   </div>
                 </Link>
+
+                <a
+                  href="#contest-tools"
+                  style={cardStyle}
+                >
+                  <strong>Contest</strong>
+                  <div style={descriptionStyle}>
+                    QR code &amp; share tools
+                  </div>
+                </a>
+              </div>
+
+              <div
+                id="contest-tools"
+                style={{
+                  marginTop: "28px",
+                  padding: "24px",
+                  border: "1px solid #d7d1c6",
+                  borderRadius: "18px",
+                }}
+              >
+                <div className="eyebrow">Contest Tools</div>
+
+                <h2 style={{ margin: "6px 0 8px" }}>
+                  Share your TenderFans contest link.
+                </h2>
+
+                <p
+                  style={{
+                    margin: "0 0 20px",
+                    color: "#697177",
+                    lineHeight: 1.55,
+                  }}
+                >
+                  Your contest link and QR code are created automatically
+                  and can be reused for future TenderFans contests.
+                </p>
+
+                {contestUrl && (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "minmax(190px, 230px) minmax(0, 1fr)",
+                      gap: "24px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "#fff",
+                        border: "1px solid #d7d1c6",
+                        borderRadius: "16px",
+                        padding: "16px",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      <QRCodeCanvas
+                        ref={contestQrRef}
+                        value={contestUrl}
+                        size={200}
+                        marginSize={1}
+                      />
+                    </div>
+
+                    <div>
+                      <strong>Your permanent contest link</strong>
+
+                      <div
+                        style={{
+                          marginTop: "8px",
+                          padding: "12px 14px",
+                          border: "1px solid #d7d1c6",
+                          borderRadius: "10px",
+                          overflowWrap: "anywhere",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        {contestUrl}
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "10px",
+                          marginTop: "16px",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="btn primary"
+                          onClick={copyContestLink}
+                        >
+                          Copy Link
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn outline"
+                          onClick={shareContestLink}
+                        >
+                          Share
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn outline"
+                          onClick={downloadContestQr}
+                        >
+                          Download QR
+                        </button>
+
+                        <Link
+                          className="btn outline"
+                          href={`/contest/t/${tender.slug}`}
+                        >
+                          Open Contest Page
+                        </Link>
+                      </div>
+
+                      {contestActionMessage && (
+                        <p
+                          style={{
+                            margin: "12px 0 0",
+                            color: "#697177",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {contestActionMessage}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           )}
