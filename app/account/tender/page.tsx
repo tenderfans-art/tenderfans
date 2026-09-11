@@ -24,6 +24,7 @@ export default function TenderAccountPage() {
   const [message, setMessage] = useState("");
   const [contestUrl, setContestUrl] = useState("");
   const [contestActionMessage, setContestActionMessage] = useState("");
+  const [showContestTools, setShowContestTools] = useState(false);
 
   const [instagramHandle, setInstagramHandle] = useState("");
   const [facebookHandle, setFacebookHandle] = useState("");
@@ -476,17 +477,25 @@ export default function TenderAccountPage() {
                   </div>
                 </Link>
 
-                <a
-                  href="#contest-tools"
-                  style={cardStyle}
+                <button
+                  type="button"
+                  onClick={() => setShowContestTools(true)}
+                  style={{
+                    ...cardStyle,
+                    background: "#fff",
+                    font: "inherit",
+                    cursor: "pointer",
+                    width: "100%",
+                  }}
                 >
                   <strong>Contest</strong>
                   <div style={descriptionStyle}>
                     QR code &amp; share tools
                   </div>
-                </a>
+                </button>
               </div>
 
+              {showContestTools && (
               <div
                 id="contest-tools"
                 style={{
@@ -506,16 +515,14 @@ export default function TenderAccountPage() {
                 >
                   <div className="eyebrow">Contest Tools</div>
 
-                  <a
-                    href="#"
+                  <button
+                    type="button"
                     className="back"
-                    style={{
-                      padding: 0,
-                      textDecoration: "none",
-                    }}
+                    onClick={() => setShowContestTools(false)}
+                    style={{ padding: 0 }}
                   >
                     Close
-                  </a>
+                  </button>
                 </div>
 
                 <h2 style={{ margin: "6px 0 8px" }}>
@@ -783,6 +790,7 @@ export default function TenderAccountPage() {
                   </div>
                 </div>
               </div>
+              )}
             </section>
           )}
         </div>
