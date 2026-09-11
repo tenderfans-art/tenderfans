@@ -400,146 +400,195 @@ export default function TenderPhotoPage() {
 
           {!loading && allowed && (
             <>
-              {/* PROFILE PHOTO */}
-              <section>
-                <h2 style={{ marginBottom: "4px" }}>
-                  Profile Photo
-                </h2>
-
-                <p className="muted">
-                  Your primary image shown across TenderFans.
-                </p>
-
-                <div
-                  style={{
-                    width: "220px",
-                    height: "220px",
-                    margin: "24px auto",
-                    borderRadius: "18px",
-                    overflow: "hidden",
-                    background: "#eee8dc",
-                    display: "grid",
-                    placeItems: "center",
-                  }}
-                >
-                  {profilePhotoUrl ? (
-                    <img
-                      src={profilePhotoUrl}
-                      alt={displayName}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-                  ) : (
-                    <span
-                      style={{
-                        fontSize: "72px",
-                        fontWeight: 900,
-                      }}
-                    >
-                      {displayName?.[0] ?? "T"}
-                    </span>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "10px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <label
-                    className="btn primary"
-                    style={{
-                      cursor: uploadingProfile
-                        ? "default"
-                        : "pointer",
-                    }}
-                  >
-                    {uploadingProfile
-                      ? "Uploading..."
-                      : profilePhoto
-                        ? "Replace Photo"
-                        : "Upload Photo"}
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      disabled={uploadingProfile}
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-
-                        if (file) {
-                          handleProfileUpload(file);
-                        }
-
-                        e.currentTarget.value = "";
-                      }}
-                    />
-                  </label>
-
-                  {profilePhoto && (
-                    <button
-                      type="button"
-                      className="btn outline"
-                      disabled={uploadingProfile}
-                      onClick={handleDeleteProfile}
-                    >
-                      Remove Photo
-                    </button>
-                  )}
-                </div>
-              </section>
-
-              {/* GALLERY */}
-              <section
+              <div
                 style={{
-                  marginTop: "38px",
-                  paddingTop: "30px",
-                  borderTop: "1px solid #ded8cc",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "flex-start",
+                  gap: "42px",
+                  flexWrap: "wrap",
+                  marginTop: "28px",
                 }}
               >
-                <div
+                {/* PROFILE PHOTO */}
+                <section
                   style={{
-                    display: "flex",
-                    alignItems: "end",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    flexWrap: "wrap",
+                    width: "220px",
                   }}
                 >
-                  <div>
-                    <h2 style={{ marginBottom: "4px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: "8px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: "1.15rem",
+                      }}
+                    >
+                      Profile Photo
+                    </h2>
+                  </div>
+
+                  <div
+                    style={{
+                      width: "220px",
+                      height: "220px",
+                      borderRadius: "18px",
+                      overflow: "hidden",
+                      background: "#eee8dc",
+                      display: "grid",
+                      placeItems: "center",
+                    }}
+                  >
+                    {profilePhotoUrl ? (
+                      <img
+                        src={profilePhotoUrl}
+                        alt={displayName}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: "72px",
+                          fontWeight: 900,
+                        }}
+                      >
+                        {displayName?.[0] ?? "T"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                      marginTop: "14px",
+                    }}
+                  >
+                    <label
+                      className="btn primary"
+                      style={{
+                        cursor: uploadingProfile
+                          ? "default"
+                          : "pointer",
+                      }}
+                    >
+                      {uploadingProfile
+                        ? "Uploading..."
+                        : profilePhoto
+                          ? "Replace"
+                          : "Upload Photo"}
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingProfile}
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+
+                          if (file) {
+                            handleProfileUpload(file);
+                          }
+
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+
+                    {profilePhoto && (
+                      <button
+                        type="button"
+                        className="btn outline"
+                        disabled={uploadingProfile}
+                        onClick={handleDeleteProfile}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </section>
+
+                {/* GALLERY PHOTOS */}
+                <section
+                  style={{
+                    width: "220px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: "8px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: "1.15rem",
+                      }}
+                    >
                       Gallery Photos
                     </h2>
 
-                    <p className="muted" style={{ margin: 0 }}>
-                      Add up to six photos to your public Tender
-                      profile.
-                    </p>
+                    <strong
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "#697177",
+                      }}
+                    >
+                      {galleryPhotos.length}/{MAX_GALLERY_PHOTOS}
+                    </strong>
                   </div>
 
-                  <strong>
-                    {galleryPhotos.length}/{MAX_GALLERY_PHOTOS}
-                  </strong>
-                </div>
-
-                {galleryPhotos.length > 0 ? (
                   <div
                     style={{
+                      width: "220px",
+                      height: "220px",
                       display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(150px, 1fr))",
-                      gap: "12px",
-                      marginTop: "22px",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gridTemplateRows: "repeat(3, 1fr)",
+                      gap: "6px",
+                      padding: "6px",
+                      boxSizing: "border-box",
+                      borderRadius: "18px",
+                      border: "1px solid #ded8cc",
+                      background: "#eee8dc",
+                      overflow: "hidden",
                     }}
                   >
-                    {galleryPhotos.map((item) => {
+                    {Array.from({
+                      length: MAX_GALLERY_PHOTOS,
+                    }).map((_, index) => {
+                      const item = galleryPhotos[index];
+
+                      if (!item) {
+                        return (
+                          <div
+                            key={`empty-${index}`}
+                            style={{
+                              borderRadius: "9px",
+                              border:
+                                "1px dashed rgba(23,39,53,.18)",
+                              background:
+                                "rgba(255,255,255,.38)",
+                            }}
+                          />
+                        );
+                      }
+
                       const url = supabase.storage
                         .from("spot-media")
                         .getPublicUrl(item.storage_path)
@@ -549,10 +598,12 @@ export default function TenderPhotoPage() {
                         <div
                           key={item.id}
                           style={{
-                            border: "1px solid #ded8cc",
-                            borderRadius: "14px",
-                            padding: "8px",
-                            background: "#fff",
+                            position: "relative",
+                            minWidth: 0,
+                            minHeight: 0,
+                            borderRadius: "9px",
+                            overflow: "hidden",
+                            background: "#172735",
                           }}
                         >
                           <img
@@ -561,89 +612,107 @@ export default function TenderPhotoPage() {
                             style={{
                               display: "block",
                               width: "100%",
-                              aspectRatio: "1 / 1",
+                              height: "100%",
                               objectFit: "cover",
-                              borderRadius: "10px",
                             }}
                           />
 
                           <button
                             type="button"
-                            className="btn outline"
                             disabled={uploadingGallery}
                             onClick={() =>
                               handleDeleteGallery(item)
                             }
+                            aria-label="Remove gallery photo"
+                            title="Remove photo"
                             style={{
-                              width: "100%",
-                              marginTop: "8px",
+                              position: "absolute",
+                              top: "4px",
+                              right: "4px",
+                              width: "22px",
+                              height: "22px",
+                              padding: 0,
+                              borderRadius: "999px",
+                              border:
+                                "1px solid rgba(255,255,255,.7)",
+                              background:
+                                "rgba(5,21,31,.78)",
+                              color: "#fff",
+                              fontSize: "15px",
+                              fontWeight: 900,
+                              lineHeight: 1,
+                              display: "grid",
+                              placeItems: "center",
+                              cursor: uploadingGallery
+                                ? "default"
+                                : "pointer",
                             }}
                           >
-                            Remove
+                            ×
                           </button>
                         </div>
                       );
                     })}
                   </div>
-                ) : (
-                  <p
-                    className="muted"
-                    style={{ marginTop: "22px" }}
-                  >
-                    No gallery photos yet.
-                  </p>
-                )}
 
-                <div style={{ marginTop: "20px" }}>
-                  <label
-                    className={
-                      galleryPhotos.length >= MAX_GALLERY_PHOTOS
-                        ? "btn outline"
-                        : "btn primary"
-                    }
+                  <div
                     style={{
-                      cursor:
-                        uploadingGallery ||
-                        galleryPhotos.length >=
-                          MAX_GALLERY_PHOTOS
-                          ? "default"
-                          : "pointer",
-                      opacity:
-                        galleryPhotos.length >=
-                        MAX_GALLERY_PHOTOS
-                          ? 0.55
-                          : 1,
+                      display: "flex",
+                      justifyContent: "center",
+                      marginTop: "14px",
                     }}
                   >
-                    {uploadingGallery
-                      ? "Uploading..."
-                      : galleryPhotos.length >=
-                          MAX_GALLERY_PHOTOS
-                        ? "Gallery Full"
-                        : "Add Gallery Photo"}
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      disabled={
-                        uploadingGallery ||
+                    <label
+                      className={
                         galleryPhotos.length >=
-                          MAX_GALLERY_PHOTOS
+                        MAX_GALLERY_PHOTOS
+                          ? "btn outline"
+                          : "btn primary"
                       }
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-
-                        if (file) {
-                          handleGalleryUpload(file);
-                        }
-
-                        e.currentTarget.value = "";
+                      style={{
+                        cursor:
+                          uploadingGallery ||
+                          galleryPhotos.length >=
+                            MAX_GALLERY_PHOTOS
+                            ? "default"
+                            : "pointer",
+                        opacity:
+                          galleryPhotos.length >=
+                          MAX_GALLERY_PHOTOS
+                            ? 0.55
+                            : 1,
                       }}
-                    />
-                  </label>
-                </div>
-              </section>
+                    >
+                      {uploadingGallery
+                        ? "Uploading..."
+                        : galleryPhotos.length >=
+                            MAX_GALLERY_PHOTOS
+                          ? "Gallery Full"
+                          : "Add Gallery Photo"}
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={
+                          uploadingGallery ||
+                          galleryPhotos.length >=
+                            MAX_GALLERY_PHOTOS
+                        }
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+
+                          if (file) {
+                            handleGalleryUpload(file);
+                          }
+
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                </section>
+              </div>
 
               {message && (
                 <p
