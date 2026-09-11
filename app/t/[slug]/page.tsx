@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import NotificationSignup from "@/components/NotificationSignup";
+import TenderProfilePhotos from "@/components/TenderProfilePhotos";
 
 export async function generateMetadata({
   params,
@@ -202,6 +203,26 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
         .getPublicUrl(heroPhoto.storage_path).data.publicUrl
     : null;
 
+  const { data: galleryPhotoRows } = await supabase
+    .from("media_assets")
+    .select("id, storage_path, created_at")
+    .eq("entity_kind", "bartender")
+    .eq("bartender_id", bartender.id)
+    .eq("media_type", "photo")
+    .eq("is_hero", false)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  const galleryPhotos = (galleryPhotoRows ?? []).map(
+    (photo) => ({
+      id: photo.id,
+      url: supabase.storage
+        .from("spot-media")
+        .getPublicUrl(photo.storage_path).data.publicUrl,
+    })
+  );
+
   const { count: cheerCount } = await supabase
     .from("shoutouts")
     .select("id", { count: "exact", head: true })
@@ -277,17 +298,12 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
         <div className="tender-profile-main">
           <div className="tender-profile-media-column">
             <div className="tender-profile-visual">
-              {heroPhotoUrl ? (
-                <img
-                  src={heroPhotoUrl}
-                  alt={bartender.display_name}
-                  className="tender-profile-photo"
-                />
-              ) : (
-                <div className="photo-fallback tender-profile-fallback">
-                  {bartender.display_name[0]}
-                </div>
-              )}
+              <TenderProfilePhotos
+                tenderName={bartender.display_name}
+                fallbackInitial={bartender.display_name[0]}
+                heroPhotoUrl={heroPhotoUrl}
+                galleryPhotos={galleryPhotos}
+              />
             </div>
 
             <div className="tender-shout-action">

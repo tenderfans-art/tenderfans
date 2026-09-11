@@ -471,9 +471,9 @@ export default function TenderAccountPage() {
                   href={`/account/tender/${tender.id}/photo`}
                   style={cardStyle}
                 >
-                  <strong>Photo</strong>
+                  <strong>Photos</strong>
                   <div style={descriptionStyle}>
-                    Profile photo
+                    Profile &amp; gallery
                   </div>
                 </Link>
 
