@@ -16,11 +16,27 @@ export async function POST(request: Request) {
       body.phone
     );
 
+    const contestTermsAccepted =
+      body.contestTermsAccepted === true;
+
+    const marketingOptIn =
+      body.marketingOptIn === true;
+
     if (!phone) {
       return NextResponse.json(
         {
           error:
             "Enter a valid mobile phone number.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!contestTermsAccepted) {
+      return NextResponse.json(
+        {
+          error:
+            "Please confirm the contest verification notice before continuing.",
         },
         { status: 400 }
       );
@@ -192,6 +208,22 @@ export async function POST(request: Request) {
           attempt_count: 0,
           resend_count: 0,
           expires_at: expiresAt,
+
+          contest_terms_accepted_at:
+            new Date().toISOString(),
+          contest_terms_version:
+            "contest-verification-v1",
+
+          marketing_opt_in:
+            marketingOptIn,
+          marketing_consent_at:
+            marketingOptIn
+              ? new Date().toISOString()
+              : null,
+          marketing_consent_version:
+            marketingOptIn
+              ? "sms-marketing-v1"
+              : null,
         });
 
     if (insertError) {

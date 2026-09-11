@@ -25,6 +25,8 @@ export default function ShoutFlow({
   const [googleVenue, setGoogleVenue] = useState<any>(null);
 
   const [contestPhone, setContestPhone] = useState("");
+  const [contestTermsAccepted, setContestTermsAccepted] = useState(false);
+  const [marketingSmsConsent, setMarketingSmsConsent] = useState(false);
   const [contestCode, setContestCode] = useState("");
   const [contestChallengeId, setContestChallengeId] = useState("");
   const [contestPendingVoice, setContestPendingVoice] = useState("");
@@ -241,6 +243,8 @@ export default function ShoutFlow({
           },
           body: JSON.stringify({
             phone: contestPhone,
+            contestTermsAccepted,
+            marketingOptIn: marketingSmsConsent,
           }),
         }
       );
@@ -534,14 +538,79 @@ export default function ShoutFlow({
           />
         </label>
 
-        <p
+        <div
           className="privacy-note"
-          style={{ marginTop: "12px" }}
+          style={{
+            marginTop: "12px",
+            display: "grid",
+            gap: "14px",
+          }}
         >
-          Your number is used to verify contest participation.
-          Verifying a Shout does not sign you up for promotional
-          text messages.
-        </p>
+          <label
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "flex-start",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={contestTermsAccepted}
+              onChange={(e) =>
+                setContestTermsAccepted(e.target.checked)
+              }
+              style={{ marginTop: "4px" }}
+            />
+
+            <span>
+              <strong>Contest verification acknowledgment</strong>
+              <br />
+              I understand that my mobile number is being used
+              to verify contest participation and enforce
+              TenderFans contest eligibility rules.
+            </span>
+          </label>
+
+          <div
+            style={{
+              borderTop: "1px solid #d7d1c6",
+              paddingTop: "14px",
+            }}
+          >
+            <label
+              style={{
+                display: "flex",
+                gap: "10px",
+                alignItems: "flex-start",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={marketingSmsConsent}
+                onChange={(e) =>
+                  setMarketingSmsConsent(e.target.checked)
+                }
+                style={{ marginTop: "4px" }}
+              />
+
+              <span>
+                <strong>
+                  Yes, send me occasional TenderFans texts.
+                </strong>
+
+                <br />
+
+                I&apos;d like to receive texts about TenderFans
+                contests, local bars, events and promotions.
+                Message frequency varies. Message and data rates
+                may apply. Consent is optional and is not required
+                to participate in the contest.
+              </span>
+            </label>
+          </div>
+        </div>
 
         {contestMessage && (
           <div
@@ -557,6 +626,7 @@ export default function ShoutFlow({
           className="btn primary"
           disabled={
             !contestPhone.trim() ||
+            !contestTermsAccepted ||
             contestSubmitting
           }
           onClick={sendContestVerification}

@@ -84,7 +84,12 @@ export async function POST(request: Request) {
         code_hash,
         status,
         attempt_count,
-        expires_at
+        expires_at,
+        contest_terms_accepted_at,
+        contest_terms_version,
+        marketing_opt_in,
+        marketing_consent_at,
+        marketing_consent_version
       `)
       .eq("id", challengeId)
       .maybeSingle();
@@ -98,6 +103,16 @@ export async function POST(request: Request) {
         {
           error:
             "That verification request is not valid.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!challenge.contest_terms_accepted_at) {
+      return NextResponse.json(
+        {
+          error:
+            "Contest verification acknowledgment is required.",
         },
         { status: 400 }
       );
@@ -282,6 +297,53 @@ export async function POST(request: Request) {
 
     if (verifyError) {
       throw verifyError;
+    }
+
+    /*
+     * Store the RAW phone number only after:
+     *   1. explicit optional marketing consent, and
+     *   2. successful phone verification.
+     *
+     * Contest anti-cheat identity remains hashed separately.
+     */
+    if (challenge.marketing_opt_in === true) {
+      const consentedAt =
+        challenge.marketing_consent_at ||
+        verifiedAt;
+
+      const { error: marketingError } =
+        await adminSupabase
+          .from("marketing_sms_subscribers")
+          .upsert(
+            {
+              phone_e164: phone,
+              status: "active",
+              consented_at: consentedAt,
+              consent_source:
+                "contest_verification",
+              consent_version:
+                challenge.marketing_consent_version ||
+                "sms-marketing-v1",
+              verified_at: verifiedAt,
+              updated_at: verifiedAt,
+            },
+            {
+              onConflict: "phone_e164",
+            }
+          );
+
+      if (marketingError) {
+        console.error(
+          "SMS marketing consent storage failed:",
+          marketingError
+        );
+
+        /*
+         * Verification itself still succeeded.
+         * Marketing storage failure must never invalidate
+         * someone's contest participation.
+         */
+      }
     }
 
     const token =
