@@ -5,7 +5,11 @@ import { bartenders, venues } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
 import GooglePlacePicker from "@/components/GooglePlacePicker";
 
-export default function ShoutFlow() {
+export default function ShoutFlow({
+  initialTenderSlug,
+}: {
+  initialTenderSlug?: string;
+}) {
   const [step, setStep] = useState(1);
   const [venueQuery, setVenueQuery] = useState("");
   const [venueId, setVenueId] = useState("");
@@ -28,6 +32,73 @@ export default function ShoutFlow() {
     };
     loadOptions();
   }, []);
+
+  useEffect(() => {
+    if (!initialTenderSlug) return;
+
+    async function loadContestTender() {
+      const { data: tender, error: tenderError } = await supabase
+        .from("bartenders")
+        .select("id, slug, display_name, status")
+        .eq("slug", initialTenderSlug)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (tenderError || !tender) {
+        console.error("Could not load contest Tender:", tenderError);
+        return;
+      }
+
+      const { data: relationships, error: relationshipError } =
+        await supabase
+          .from("bartender_venues")
+          .select("venue_id, is_primary")
+          .eq("bartender_id", tender.id)
+          .eq("is_current", true)
+          .order("is_primary", { ascending: false })
+          .limit(1);
+
+      if (relationshipError || !relationships?.length) {
+        console.error(
+          "Could not load contest Tender Spot:",
+          relationshipError
+        );
+        return;
+      }
+
+      const selectedRelationship = relationships[0];
+      const selectedVenueId = selectedRelationship.venue_id;
+
+      const { data: venue, error: venueError } = await supabase
+        .from("venues")
+        .select("id, slug, name, city, street_address, state_region")
+        .eq("id", selectedVenueId)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (venueError || !venue) {
+        console.error("Could not load contest Spot:", venueError);
+        return;
+      }
+
+      setLiveVenues((current) => [
+        ...current.filter((item) => item.id !== venue.id),
+        venue,
+      ]);
+
+      setVenueId(venue.id);
+
+      setLiveBartenders((current) => [
+        ...current.filter((item) => item.id !== tender.id),
+        tender,
+      ]);
+
+      setBartenderId(tender.id);
+      setStep(3);
+    }
+
+    loadContestTender();
+  }, [initialTenderSlug]);
 
   useEffect(() => {
   async function loadBartenders() {
