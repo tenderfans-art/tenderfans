@@ -22,6 +22,7 @@ export default function ShoutFlow({
   const [voices, setVoices] = useState<string[]>([]);
   const [liveVenues, setLiveVenues] = useState<any[]>([]);
   const [liveBartenders, setLiveBartenders] = useState<any[]>([]);
+  const [searchTenders, setSearchTenders] = useState<any[]>([]);
   const [googleVenue, setGoogleVenue] = useState<any>(null);
 
   const [contestPhone, setContestPhone] = useState("");
@@ -37,10 +38,51 @@ export default function ShoutFlow({
     const loadOptions = async () => {
       const { data: traitData } = await supabase.from("traits").select("label").eq("audience", "bartender").eq("active", true).order("id");
       const { data: voiceData } = await supabase.from("voices").select("name").eq("active", true).order("id");
-      const { data: venueData } = await supabase.from("venues").select("id, slug, name, city, street_address, state_region").eq("status", "active").order("name");
+      const { data: venueData } = await supabase
+        .from("venues")
+        .select("id, slug, name, city, street_address, state_region")
+        .eq("status", "active")
+        .order("name");
+
+      const { data: tenderData, error: tenderSearchError } =
+        await supabase
+          .from("bartender_venues")
+          .select(`
+            bartender_id,
+            venue_id,
+            is_primary,
+            bartenders!inner(
+              id,
+              slug,
+              display_name,
+              status
+            ),
+            venues!inner(
+              id,
+              slug,
+              name,
+              city,
+              street_address,
+              state_region,
+              status
+            )
+          `)
+          .eq("is_current", true)
+          .eq("bartenders.status", "active")
+          .eq("venues.status", "active")
+          .order("is_primary", { ascending: false });
+
+      if (tenderSearchError) {
+        console.error(
+          "Could not load Tenders for Shout search:",
+          tenderSearchError
+        );
+      }
+
       setLiveTraits((traitData ?? []).map(t => t.label));
       setVoices((voiceData ?? []).map(v => v.name));
       setLiveVenues(venueData ?? []);
+      setSearchTenders(tenderData ?? []);
     };
     loadOptions();
   }, []);
@@ -139,8 +181,63 @@ export default function ShoutFlow({
 
   const selectedVenue = liveVenues.find(v => v.id === venueId);
   const selectedBartender = liveBartenders.find(b => b.id === bartenderId);
-  const venueMatches = useMemo(() => liveVenues.filter(v => (v.name + " " + v.city).toLowerCase().includes(venueQuery.toLowerCase())).slice(0,5), [liveVenues, venueQuery]);
-  const bartenderMatches = useMemo(() => liveBartenders.filter(b => b.display_name.toLowerCase().includes(bartenderQuery.toLowerCase())).slice(0,5), [liveBartenders, bartenderQuery]);
+  const venueMatches = useMemo(
+    () =>
+      venueQuery.trim()
+        ? liveVenues
+            .filter((v) =>
+              `${v.name ?? ""} ${v.city ?? ""}`
+                .toLowerCase()
+                .includes(venueQuery.trim().toLowerCase())
+            )
+            .slice(0, 5)
+        : [],
+    [liveVenues, venueQuery]
+  );
+
+  const tenderMatches = useMemo(() => {
+    const query = venueQuery.trim().toLowerCase();
+
+    if (!query) return [];
+
+    const seen = new Set<string>();
+
+    return searchTenders
+      .filter((row: any) => {
+        const tender = Array.isArray(row.bartenders)
+          ? row.bartenders[0]
+          : row.bartenders;
+
+        return tender?.display_name
+          ?.toLowerCase()
+          .includes(query);
+      })
+      .filter((row: any) => {
+        const tender = Array.isArray(row.bartenders)
+          ? row.bartenders[0]
+          : row.bartenders;
+
+        if (!tender?.id || seen.has(tender.id)) {
+          return false;
+        }
+
+        seen.add(tender.id);
+        return true;
+      })
+      .slice(0, 5);
+  }, [searchTenders, venueQuery]);
+
+  const bartenderMatches = useMemo(
+    () =>
+      liveBartenders
+        .filter((b) =>
+          b.display_name
+            .toLowerCase()
+            .includes(bartenderQuery.toLowerCase())
+        )
+        .slice(0, 5),
+    [liveBartenders, bartenderQuery]
+  );
   const toggleTrait = (trait:string) => setTraits(current => current.includes(trait) ? current.filter(t=>t!==trait) : current.length < 5 ? [...current, trait] : current);
 
   async function submitContestShout(
@@ -342,9 +439,104 @@ export default function ShoutFlow({
   }
 
   return <div className="flow-card">
-    {step === 1 && <div className="flow-step"><div className="eyebrow">Step 1</div><h1>Where do they work?</h1><p>We search TenderFans first. If the spot is new, the production version will fall through to Google Places to select the real business and address.</p><input className="field" value={venueQuery} onChange={e=>setVenueQuery(e.target.value)} placeholder="Start typing a bar, brewery or spot..."/>
-      <div className="choice-list">{venueMatches.map(v => <button key={v.id} className={`choice ${venueId===v.id?"selected":""}`} onClick={()=>setVenueId(v.id)}><strong>{v.name}</strong><span>{[v.street_address, v.city, v.state_region].filter(Boolean).join(", ")}</span></button>)}</div>
-      {venueQuery && !venueMatches.length && <div className="new-entity"><strong>We don't have this spot yet.</strong><span>Search Google for the exact location:</span><GooglePlacePicker onSelect={async (place:any) => {
+    {step === 1 && <div className="flow-step">
+      <div className="eyebrow">Step 1</div>
+      <h1>Find their Tender or Spot.</h1>
+      <p>
+        Search TenderFans by Tender name or Spot. If the Spot is new,
+        you can add the real location through Google Places.
+      </p>
+
+      <input
+        className="field"
+        value={venueQuery}
+        onChange={e => setVenueQuery(e.target.value)}
+        placeholder="Search a Tender, bar, brewery or spot..."
+      />
+
+      <div className="choice-list">
+        {tenderMatches.map((row:any) => {
+          const tender = Array.isArray(row.bartenders)
+            ? row.bartenders[0]
+            : row.bartenders;
+
+          const spot = Array.isArray(row.venues)
+            ? row.venues[0]
+            : row.venues;
+
+          if (!tender || !spot) return null;
+
+          return (
+            <button
+              key={`tender-${tender.id}`}
+              className="choice person-choice"
+              onClick={() => {
+                setVenueId(spot.id);
+
+                setLiveVenues(current => [
+                  ...current.filter(v => v.id !== spot.id),
+                  spot,
+                ]);
+
+                setLiveBartenders(current => [
+                  ...current.filter(b => b.id !== tender.id),
+                  tender,
+                ]);
+
+                setBartenderId(tender.id);
+                setBartenderQuery(tender.display_name);
+                setStep(3);
+              }}
+            >
+              <span className="mini-avatar">
+                {tender.display_name?.[0]}
+              </span>
+
+              <span>
+                <small>TENDER</small>
+                <strong>{tender.display_name}</strong>
+                <small>
+                  {spot.name}
+                  {spot.city ? ` · ${spot.city}` : ""}
+                </small>
+              </span>
+            </button>
+          );
+        })}
+
+        {venueMatches.map(v => (
+          <button
+            key={`spot-${v.id}`}
+            className={`choice ${venueId===v.id ? "selected" : ""}`}
+            onClick={() => {
+              setVenueId(v.id);
+              setBartenderId("");
+              setBartenderQuery("");
+              setStep(2);
+            }}
+          >
+            <small>SPOT</small>
+            <strong>{v.name}</strong>
+            <span>
+              {[v.street_address, v.city, v.state_region]
+                .filter(Boolean)
+                .join(", ")}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {venueQuery &&
+       !venueMatches.length &&
+       !tenderMatches.length && (
+        <div className="new-entity">
+          <strong>No TenderFans match found.</strong>
+          <span>
+            If you're looking for a new Spot, search Google for the
+            exact location:
+          </span>
+
+          <GooglePlacePicker onSelect={async (place:any) => {
         try {
           const verifyResponse = await fetch("/api/google/place", {
             method: "POST",
@@ -379,8 +571,23 @@ export default function ShoutFlow({
         } catch (error) {
           console.error("Google Place selection failed:", error);
         }
-      }} />{googleVenue && <div><strong>{googleVenue.name}</strong><span>{googleVenue.address}</span></div>}</div>}
-      <button className="btn primary" disabled={!venueId} onClick={()=>setStep(2)}>Continue</button>
+          }} />
+
+          {googleVenue && (
+            <div>
+              <strong>{googleVenue.name}</strong>
+              <span>{googleVenue.address}</span>
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => setStep(2)}
+              >
+                Continue with this Spot
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>}
     {step === 2 && <div className="flow-step"><button className="back" onClick={()=>setStep(1)}>← Change spot</button><div className="eyebrow">Step 2</div><h1>Who deserves the shout?</h1><p>{selectedVenue?.name} selected. Existing profiles at this spot appear before we allow a new Tender to be created.</p><input className="field" value={bartenderQuery} onChange={e=>setBartenderQuery(e.target.value)} placeholder="Tender name..."/>
       <div className="choice-list">{bartenderMatches.map(b => <button key={b.id} className={`choice person-choice ${bartenderId===b.id?"selected":""}`} onClick={()=>setBartenderId(b.id)}><span className="mini-avatar">{b.display_name[0]}</span><span><strong>{b.display_name}</strong><small>Current Tender at {selectedVenue?.name}</small></span></button>)}</div>
