@@ -26,6 +26,12 @@ const tools = [
     status: "COMING SOON",
   },
   {
+    title: "Contests",
+    description: "Create, activate and manage TenderFans contests.",
+    href: "/admin/contests",
+    status: "OPEN",
+  },
+  {
     title: "Site Banners",
     description: "Quickly change hero and banner images across the site.",
     href: null,
