@@ -139,8 +139,57 @@ export default async function SpotPage({
     })
     .filter(Boolean);
 
+  const spotJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: venue.name,
+    url: `https://tenderfans.com/s/${venue.slug}`,
+    ...(venue.description
+      ? { description: venue.description }
+      : {}),
+    ...(venue.public_phone
+      ? { telephone: venue.public_phone }
+      : {}),
+    ...(venue.website_url
+      ? { sameAs: [venue.website_url] }
+      : {}),
+    address: {
+      "@type": "PostalAddress",
+      ...(venue.street_address
+        ? { streetAddress: venue.street_address }
+        : {}),
+      ...(venue.city
+        ? { addressLocality: venue.city }
+        : {}),
+      ...(venue.state_region
+        ? { addressRegion: venue.state_region }
+        : {}),
+      ...(venue.postal_code
+        ? { postalCode: venue.postal_code }
+        : {}),
+      addressCountry: "US",
+    },
+    ...(venue.latitude != null && venue.longitude != null
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: venue.latitude,
+            longitude: venue.longitude,
+          },
+        }
+      : {}),
+  };
+
   return (
-    <section className="profile-page">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(spotJsonLd),
+        }}
+      />
+
+      <section className="profile-page">
       <div className="shell profile-shell">
         <div className="venue-profile-visual">
           <VenueVisual venue={venue as any} />
@@ -233,5 +282,6 @@ export default async function SpotPage({
         </section>
       </div>
     </section>
+    </>
   );
 }

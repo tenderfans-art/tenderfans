@@ -230,8 +230,48 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
+  const primarySpot =
+    currentSpots.find((spot) => spot.is_primary) ??
+    currentSpots[0];
+
+  const tenderJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: bartender.display_name,
+    url: `https://tenderfans.com/t/${bartender.slug}`,
+    ...(bartender.bio
+      ? { description: bartender.bio }
+      : {}),
+    jobTitle: tenderTypeLabel,
+    ...(primarySpot
+      ? {
+          worksFor: {
+            "@type": "Organization",
+            name: primarySpot.name,
+            url: `https://tenderfans.com/s/${primarySpot.slug}`,
+            ...(primarySpot.city
+              ? {
+                  address: {
+                    "@type": "PostalAddress",
+                    addressLocality: primarySpot.city,
+                  },
+                }
+              : {}),
+          },
+        }
+      : {}),
+  };
+
   return (
-    <section className="profile-page tender-profile-page">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(tenderJsonLd),
+        }}
+      />
+
+      <section className="profile-page tender-profile-page">
       <div className="shell tender-profile-shell">
 
         <div className="tender-profile-main">
@@ -360,5 +400,6 @@ export default async function TenderPage({ params }: { params: Promise<{ slug: s
 
       </div>
     </section>
+    </>
   );
 }
