@@ -23,6 +23,16 @@ type ContestTender = {
   entries: number;
 };
 
+function flyerSpotName(name: string) {
+  const trimmed = name.trim();
+
+  if (trimmed.length <= 10) {
+    return trimmed;
+  }
+
+  return trimmed.slice(0, 10).trimEnd();
+}
+
 export default function ContestPage() {
   const [contest, setContest] = useState<Contest | null>(null);
   const [leaders, setLeaders] = useState<ContestTender[]>([]);
@@ -246,8 +256,11 @@ export default function ContestPage() {
                   {tender.name}
                 </span>
 
-                <span className="contest-leader-count">
-                  {tender.spotName}
+                <span
+                  className="contest-leader-count"
+                  title={tender.spotName}
+                >
+                  {flyerSpotName(tender.spotName)}
                 </span>
               </Link>
             ) : (
