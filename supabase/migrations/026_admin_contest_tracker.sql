@@ -20,3 +20,24 @@ using (
     where pa.user_id = auth.uid()
   )
 );
+
+-- ------------------------------------------------------------
+-- Platform Admins may read qualifying contest Shout entries.
+-- ------------------------------------------------------------
+
+drop policy if exists
+  "platform admins read contest shout entries"
+on public.contest_shout_entries;
+
+create policy
+  "platform admins read contest shout entries"
+on public.contest_shout_entries
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.platform_admins pa
+    where pa.user_id = auth.uid()
+  )
+);
