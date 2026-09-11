@@ -384,7 +384,7 @@ export default function ShoutFlow({
       <button className="btn primary" disabled={!bartenderId} onClick={()=>setStep(3)}>That's them</button>
     </div>}
     {step === 3 && <div className="flow-step">
-      {!contestMode && (
+      {!initialTenderSlug && (
         <button className="back" onClick={()=>setStep(2)}>
           ← Change tender
         </button>
