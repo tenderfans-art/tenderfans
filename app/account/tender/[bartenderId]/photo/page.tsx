@@ -380,14 +380,44 @@ export default function TenderPhotoPage() {
     : null;
 
   return (
-    <main className="flow-page">
+    <main
+      className="flow-page"
+      style={{
+        paddingTop: "18px",
+        paddingBottom: "24px",
+      }}
+    >
       <div className="shell narrow">
-        <div className="flow-card">
-          <div className="eyebrow">Tender Account</div>
+        <div
+          className="flow-card"
+          style={{
+            paddingTop: "24px",
+            paddingBottom: "24px",
+          }}
+        >
+          <div
+            className="eyebrow"
+            style={{ marginBottom: "4px" }}
+          >
+            Tender Account
+          </div>
 
-          <h1>Photos.</h1>
+          <h1
+            style={{
+              marginTop: "4px",
+              marginBottom: "8px",
+            }}
+          >
+            Photos.
+          </h1>
 
-          <p className="lead-copy">
+          <p
+            className="lead-copy"
+            style={{
+              marginTop: 0,
+              marginBottom: "12px",
+            }}
+          >
             Manage your profile photo and up to six photos shown
             in your Tender gallery.
           </p>
@@ -407,7 +437,7 @@ export default function TenderPhotoPage() {
                   alignItems: "flex-start",
                   gap: "42px",
                   flexWrap: "wrap",
-                  marginTop: "28px",
+                  marginTop: "12px",
                 }}
               >
                 {/* PROFILE PHOTO */}
@@ -733,9 +763,12 @@ export default function TenderPhotoPage() {
               <div
                 style={{
                   display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
                   gap: "10px",
                   flexWrap: "wrap",
-                  marginTop: "30px",
+                  width: "100%",
+                  marginTop: "22px",
                 }}
               >
                 {slug && (
