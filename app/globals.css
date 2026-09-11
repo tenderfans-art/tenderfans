@@ -2743,3 +2743,221 @@
 @media (max-width:900px){
   .draft-beer-hotspot{display:none}
 }
+
+/* ============================================================
+   PUBLIC CONTEST FLYER
+   ============================================================ */
+
+.contest-public-page{
+  min-height:calc(100vh - 72px);
+  background:#050505;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+
+.contest-loading{
+  color:#fff;
+}
+
+.contest-empty{
+  color:#fff;
+  text-align:center;
+  padding:48px 24px;
+}
+
+.contest-empty h1{
+  font-family:Georgia,serif;
+  margin:8px 0 24px;
+}
+
+.contest-flyer-stage{
+  position:relative;
+  height:calc(100vh - 72px);
+  max-width:100vw;
+  aspect-ratio:2/3;
+  overflow:hidden;
+  background:#050505;
+}
+
+.contest-flyer-art{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+
+/* ------------------------------------------------------------
+   Live Top 5
+   Percentages correspond to the five blank plaque rows.
+   ------------------------------------------------------------ */
+
+.contest-leaderboard-overlay{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+}
+
+.contest-leader-row{
+  position:absolute;
+  left:27.5%;
+  width:45%;
+  height:3.35%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:0 2%;
+  color:#f3c86a;
+  font-size:clamp(9px,1.05vw,16px);
+  font-weight:850;
+  letter-spacing:.02em;
+  text-shadow:0 1px 3px #000;
+  pointer-events:auto;
+  border-radius:4px;
+}
+
+.contest-leader-row:hover{
+  background:rgba(255,255,255,.07);
+}
+
+.contest-leader-row-1{top:46.4%}
+.contest-leader-row-2{top:50.8%}
+.contest-leader-row-3{top:55.1%}
+.contest-leader-row-4{top:59.4%}
+.contest-leader-row-5{top:63.7%}
+
+.contest-leader-name{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.contest-leader-count{
+  flex:0 0 auto;
+  font-size:.82em;
+  opacity:.9;
+}
+
+
+/* ------------------------------------------------------------
+   Working general contest QR.
+   Overlays the decorative QR baked into the flyer artwork.
+   ------------------------------------------------------------ */
+
+.contest-public-qr{
+  position:absolute;
+  z-index:5;
+  left:39.2%;
+  top:72.4%;
+  width:21.5%;
+  aspect-ratio:1;
+  background:#fff;
+  display:grid;
+  place-items:center;
+  padding:1.2%;
+}
+
+.contest-public-qr canvas{
+  width:100%!important;
+  height:100%!important;
+}
+
+
+/* ------------------------------------------------------------
+   Details / disclaimer hotspot
+   ------------------------------------------------------------ */
+
+.contest-details-hotspot{
+  position:absolute;
+  z-index:6;
+  left:25%;
+  bottom:2.6%;
+  width:50%;
+  border:0;
+  background:transparent;
+  color:#e5bd70;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  font-size:clamp(9px,.9vw,13px);
+  font-weight:700;
+  cursor:pointer;
+}
+
+
+/* ------------------------------------------------------------
+   Details modal
+   ------------------------------------------------------------ */
+
+.contest-details-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  background:rgba(0,0,0,.78);
+  display:grid;
+  place-items:center;
+  padding:20px;
+}
+
+.contest-details-modal{
+  position:relative;
+  width:min(700px,100%);
+  max-height:88vh;
+  overflow:auto;
+  background:#fff;
+  color:var(--ink);
+  border-radius:20px;
+  padding:34px;
+  box-shadow:0 30px 80px rgba(0,0,0,.45);
+}
+
+.contest-details-modal h2{
+  font-family:Georgia,serif;
+  font-size:clamp(32px,5vw,48px);
+  margin:8px 0 14px;
+}
+
+.contest-details-close{
+  position:absolute;
+  top:14px;
+  right:18px;
+  width:38px;
+  height:38px;
+  border:0;
+  background:transparent;
+  font-size:30px;
+  line-height:1;
+}
+
+.contest-rules-copy{
+  white-space:pre-wrap;
+  line-height:1.65;
+  margin:22px 0;
+}
+
+
+/* Keep entire flyer visible on small screens. */
+@media(max-width:900px){
+  .contest-public-page{
+    min-height:auto;
+  }
+
+  .contest-flyer-stage{
+    width:100vw;
+    height:auto;
+    aspect-ratio:2/3;
+  }
+
+  .contest-leader-row{
+    font-size:clamp(7px,2.1vw,13px);
+  }
+
+  .contest-details-hotspot{
+    font-size:clamp(7px,2vw,11px);
+  }
+}
