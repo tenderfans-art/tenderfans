@@ -441,11 +441,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      id: reminder.id,
       status: "pending",
+      needsSmsVerification: wantsSms,
       message:
         wantsEmail
           ? "Check your email to verify your event reminder."
-          : "Your event reminder was saved.",
+          : wantsSms
+            ? "Verify your mobile number to finish setting your reminder."
+            : "Your event reminder was saved.",
     });
   } catch (error) {
     console.error(

@@ -425,11 +425,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      id: subscription.id,
       status: "pending",
+      needsSmsVerification: wantsSms,
       message:
         wantsEmail
           ? "Check your email to verify your follow."
-          : "Your notification request was saved.",
+          : wantsSms
+            ? "Verify your mobile number to finish following."
+            : "Your notification request was saved.",
     });
   } catch (error) {
     console.error(
