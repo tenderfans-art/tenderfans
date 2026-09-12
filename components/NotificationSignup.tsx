@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type FollowProps = {
   mode: "follow";
@@ -49,6 +49,24 @@ export default function NotificationSignup(props: Props) {
 
   const [verifyingSms, setVerifyingSms] =
     useState(false);
+
+  const [resendCooldown, setResendCooldown] =
+    useState(0);
+
+  const [resendingSms, setResendingSms] =
+    useState(false);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((current) =>
+        current <= 1 ? 0 : current - 1
+      );
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
 
   const displayName =
     props.mode === "follow"
@@ -157,7 +175,8 @@ export default function NotificationSignup(props: Props) {
 
       if (
         wantsSms &&
-        data.id
+        data.id &&
+        data.needsSmsVerification === true
       ) {
         await sendSmsVerification(data.id);
         return;
@@ -184,6 +203,56 @@ export default function NotificationSignup(props: Props) {
       );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function resendSmsVerification() {
+    if (
+      !verificationId ||
+      resendingSms ||
+      resendCooldown > 0
+    ) {
+      return;
+    }
+
+    setResendingSms(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        "/api/notifications/verification/send",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: props.mode,
+            id: verificationId,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          data.error ||
+            "Could not resend the verification code."
+        );
+        return;
+      }
+
+      setResendCooldown(30);
+      setMessage(
+        "A new 6-digit verification code was sent."
+      );
+    } catch {
+      setMessage(
+        "Could not resend the verification code."
+      );
+    } finally {
+      setResendingSms(false);
     }
   }
 
@@ -375,6 +444,22 @@ export default function NotificationSignup(props: Props) {
                     {verifyingSms
                       ? "Verifying..."
                       : "Verify Number"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn outline"
+                    disabled={
+                      resendingSms ||
+                      resendCooldown > 0
+                    }
+                    onClick={resendSmsVerification}
+                  >
+                    {resendingSms
+                      ? "Sending..."
+                      : resendCooldown > 0
+                        ? `Resend code in ${resendCooldown}s`
+                        : "Resend code"}
                   </button>
                 </form>
               </>

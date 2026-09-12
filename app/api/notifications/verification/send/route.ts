@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import twilio from "twilio";
+import crypto from "crypto";
+
+function getClientIpHash(request: Request) {
+  const forwardedFor =
+    request.headers.get("x-forwarded-for");
+
+  const ip =
+    forwardedFor?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown";
+
+  return crypto
+    .createHash("sha256")
+    .update(ip)
+    .digest("hex");
+}
 
 type VerificationType = "follow" | "reminder";
 
@@ -107,32 +123,46 @@ export async function POST(request: Request) {
       });
     }
 
-    /*
-      Avoid repeated rapid sends against the same record.
-    */
-    if (record.phone_verification_sent_at) {
-      const sentAt =
-        new Date(
-          record.phone_verification_sent_at
-        ).getTime();
+    const ipHash = getClientIpHash(request);
 
-      if (
-        Number.isFinite(sentAt) &&
-        Date.now() - sentAt < 30 * 1000
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "A verification code was just sent. Please wait before requesting another.",
+    const { data: allowed, error: rateLimitError } =
+      await adminSupabase.rpc(
+        "check_notification_rate_limit",
+        {
+          p_ip_hash: ipHash,
+          p_limit: 5,
+          p_window_minutes: 15,
+        }
+      );
+
+    if (rateLimitError) {
+      console.error(
+        "Notification verification rate limit failed:",
+        rateLimitError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "SMS verification is temporarily unavailable.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (allowed !== true) {
+      return NextResponse.json(
+        {
+          error:
+            "Too many verification requests. Please try again later.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "900",
           },
-          {
-            status: 429,
-            headers: {
-              "Retry-After": "30",
-            },
-          }
-        );
-      }
+        }
+      );
     }
 
     const client = twilio(

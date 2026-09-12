@@ -296,16 +296,126 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      if (error.code === "23505") {
-        return NextResponse.json(
-          {
-            ok: true,
-            status: "existing",
-            message:
-              "You're already following this Tender or Spot with that email.",
-          },
-          { status: 200 }
-        );
+      if (error.code === "23505" && email) {
+        let existingQuery = adminSupabase
+          .from("notification_subscriptions")
+          .select(`
+            id,
+            wants_email,
+            wants_sms,
+            email_verified,
+            phone_e164,
+            phone_verified,
+            status
+          `)
+          .eq("entity_kind", entityKind)
+          .eq("email", email);
+
+        existingQuery =
+          entityKind === "bartender"
+            ? existingQuery.eq("bartender_id", entityId)
+            : existingQuery.eq("venue_id", entityId);
+
+        const {
+          data: existing,
+          error: existingError,
+        } = await existingQuery.maybeSingle();
+
+        if (existingError || !existing) {
+          console.error(
+            "Existing follow lookup failed:",
+            existingError
+          );
+
+          return NextResponse.json(
+            {
+              error:
+                "Could not update your notification request.",
+            },
+            { status: 500 }
+          );
+        }
+
+        const phoneChanged =
+          wantsSms &&
+          phone &&
+          existing.phone_e164 !== phone;
+
+        const phoneVerifiedAfter =
+          wantsSms
+            ? (
+                !phoneChanged &&
+                existing.phone_verified === true
+              )
+            : existing.phone_verified === true;
+
+        const existingUpdate: Record<string, unknown> = {
+          wants_email:
+            existing.wants_email || wantsEmail,
+
+          wants_sms:
+            existing.wants_sms || wantsSms,
+
+          status:
+            existing.email_verified === true ||
+            phoneVerifiedAfter
+              ? "active"
+              : "pending",
+
+          updated_at: now,
+        };
+
+        if (wantsSms) {
+          existingUpdate.phone_e164 = phone;
+          existingUpdate.phone_verified =
+            phoneVerifiedAfter;
+          existingUpdate.sms_consent_at = now;
+          existingUpdate.sms_consent_source =
+            "public_follow_form";
+
+          if (phoneChanged) {
+            existingUpdate.phone_verified_at = null;
+            existingUpdate.phone_verification_sent_at = null;
+          }
+        }
+
+        const { error: updateExistingError } =
+          await adminSupabase
+            .from("notification_subscriptions")
+            .update(existingUpdate)
+            .eq("id", existing.id);
+
+        if (updateExistingError) {
+          console.error(
+            "Existing follow update failed:",
+            updateExistingError
+          );
+
+          return NextResponse.json(
+            {
+              error:
+                "Could not update your notification request.",
+            },
+            { status: 500 }
+          );
+        }
+
+        return NextResponse.json({
+          ok: true,
+          id: existing.id,
+          status:
+            existing.email_verified === true ||
+            phoneVerifiedAfter
+              ? "active"
+              : "pending",
+          needsSmsVerification:
+            wantsSms &&
+            !phoneVerifiedAfter,
+          message:
+            wantsSms && !phoneVerifiedAfter
+              ? "Verify your mobile number to enable text notifications."
+              : "Your follow preferences are already active.",
+        });
       }
 
       console.error(

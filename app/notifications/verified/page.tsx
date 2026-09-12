@@ -1,61 +1,140 @@
-type Props = {
+import Link from "next/link";
+
+type PageProps = {
   searchParams: Promise<{
     status?: string;
+    type?: string;
+    name?: string;
   }>;
 };
 
 export default async function NotificationVerifiedPage({
   searchParams,
-}: Props) {
-  const { status } = await searchParams;
+}: PageProps) {
+  const params = await searchParams;
 
-  let title = "Email verification";
+  const status = params.status ?? "";
+  const type = params.type ?? "follow";
+  const name = params.name?.trim() ?? "";
+
+  let eyebrow = "TenderFans Notifications";
+  let title = "Verification complete.";
   let message =
-    "We couldn't verify that notification request.";
+    "Your notification preferences have been updated.";
 
   if (status === "success") {
-    title = "You're following!";
-    message =
-      "Your email is verified and TenderFans notifications are now active.";
+    if (type === "follow") {
+      title = name
+        ? `You're following ${name}!`
+        : "You're following!";
+
+      message =
+        "Your email is verified and email notifications are now active.";
+    } else {
+      title = "Reminder confirmed!";
+
+      message =
+        "Your email is verified and your event reminder is now active.";
+    }
   }
 
   if (status === "already-verified") {
-    title = "Already verified";
+    title =
+      type === "reminder"
+        ? "Reminder already verified."
+        : "Already following.";
+
     message =
-      "This email notification subscription is already active.";
+      "This email address has already been verified.";
   }
 
   if (status === "expired") {
-    title = "Verification link expired";
+    title = "Verification link expired.";
+
     message =
-      "That verification link has expired. Follow the Tender or Spot again to request a new one.";
+      type === "reminder"
+        ? "Set the event reminder again to request a new verification email."
+        : "Follow the Tender or Spot again to request a new verification email.";
   }
 
   if (status === "invalid") {
-    title = "Invalid verification link";
+    title = "Invalid verification link.";
+
     message =
-      "That verification link is no longer valid.";
+      "This verification link is not valid.";
   }
 
   if (status === "error") {
-    title = "Something went wrong";
+    title = "We couldn't verify that.";
+
     message =
-      "We couldn't verify your notification request. Please try again.";
+      "Something went wrong while verifying your notification request.";
   }
 
   return (
-    <main className="flow-page">
-      <section className="flow-card">
-        <div className="eyebrow">TenderFans Notifications</div>
+    <section
+      style={{
+        minHeight: "520px",
+        display: "grid",
+        placeItems: "center",
+        padding: "42px 20px",
+      }}
+    >
+      <div
+        style={{
+          width: "min(560px, 100%)",
+          padding: "34px 36px",
+          border: "1px solid #ddd7cb",
+          borderRadius: "24px",
+          background: "#fff",
+          textAlign: "center",
+          boxShadow:
+            "0 14px 34px rgba(14, 28, 37, 0.07)",
+        }}
+      >
+        <div
+          className="eyebrow"
+          style={{
+            marginBottom: "10px",
+          }}
+        >
+          {eyebrow}
+        </div>
 
-        <h1>{title}</h1>
+        <h1
+          style={{
+            margin: "0 0 12px",
+            fontSize: "clamp(2rem, 4vw, 2.7rem)",
+            lineHeight: 1.05,
+          }}
+        >
+          {title}
+        </h1>
 
-        <p>{message}</p>
+        <p
+          style={{
+            margin:
+              "0 auto 22px",
+            maxWidth: "440px",
+            fontSize: "1.05rem",
+            lineHeight: 1.55,
+            color: "#657078",
+          }}
+        >
+          {message}
+        </p>
 
-        <a className="btn primary" href="/">
+        <Link
+          href="/"
+          className="btn primary"
+          style={{
+            display: "inline-flex",
+            justifyContent: "center",
+          }}
+        >
           Back to TenderFans
-        </a>
-      </section>
-    </main>
+        </Link>
+      </div>
+    </section>
   );
 }

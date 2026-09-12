@@ -21,6 +21,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(redirectBase);
   }
 
+  redirectBase.searchParams.set("type", type);
+
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -57,17 +59,40 @@ export async function GET(request: Request) {
       ? "notification_subscriptions"
       : "event_reminders";
 
-  const { data: record, error } =
-    await adminSupabase
-      .from(table)
-      .select(
-        "id, email_verified, email_verification_sent_at"
-      )
-      .eq(
-        "email_verification_token_hash",
-        tokenHash
-      )
-      .maybeSingle();
+  let record: any = null;
+  let error: any = null;
+
+  if (type === "follow") {
+    const result =
+      await adminSupabase
+        .from("notification_subscriptions")
+        .select(
+          "id, email_verified, email_verification_sent_at, entity_kind, bartender_id, venue_id"
+        )
+        .eq(
+          "email_verification_token_hash",
+          tokenHash
+        )
+        .maybeSingle();
+
+    record = result.data;
+    error = result.error;
+  } else {
+    const result =
+      await adminSupabase
+        .from("event_reminders")
+        .select(
+          "id, email_verified, email_verification_sent_at, event_id"
+        )
+        .eq(
+          "email_verification_token_hash",
+          tokenHash
+        )
+        .maybeSingle();
+
+    record = result.data;
+    error = result.error;
+  }
 
   if (error) {
     console.error(
@@ -133,6 +158,54 @@ export async function GET(request: Request) {
 
     redirectBase.searchParams.set("status", "error");
     return NextResponse.redirect(redirectBase);
+  }
+
+  /*
+   * Add the followed entity name to the success redirect
+   * so the confirmation page can say:
+   *
+   * "You're following Jay!"
+   * "You're following The Galley!"
+   */
+  if (type === "follow") {
+    let entityName: string | null = null;
+
+    if (
+      record.entity_kind === "bartender" &&
+      record.bartender_id
+    ) {
+      const { data: bartender } =
+        await adminSupabase
+          .from("bartenders")
+          .select("display_name")
+          .eq("id", record.bartender_id)
+          .maybeSingle();
+
+      entityName =
+        bartender?.display_name ?? null;
+    }
+
+    if (
+      record.entity_kind === "venue" &&
+      record.venue_id
+    ) {
+      const { data: venue } =
+        await adminSupabase
+          .from("venues")
+          .select("name")
+          .eq("id", record.venue_id)
+          .maybeSingle();
+
+      entityName =
+        venue?.name ?? null;
+    }
+
+    if (entityName) {
+      redirectBase.searchParams.set(
+        "name",
+        entityName
+      );
+    }
   }
 
   redirectBase.searchParams.set("status", "success");
