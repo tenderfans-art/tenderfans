@@ -26,3 +26,6 @@ pnpm-debug.log*
 .DS_Store
 *.swp
 tsconfig.tsbuildinfo
+
+# Supabase CLI local state
+/supabase/.temp/
