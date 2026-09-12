@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import twilio from "twilio";
 
 import {
   createCodeHash,
@@ -165,40 +166,77 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      challenge.provider !== "development"
-    ) {
+    let codeApproved = false;
+
+    if (challenge.provider === "development") {
+      if (!challenge.code_hash) {
+        return NextResponse.json(
+          {
+            error:
+              "Verification code is unavailable.",
+          },
+          { status: 500 }
+        );
+      }
+
+      const suppliedHash =
+        createCodeHash(
+          challengeId,
+          code
+        );
+
+      codeApproved = timingSafeMatch(
+        suppliedHash,
+        challenge.code_hash
+      );
+    } else if (challenge.provider === "twilio") {
+      const accountSid =
+        process.env.TWILIO_ACCOUNT_SID;
+      const authToken =
+        process.env.TWILIO_AUTH_TOKEN;
+      const verifyServiceSid =
+        process.env.TWILIO_VERIFY_SERVICE_SID;
+
+      if (
+        !accountSid ||
+        !authToken ||
+        !verifyServiceSid
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Twilio verification is not configured.",
+          },
+          { status: 500 }
+        );
+      }
+
+      const client = twilio(
+        accountSid,
+        authToken
+      );
+
+      const verificationCheck =
+        await client.verify.v2
+          .services(verifyServiceSid)
+          .verificationChecks.create({
+            to: phone,
+            code,
+          });
+
+      codeApproved =
+        verificationCheck.status === "approved";
+    } else {
       return NextResponse.json(
         {
           error:
-            "This verification provider is not available yet.",
+            "This verification provider is not available.",
         },
         { status: 501 }
       );
     }
 
-    if (!challenge.code_hash) {
-      return NextResponse.json(
-        {
-          error:
-            "Verification code is unavailable.",
-        },
-        { status: 500 }
-      );
-    }
-
-    const suppliedHash =
-      createCodeHash(
-        challengeId,
-        code
-      );
-
-    if (
-      !timingSafeMatch(
-        suppliedHash,
-        challenge.code_hash
-      )
-    ) {
+    if (!codeApproved) {
       const nextAttempts =
         challenge.attempt_count + 1;
 

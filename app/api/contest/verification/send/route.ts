@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import twilio from "twilio";
 
 import {
   createCodeHash,
@@ -106,16 +107,6 @@ export async function POST(request: Request) {
       }
     }
 
-    if (provider === "twilio") {
-      return NextResponse.json(
-        {
-          error:
-            "Twilio contest verification is not connected yet.",
-        },
-        { status: 501 }
-      );
-    }
-
     const adminSupabase = createClient(
       supabaseUrl,
       supabaseSecret,
@@ -181,14 +172,57 @@ export async function POST(request: Request) {
     const challengeId =
       crypto.randomUUID();
 
-    const code = String(
-      crypto.randomInt(0, 1000000)
-    ).padStart(6, "0");
+    let code: string | null = null;
+    let codeHash: string | null = null;
+    let providerReference: string | null = null;
 
-    const codeHash = createCodeHash(
-      challengeId,
-      code
-    );
+    if (provider === "development") {
+      code = String(
+        crypto.randomInt(0, 1000000)
+      ).padStart(6, "0");
+
+      codeHash = createCodeHash(
+        challengeId,
+        code
+      );
+    } else {
+      const accountSid =
+        process.env.TWILIO_ACCOUNT_SID;
+      const authToken =
+        process.env.TWILIO_AUTH_TOKEN;
+      const verifyServiceSid =
+        process.env.TWILIO_VERIFY_SERVICE_SID;
+
+      if (
+        !accountSid ||
+        !authToken ||
+        !verifyServiceSid
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Twilio verification is not configured.",
+          },
+          { status: 500 }
+        );
+      }
+
+      const client = twilio(
+        accountSid,
+        authToken
+      );
+
+      const verification =
+        await client.verify.v2
+          .services(verifyServiceSid)
+          .verifications.create({
+            to: phone,
+            channel: "sms",
+          });
+
+      providerReference =
+        verification.sid;
+    }
 
     const expiresAt =
       new Date(
@@ -201,8 +235,8 @@ export async function POST(request: Request) {
         .insert({
           id: challengeId,
           phone_hash: phoneHash,
-          provider: "development",
-          provider_reference: null,
+          provider,
+          provider_reference: providerReference,
           code_hash: codeHash,
           status: "pending",
           attempt_count: 0,
@@ -241,18 +275,19 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
-     * Development only:
-     * return the generated OTP so we can exercise the
-     * complete UI before Twilio is connected.
-     *
-     * This endpoint only permits allowlisted test phones.
-     */
+    if (provider === "development") {
+      return NextResponse.json({
+        ok: true,
+        challengeId,
+        expiresInSeconds: 600,
+        developmentCode: code,
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       challengeId,
       expiresInSeconds: 600,
-      developmentCode: code,
     });
   } catch (error) {
     console.error(
