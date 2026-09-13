@@ -3958,3 +3958,31 @@
     padding:14px 16px;
   }
 }
+
+
+/* Final claim landing proportions */
+
+.flow-card:has(.claim-type-grid){
+  width:min(590px,100%);
+  padding:30px 30px 28px;
+}
+
+.claim-type-grid{
+  gap:12px;
+}
+
+.claim-type-card{
+  min-height:112px;
+  padding:14px 14px;
+}
+
+@media (max-width:640px){
+  .flow-card:has(.claim-type-grid){
+    width:100%;
+    padding:25px 18px 24px;
+  }
+
+  .claim-type-grid{
+    grid-template-columns:1fr;
+  }
+}
