@@ -2,9 +2,11 @@ import LandingHero from "@/components/LandingHero";
 import TrendingTenders from "@/components/TrendingTenders";
 import PopularSpots from "@/components/PopularSpots";
 import PartnerHomeBanner from "@/components/PartnerHomeBanner";
+import ActiveContestPopup from "@/components/ActiveContestPopup";
 
 export default function Home() {
   return <>
+    <ActiveContestPopup />
     <PartnerHomeBanner />
 
     <LandingHero />
