@@ -562,7 +562,7 @@ export default function ClaimPage() {
                   Tender Profile
                 </span>
                 <strong>I’m a Tender</strong>
-                <span>Claim my existing Tender profile.</span>
+                <span>Claim my existing profile.</span>
                 <span className="claim-type-action">
                   Select Tender →
                 </span>
