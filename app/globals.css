@@ -3714,3 +3714,37 @@
     text-align:center;
   }
 }
+
+
+/* -------------------------------------------------------
+   How It Works narrative section alignment
+-------------------------------------------------------- */
+
+.how-hero,
+.how-why{
+  text-align:center;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.how-hero{
+  max-width:960px;
+}
+
+.how-why{
+  max-width:1060px;
+}
+
+.how-hero p,
+.how-why p{
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.how-hero p{
+  max-width:900px;
+}
+
+.how-why p{
+  max-width:980px;
+}
