@@ -3675,3 +3675,42 @@
     height:38px;
   }
 }
+
+
+/* Homepage manifesto branded lockup */
+
+.manifesto-inner{
+  justify-content:center;
+  width:fit-content;
+  max-width:calc(100% - 40px);
+}
+
+.manifesto-brand-icon{
+  display:block;
+  width:96px;
+  height:96px;
+  object-fit:contain;
+  flex:0 0 auto;
+}
+
+.manifesto-copy{
+  text-align:left;
+}
+
+@media (max-width:640px){
+  .manifesto-inner{
+    width:auto;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+  }
+
+  .manifesto-brand-icon{
+    width:86px;
+    height:86px;
+  }
+
+  .manifesto-copy{
+    text-align:center;
+  }
+}
