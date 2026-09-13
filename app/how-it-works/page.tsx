@@ -72,14 +72,9 @@ export default function HowItWorksPage() {
           <h2>People are more than a star rating.</h2>
           <p>
             Traditional review sites usually rate the business. TenderFans
-            puts the spotlight on the people creating the experience.
-          </p>
-          <p>
-            Tenders can claim their profiles, add their own bio and
-            imagery, and build a presence around the reputation their guests
-            are already creating.
-          </p>
-          <p>
+            puts the spotlight on the people creating the experience. Tenders
+            can claim their profiles, add their own bio and imagery, and build
+            a presence around the reputation their guests are already creating.
             Establishments benefit too. Great people help great spots get
             discovered.
           </p>
