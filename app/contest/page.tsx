@@ -251,7 +251,7 @@ export default function ContestPage() {
             return tender ? (
               <Link
                 key={tender.id}
-                href={`/contest/t/${tender.slug}`}
+                href={`/t/${tender.slug}`}
                 className={`contest-leader-row contest-leader-row-${index + 1}`}
                 aria-label={`Give ${tender.name} a contest Shout`}
               >
