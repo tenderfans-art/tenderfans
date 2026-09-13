@@ -616,7 +616,7 @@ export default function ShoutFlow({
         {contestMode ? "Contest Shout" : "Step 3"}
       </div>
 
-      <h1>What makes {selectedBartender?.name} great?</h1>
+      <h1>What makes {selectedBartender?.display_name} great?</h1>
 
       <p>
         Choose up to five. There is intentionally no public free-text review box.
