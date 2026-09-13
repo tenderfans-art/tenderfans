@@ -3860,3 +3860,73 @@
     min-width:160px;
   }
 }
+
+
+/* -------------------------------------------------------
+   Compact claim landing layout
+-------------------------------------------------------- */
+
+.flow-card:has(.claim-type-grid){
+  width:min(700px,100%);
+  margin-left:auto;
+  margin-right:auto;
+  padding:32px 34px 30px;
+}
+
+.flow-card:has(.claim-type-grid) > .eyebrow,
+.flow-card:has(.claim-type-grid) > h1{
+  text-align:center;
+}
+
+.claim-type-grid{
+  gap:14px;
+  margin-top:24px;
+}
+
+.claim-type-card{
+  min-height:140px;
+  padding:20px 22px;
+  text-align:center;
+  align-items:center;
+}
+
+.claim-type-card strong{
+  font-size:21px;
+}
+
+.claim-type-card > span{
+  text-align:center;
+}
+
+.claim-type-kicker{
+  margin-bottom:2px !important;
+}
+
+.claim-type-action{
+  margin-top:6px !important;
+}
+
+.claim-login-actions{
+  margin-top:24px;
+  gap:7px;
+}
+
+.claim-login-button{
+  min-width:150px;
+  padding:11px 22px;
+}
+
+@media (max-width:640px){
+  .flow-card:has(.claim-type-grid){
+    padding:26px 18px 24px;
+  }
+
+  .claim-type-grid{
+    gap:12px;
+  }
+
+  .claim-type-card{
+    min-height:125px;
+    padding:18px 16px;
+  }
+}
