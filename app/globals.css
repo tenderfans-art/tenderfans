@@ -3748,3 +3748,115 @@
 .how-why p{
   max-width:980px;
 }
+
+
+/* -------------------------------------------------------
+   Claim landing choice polish
+-------------------------------------------------------- */
+
+.claim-type-grid{
+  gap:18px;
+}
+
+.claim-type-card{
+  position:relative;
+  min-height:165px;
+  padding:24px 26px;
+  justify-content:center;
+  border:2px solid var(--line);
+  background:linear-gradient(
+    145deg,
+    #fff 0%,
+    #fffdf8 100%
+  );
+  box-shadow:0 8px 24px rgba(9,23,35,.04);
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    background .18s ease;
+}
+
+.claim-type-card:hover{
+  transform:translateY(-3px);
+  border-color:var(--olive);
+  background:#f8faef;
+  box-shadow:0 15px 34px rgba(9,23,35,.10);
+}
+
+.claim-type-card:focus-visible{
+  outline:3px solid rgba(137,156,42,.30);
+  outline-offset:3px;
+  border-color:var(--olive);
+}
+
+.claim-type-card strong{
+  font-size:22px;
+}
+
+.claim-type-kicker{
+  margin:0 0 3px !important;
+  color:var(--olive) !important;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+}
+
+.claim-type-action{
+  margin-top:8px !important;
+  color:var(--ink) !important;
+  font-size:13px;
+  font-weight:850;
+}
+
+.claim-type-card:hover .claim-type-action{
+  color:var(--olive) !important;
+}
+
+.claim-login-actions{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:9px;
+  margin-top:30px;
+  text-align:center;
+}
+
+.claim-login-label{
+  color:var(--muted);
+  font-size:14px;
+}
+
+.claim-login-button{
+  min-width:170px;
+  margin-top:2px;
+}
+
+.claim-forgot-link{
+  margin-top:1px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+
+.claim-forgot-link:hover{
+  color:var(--olive);
+}
+
+@media (max-width:640px){
+  .claim-type-card{
+    min-height:140px;
+    padding:21px 22px;
+  }
+
+  .claim-login-actions{
+    margin-top:26px;
+  }
+
+  .claim-login-button{
+    min-width:160px;
+  }
+}

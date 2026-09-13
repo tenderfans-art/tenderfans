@@ -553,29 +553,53 @@ export default function ClaimPage() {
             <div className="eyebrow">Claim a profile</div>
             <h1>What are you claiming?</h1>
 
-            <div className="claim-grid">
+            <div className="claim-grid claim-type-grid">
               <a
-                className="claim-card"
+                className="claim-card claim-type-card"
                 href="/claim?type=bartender"
               >
+                <span className="claim-type-kicker">
+                  Tender Profile
+                </span>
                 <strong>I’m a Tender</strong>
                 <span>Claim my existing Tender profile.</span>
+                <span className="claim-type-action">
+                  Select Tender →
+                </span>
               </a>
 
               <a
-                className="claim-card"
+                className="claim-card claim-type-card"
                 href="/claim?type=venue"
               >
+                <span className="claim-type-kicker">
+                  Spot Profile
+                </span>
                 <strong>I represent a Spot</strong>
                 <span>Claim an existing Spot.</span>
+                <span className="claim-type-action">
+                  Select Spot →
+                </span>
+              </a>
+            </div>
+
+            <div className="claim-login-actions">
+              <span className="claim-login-label">
+                Already have an account?
+              </span>
+
+              <a
+                className="btn primary claim-login-button"
+                href="/login"
+              >
+                Login
               </a>
 
               <a
-                className="claim-card"
-                href="/login"
+                className="claim-forgot-link"
+                href="/forgot-password"
               >
-                <strong>Login</strong>
-                <span>Already have an account? Sign in here.</span>
+                Forgot password?
               </a>
             </div>
           </div>
