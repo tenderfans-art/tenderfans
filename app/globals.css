@@ -3986,3 +3986,9 @@
     grid-template-columns:1fr;
   }
 }
+
+
+/* Shout page compact width */
+.shout-shell{
+  max-width:630px;
+}

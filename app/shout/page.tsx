@@ -14,7 +14,7 @@ export default async function ShoutPage() {
 
   return (
     <section className="flow-page">
-      <div className="shell narrow">
+      <div className="shell narrow shout-shell">
         <ShoutFlow
           contestMode={Boolean(activeContest)}
         />
