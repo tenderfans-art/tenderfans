@@ -2173,7 +2173,7 @@ export async function POST(
      */
   }
 
-  try {
+  async function runProcessors() {
     const admin =
       getAdminClient();
 
@@ -2191,13 +2191,75 @@ export async function POST(
       ),
     ]);
 
+    return {
+      follow,
+      reminders,
+    };
+  }
+
+  function isTransientJobError(
+    error: unknown
+  ) {
+    const message =
+      safeError(error).toLowerCase();
+
+    return (
+      message.includes(
+        "gateway timeout"
+      ) ||
+      message.includes(
+        "bad gateway"
+      ) ||
+      message.includes(
+        "service unavailable"
+      ) ||
+      message.includes(
+        "upstream"
+      )
+    );
+  }
+
+  try {
+    let result;
+
+    try {
+      result =
+        await runProcessors();
+    } catch (error) {
+      if (
+        !isTransientJobError(
+          error
+        )
+      ) {
+        throw error;
+      }
+
+      console.warn(
+        "Notification job transient failure; retrying once:",
+        safeError(error)
+      );
+
+      await new Promise(
+        (resolve) =>
+          setTimeout(
+            resolve,
+            1500
+          )
+      );
+
+      result =
+        await runProcessors();
+    }
+
     return NextResponse.json({
       ok: true,
       dryRun,
       outboundSmsEnabled:
         outboundSmsEnabled(),
-      follow,
-      reminders,
+      follow:
+        result.follow,
+      reminders:
+        result.reminders,
     });
   } catch (error) {
     console.error(
