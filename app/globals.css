@@ -3992,3 +3992,11 @@
 .shout-shell{
   max-width:630px;
 }
+
+/* Center Shout flow Continue button */
+.shout-shell .btn.primary{
+  display:block;
+  width:fit-content;
+  margin-left:auto;
+  margin-right:auto;
+}
