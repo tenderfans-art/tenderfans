@@ -1,7 +1,17 @@
-import { NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import crypto from "crypto";
+
+import {
+  createNotificationIdentityToken,
+  getNotificationIdentityCookieMaxAge,
+  getNotificationIdentityCookieName,
+  verifyNotificationIdentityToken,
+} from "@/lib/notificationIdentity";
 
 function getClientIpHash(request: Request) {
   const forwardedFor = request.headers.get("x-forwarded-for");
@@ -15,6 +25,50 @@ function getClientIpHash(request: Request) {
     .createHash("sha256")
     .update(ip)
     .digest("hex");
+}
+
+function attachNotificationIdentity(
+  response: NextResponse,
+  request: NextRequest,
+  subscriptionId: string
+) {
+  const existingToken =
+    request.cookies.get(
+      getNotificationIdentityCookieName()
+    )?.value;
+
+  const existingIdentity =
+    existingToken
+      ? verifyNotificationIdentityToken(
+          existingToken
+        )
+      : null;
+
+  const token =
+    createNotificationIdentityToken([
+      ...(
+        existingIdentity
+          ?.subscriptionIds ?? []
+      ),
+      subscriptionId,
+    ]);
+
+  response.cookies.set(
+    getNotificationIdentityCookieName(),
+    token,
+    {
+      httpOnly: true,
+      secure:
+        process.env.NODE_ENV ===
+        "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge:
+        getNotificationIdentityCookieMaxAge(),
+    }
+  );
+
+  return response;
 }
 
 function normalizeEmail(value: unknown) {
@@ -60,7 +114,7 @@ function normalizePhone(value: unknown) {
   return null;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
@@ -400,22 +454,26 @@ export async function POST(request: Request) {
           );
         }
 
-        return NextResponse.json({
-          ok: true,
-          id: existing.id,
-          status:
-            existing.email_verified === true ||
-            phoneVerifiedAfter
-              ? "active"
-              : "pending",
-          needsSmsVerification:
-            wantsSms &&
-            !phoneVerifiedAfter,
-          message:
-            wantsSms && !phoneVerifiedAfter
-              ? "Verify your mobile number to enable text notifications."
-              : "Your follow preferences are already active.",
-        });
+        return attachNotificationIdentity(
+          NextResponse.json({
+            ok: true,
+            id: existing.id,
+            status:
+              existing.email_verified === true ||
+              phoneVerifiedAfter
+                ? "active"
+                : "pending",
+            needsSmsVerification:
+              wantsSms &&
+              !phoneVerifiedAfter,
+            message:
+              wantsSms && !phoneVerifiedAfter
+                ? "Verify your mobile number to enable text notifications."
+                : "Your follow preferences are already active.",
+          }),
+          request,
+          existing.id
+        );
       }
 
       console.error(
@@ -533,18 +591,22 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({
-      ok: true,
-      id: subscription.id,
-      status: "pending",
-      needsSmsVerification: wantsSms,
-      message:
-        wantsEmail
-          ? "Check your email to verify your follow."
-          : wantsSms
-            ? "Verify your mobile number to finish following."
-            : "Your notification request was saved.",
-    });
+    return attachNotificationIdentity(
+      NextResponse.json({
+        ok: true,
+        id: subscription.id,
+        status: "pending",
+        needsSmsVerification: wantsSms,
+        message:
+          wantsEmail
+            ? "Check your email to verify your follow."
+            : wantsSms
+              ? "Verify your mobile number to finish following."
+              : "Your notification request was saved.",
+      }),
+      request,
+      subscription.id
+    );
   } catch (error) {
     console.error(
       "Notification subscription failed:",

@@ -17,6 +17,11 @@ type ReminderProps = {
 
 type Props = FollowProps | ReminderProps;
 
+type FollowState =
+  | "none"
+  | "partial"
+  | "full";
+
 export default function NotificationSignup(props: Props) {
   const [open, setOpen] = useState(false);
 
@@ -37,6 +42,11 @@ export default function NotificationSignup(props: Props) {
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const [
+    followState,
+    setFollowState,
+  ] = useState<FollowState>("none");
 
   const [verificationId, setVerificationId] =
     useState("");
@@ -72,6 +82,80 @@ export default function NotificationSignup(props: Props) {
     props.mode === "follow"
       ? props.entityName
       : props.eventName;
+
+  const followEntityKind =
+    props.mode === "follow"
+      ? props.entityKind
+      : "";
+
+  const followEntityId =
+    props.mode === "follow"
+      ? props.entityId
+      : "";
+
+  async function refreshFollowState() {
+    if (
+      props.mode !== "follow"
+    ) {
+      return;
+    }
+
+    try {
+      const params =
+        new URLSearchParams({
+          entityKind:
+            props.entityKind,
+          entityId:
+            props.entityId,
+        });
+
+      const response =
+        await fetch(
+          `/api/follow/status?${params.toString()}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data =
+        await response.json();
+
+      if (
+        data.state === "none" ||
+        data.state === "partial" ||
+        data.state === "full"
+      ) {
+        setFollowState(
+          data.state
+        );
+      }
+    } catch {
+      /*
+       * Follow status is enhancement-only.
+       * A failed status lookup must not
+       * block the Follow control.
+       */
+    }
+  }
+
+  useEffect(() => {
+    if (
+      props.mode !== "follow"
+    ) {
+      setFollowState("none");
+      return;
+    }
+
+    refreshFollowState();
+  }, [
+    props.mode,
+    followEntityKind,
+    followEntityId,
+  ]);
 
   async function sendSmsVerification(
     id: string
@@ -183,6 +267,8 @@ export default function NotificationSignup(props: Props) {
       }
 
       setSuccess(true);
+
+      await refreshFollowState();
 
       setMessage(
         wantsEmail
@@ -303,6 +389,8 @@ export default function NotificationSignup(props: Props) {
       setSuccess(true);
       setAwaitingSmsVerification(false);
 
+      await refreshFollowState();
+
       if (data.emailPending) {
         setMessage(
           props.mode === "follow"
@@ -343,13 +431,38 @@ export default function NotificationSignup(props: Props) {
           setOpen(true);
         }}
       >
-        <span aria-hidden="true">
-          {props.mode === "follow" ? "♡" : "🔔"}
+        <span
+          className="notification-trigger-icon"
+          aria-hidden="true"
+        >
+          {props.mode === "follow" ? (
+            followState === "partial" ? (
+              <img
+                src="/halfheart.png"
+                alt=""
+                className="notification-heart-image"
+              />
+            ) : followState === "full" ? (
+              <img
+                src="/wholeheart.png"
+                alt=""
+                className="notification-heart-image"
+              />
+            ) : (
+              <span className="notification-heart-empty">
+                ♡
+              </span>
+            )
+          ) : (
+            "🔔"
+          )}
         </span>
 
         <span>
           {props.mode === "follow"
-            ? "Follow"
+            ? followState === "none"
+              ? "Follow"
+              : "Following"
             : "Remind Me"}
         </span>
       </button>
