@@ -9,9 +9,9 @@ const tools = [
   },
   {
     title: "Manage Spots",
-    description: "Search, edit, hide or remove venue profiles.",
-    href: null,
-    status: "COMING SOON",
+    description: "Search, add and manage venue profiles.",
+    href: "/admin/spots",
+    status: "OPEN",
   },
   {
     title: "Manage Tenders",
