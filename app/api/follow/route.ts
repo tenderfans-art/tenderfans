@@ -401,23 +401,56 @@ export async function POST(request: NextRequest) {
                 !phoneChanged &&
                 existing.phone_verified === true
               )
-            : existing.phone_verified === true;
+            : false;
+
+        /*
+         * The submitted checkboxes are the user's
+         * current preferences, not additive preferences.
+         */
+        const emailActive =
+          wantsEmail &&
+          existing.email_verified === true;
+
+        const smsActive =
+          wantsSms &&
+          phoneVerifiedAfter;
+
+        const needsEmailVerification =
+          wantsEmail &&
+          existing.email_verified !== true;
+
+        const newEmailVerificationToken =
+          needsEmailVerification
+            ? crypto.randomBytes(32).toString("hex")
+            : null;
+
+        const newEmailVerificationTokenHash =
+          newEmailVerificationToken
+            ? crypto
+                .createHash("sha256")
+                .update(newEmailVerificationToken)
+                .digest("hex")
+            : null;
 
         const existingUpdate: Record<string, unknown> = {
-          wants_email:
-            existing.wants_email || wantsEmail,
-
-          wants_sms:
-            existing.wants_sms || wantsSms,
+          wants_email: wantsEmail,
+          wants_sms: wantsSms,
 
           status:
-            existing.email_verified === true ||
-            phoneVerifiedAfter
+            emailActive || smsActive
               ? "active"
               : "pending",
 
           updated_at: now,
         };
+
+        if (needsEmailVerification) {
+          existingUpdate.email_verification_token_hash =
+            newEmailVerificationTokenHash;
+
+          existingUpdate.email_verification_sent_at =
+            now;
+        }
 
         if (wantsSms) {
           existingUpdate.phone_e164 = phone;
@@ -454,22 +487,122 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        /*
+         * Existing unverified email subscriptions need
+         * a fresh verification email before we return.
+         */
+        if (
+          needsEmailVerification &&
+          email &&
+          newEmailVerificationToken
+        ) {
+          const resendApiKey =
+            process.env.RESEND_API_KEY;
+
+          const resendFromEmail =
+            process.env.RESEND_FROM_EMAIL;
+
+          const siteUrl =
+            process.env.NEXT_PUBLIC_SITE_URL;
+
+          if (
+            !resendApiKey ||
+            !resendFromEmail ||
+            !siteUrl
+          ) {
+            console.error(
+              "Resend email configuration is incomplete."
+            );
+
+            return NextResponse.json(
+              {
+                error:
+                  "Email verification is not configured.",
+              },
+              { status: 500 }
+            );
+          }
+
+          const resend = new Resend(resendApiKey);
+
+          const verifyUrl =
+            `${siteUrl.replace(/\/$/, "")}` +
+            `/notifications/verify?type=follow&token=${newEmailVerificationToken}`;
+
+          const entityLabel =
+            entityKind === "bartender"
+              ? "Tender"
+              : "Spot";
+
+          const { error: emailError } =
+            await resend.emails.send({
+              from: resendFromEmail,
+              to: email,
+              subject:
+                `Verify your TenderFans ${entityLabel} follow`,
+              html: `
+                <div style="font-family:Arial,sans-serif;line-height:1.5;color:#222;">
+                  <h2>Confirm your TenderFans follow</h2>
+                  <p>
+                    Click below to verify your email address and turn on
+                    notifications for this ${entityLabel}.
+                  </p>
+                  <p>
+                    <a
+                      href="${verifyUrl}"
+                      style="
+                        display:inline-block;
+                        padding:10px 16px;
+                        background:#222;
+                        color:#fff;
+                        text-decoration:none;
+                        border-radius:8px;
+                        font-weight:700;
+                      "
+                    >
+                      Verify Email
+                    </a>
+                  </p>
+                  <p style="font-size:12px;color:#666;">
+                    This is an automated message. This address does not accept replies.
+                  </p>
+                </div>
+              `,
+            });
+
+          if (emailError) {
+            console.error(
+              "Resend verification email failed:",
+              emailError
+            );
+
+            return NextResponse.json(
+              {
+                error:
+                  "Could not send the verification email.",
+              },
+              { status: 500 }
+            );
+          }
+        }
+
         return attachNotificationIdentity(
           NextResponse.json({
             ok: true,
             id: existing.id,
             status:
-              existing.email_verified === true ||
-              phoneVerifiedAfter
+              emailActive || smsActive
                 ? "active"
                 : "pending",
             needsSmsVerification:
               wantsSms &&
               !phoneVerifiedAfter,
             message:
-              wantsSms && !phoneVerifiedAfter
-                ? "Verify your mobile number to enable text notifications."
-                : "Your follow preferences are already active.",
+              needsEmailVerification
+                ? "Check your email to verify your follow."
+                : wantsSms && !phoneVerifiedAfter
+                  ? "Verify your mobile number to enable text notifications."
+                  : "Your follow preferences are active.",
           }),
           request,
           existing.id
