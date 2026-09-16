@@ -4262,9 +4262,3 @@
   margin-right:auto;
 }
 
-/* Events weekly view modal-width refinement */
-.events-calendar-card{
-  width:min(760px,100%);
-  margin-left:auto;
-  margin-right:auto;
-}
