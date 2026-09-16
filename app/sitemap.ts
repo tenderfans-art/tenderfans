@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase";
 
 const BASE_URL = "https://tenderfans.com";
 
+export const revalidate = 21600; // Refresh sitemap every 6 hours.
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
