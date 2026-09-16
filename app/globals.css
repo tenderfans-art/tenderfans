@@ -994,7 +994,7 @@
 }
 
 .events-calendar-card{
-  overflow:hidden;
+  overflow:visible;
   background:#fff;
   border:1px solid var(--line);
   border-radius:20px;
