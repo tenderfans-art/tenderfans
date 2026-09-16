@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import NotificationSignup from "@/components/NotificationSignup";
 
-const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 type CalendarEvent = {
   id: string;
   venue_id: string;
@@ -18,76 +16,104 @@ type CalendarEvent = {
   venue_slug: string | null;
 };
 
+type CalendarWeek = {
+  start: Date;
+  end: Date;
+};
+
+function startOfWeek(date: Date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  result.setDate(result.getDate() - result.getDay());
+  return result;
+}
+
+function endOfWeek(date: Date) {
+  const result = startOfWeek(date);
+  result.setDate(result.getDate() + 6);
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
+function sameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function sameWeek(a: CalendarWeek, b: CalendarWeek) {
+  return sameDay(a.start, b.start) && sameDay(a.end, b.end);
+}
+
+function weekLabel(week: CalendarWeek) {
+  const startMonth = week.start.toLocaleDateString("en-US", {
+    month: "short",
+  });
+  const endMonth = week.end.toLocaleDateString("en-US", {
+    month: "short",
+  });
+
+  if (week.start.getMonth() === week.end.getMonth()) {
+    return `${startMonth} ${week.start.getDate()}–${week.end.getDate()}`;
+  }
+
+  return `${startMonth} ${week.start.getDate()}–${endMonth} ${week.end.getDate()}`;
+}
+
 export default function EventsCalendar() {
   const [today, setToday] = useState<Date | null>(null);
-
   const [month, setMonth] = useState<Date | null>(null);
+  const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
+
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedFlyer, setSelectedFlyer] = useState<CalendarEvent | null>(null);
 
   useEffect(() => {
     const now = new Date();
 
     setToday(now);
-    setMonth(
-      new Date(now.getFullYear(), now.getMonth(), 1)
-    );
+    setMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedWeekStart(startOfWeek(now));
   }, []);
 
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [selectedDayEvents, setSelectedDayEvents] =
-    useState<CalendarEvent[] | null>(null);
-  const [selectedDayDate, setSelectedDayDate] =
-    useState<Date | null>(null);
-
-  const calendarDays = useMemo(() => {
+  const calendarWeeks = useMemo<CalendarWeek[]>(() => {
     if (!month) return [];
 
     const year = month.getFullYear();
     const monthIndex = month.getMonth();
 
-    const firstDay = new Date(year, monthIndex, 1).getDay();
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-    const previousMonthDays = new Date(year, monthIndex, 0).getDate();
+    const firstOfMonth = new Date(year, monthIndex, 1);
+    const lastOfMonth = new Date(year, monthIndex + 1, 0);
 
-    const cells = [];
+    const firstWeekStart = startOfWeek(firstOfMonth);
+    const lastWeekEnd = endOfWeek(lastOfMonth);
 
-    for (let i = firstDay - 1; i >= 0; i--) {
-      cells.push({
-        date: new Date(year, monthIndex - 1, previousMonthDays - i),
-        currentMonth: false,
-      });
+    const weeks: CalendarWeek[] = [];
+    const cursor = new Date(firstWeekStart);
+
+    while (cursor <= lastWeekEnd) {
+      const start = new Date(cursor);
+      const end = endOfWeek(start);
+
+      weeks.push({ start, end });
+      cursor.setDate(cursor.getDate() + 7);
     }
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      cells.push({
-        date: new Date(year, monthIndex, day),
-        currentMonth: true,
-      });
-    }
-
-    let nextDay = 1;
-    while (cells.length < 42) {
-      cells.push({
-        date: new Date(year, monthIndex + 1, nextDay++),
-        currentMonth: false,
-      });
-    }
-
-    return cells;
+    return weeks;
   }, [month]);
 
   useEffect(() => {
     async function loadEvents() {
-      if (!calendarDays.length) return;
+      if (!calendarWeeks.length) return;
 
       setLoading(true);
 
-      const rangeStart = new Date(calendarDays[0].date);
-      rangeStart.setHours(0, 0, 0, 0);
-
-      const rangeEnd = new Date(calendarDays[calendarDays.length - 1].date);
-      rangeEnd.setHours(23, 59, 59, 999);
+      const rangeStart = new Date(calendarWeeks[0].start);
+      const rangeEnd = new Date(calendarWeeks[calendarWeeks.length - 1].end);
 
       const { data, error } = await supabase
         .from("events")
@@ -133,48 +159,78 @@ export default function EventsCalendar() {
     }
 
     loadEvents();
-  }, [calendarDays]);
+  }, [calendarWeeks]);
+
+  const selectedWeek = useMemo<CalendarWeek | null>(() => {
+    if (!calendarWeeks.length) return null;
+
+    if (selectedWeekStart) {
+      const match = calendarWeeks.find((week) =>
+        sameDay(week.start, selectedWeekStart)
+      );
+
+      if (match) return match;
+    }
+
+    return calendarWeeks[0];
+  }, [calendarWeeks, selectedWeekStart]);
+
+  const selectedWeekEvents = useMemo(() => {
+    if (!selectedWeek) return [];
+
+    return events.filter((event) => {
+      const eventDate = new Date(event.starts_at);
+      return eventDate >= selectedWeek.start && eventDate <= selectedWeek.end;
+    });
+  }, [events, selectedWeek]);
+
+  function selectMonth(nextMonth: Date) {
+    setMonth(nextMonth);
+
+    const firstOfMonth = new Date(
+      nextMonth.getFullYear(),
+      nextMonth.getMonth(),
+      1
+    );
+
+    setSelectedWeekStart(startOfWeek(firstOfMonth));
+  }
 
   function previousMonth() {
-    setMonth((current) =>
-      current
-        ? new Date(current.getFullYear(), current.getMonth() - 1, 1)
-        : current
+    if (!month) return;
+
+    selectMonth(
+      new Date(month.getFullYear(), month.getMonth() - 1, 1)
     );
   }
 
   function nextMonth() {
-    setMonth((current) =>
-      current
-        ? new Date(current.getFullYear(), current.getMonth() + 1, 1)
-        : current
+    if (!month) return;
+
+    selectMonth(
+      new Date(month.getFullYear(), month.getMonth() + 1, 1)
     );
   }
 
   function goToday() {
     if (!today) return;
 
-    setMonth(
-      new Date(today.getFullYear(), today.getMonth(), 1)
-    );
-  }
-
-  function eventsForDate(date: Date) {
-    return events.filter((event) => {
-      const eventDate = new Date(event.starts_at);
-
-      return (
-        eventDate.getFullYear() === date.getFullYear() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getDate() === date.getDate()
-      );
-    });
+    setMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    setSelectedWeekStart(startOfWeek(today));
   }
 
   function eventTime(startsAt: string) {
     return new Date(startsAt).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
+    });
+  }
+
+  function eventDate(startsAt: string) {
+    return new Date(startsAt).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
     });
   }
 
@@ -214,153 +270,124 @@ export default function EventsCalendar() {
         </button>
       </div>
 
-      <div className="events-weekdays">
-        {weekdayNames.map((day) => (
-          <div key={day}>{day}</div>
-        ))}
-      </div>
-
-      <div className="events-calendar-grid">
-        {calendarDays.map(({ date, currentMonth }) => {
-          const isToday =
-            !!today &&
-            date.getFullYear() === today.getFullYear() &&
-            date.getMonth() === today.getMonth() &&
-            date.getDate() === today.getDate();
-
-          const dayEvents = eventsForDate(date);
+      <nav className="events-week-selector" aria-label="Select event week">
+        {calendarWeeks.map((week) => {
+          const active = !!selectedWeek && sameWeek(week, selectedWeek);
 
           return (
-            <div
-              key={date.toISOString()}
+            <button
+              type="button"
+              key={week.start.toISOString()}
               className={[
-                "events-day",
-                currentMonth ? "" : "events-day-muted",
-                isToday ? "events-day-today" : "",
+                "events-week-link",
+                active ? "events-week-link-active" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
+              onClick={() => setSelectedWeekStart(new Date(week.start))}
+              aria-pressed={active}
             >
-              <div className="events-day-header">
-                <span className="events-day-number">{date.getDate()}</span>
-
-                {dayEvents.length > 3 && (
-                  <button
-                    type="button"
-                    className="events-calendar-more events-calendar-more-header"
-                    onClick={() => {
-                      setSelectedDayDate(date);
-                      setSelectedDayEvents(dayEvents);
-                    }}
-                  >
-                    + {dayEvents.length - 3} more
-                  </button>
-                )}
-              </div>
-
-              <div className="events-day-items">
-                {dayEvents.slice(0, 3).map((event) => (
-                  <button
-                    type="button"
-                    className="events-calendar-event events-calendar-event-compact"
-                    key={event.id}
-                    onClick={() => setSelectedEvent(event)}
-                  >
-                    <span className="events-calendar-event-line">
-                      <span className="events-calendar-event-time">
-                        {eventTime(event.starts_at)}
-                      </span>
-                      <small>{event.venue_name}</small>
-                    </span>
-
-                    <strong className="events-calendar-event-title">
-                      {event.title}
-                    </strong>
-                  </button>
-                ))}
-
-              </div>
-            </div>
+              {weekLabel(week)}
+            </button>
           );
         })}
+      </nav>
+
+      <div className="events-week-list">
+        {loading && (
+          <div className="events-empty">
+            <span>Loading events...</span>
+          </div>
+        )}
+
+        {!loading && selectedWeekEvents.length === 0 && (
+          <div className="events-empty">
+            <strong>No events posted for this week.</strong>
+            <span>Try another week or check back soon.</span>
+          </div>
+        )}
+
+        {!loading &&
+          selectedWeekEvents.map((event) => (
+            <article className="events-list-row" key={event.id}>
+              <button
+                type="button"
+                className="events-list-row-main"
+                onClick={() => setSelectedEvent(event)}
+                aria-label={`View ${event.title} event details`}
+              >
+                <span className="events-list-row-top">
+                  <strong>{event.title}</strong>
+                  <span aria-hidden="true">·</span>
+                  <span>{event.venue_name}</span>
+                </span>
+
+                <span className="events-list-row-bottom">
+                  <span>{eventDate(event.starts_at)}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    {eventTime(event.starts_at)}
+                    {event.ends_at && (
+                      <>
+                        {" – "}
+                        {eventTime(event.ends_at)}
+                      </>
+                    )}
+                  </span>
+                </span>
+              </button>
+
+              {event.flyer_url ? (
+                <button
+                  type="button"
+                  className="events-list-flyer-button"
+                  onClick={() => setSelectedFlyer(event)}
+                  aria-label={`Enlarge ${event.title} flyer`}
+                >
+                  <img
+                    src={event.flyer_url}
+                    alt={`${event.title} event flyer`}
+                    className="events-list-flyer"
+                  />
+                </button>
+              ) : (
+                <div
+                  className="events-list-flyer-placeholder"
+                  aria-hidden="true"
+                >
+                  Event
+                </div>
+              )}
+            </article>
+          ))}
       </div>
 
-      {!loading && events.length === 0 && (
-        <div className="events-empty">
-          <strong>No events posted yet.</strong>
-          <span>Check back soon for events from TenderFans Spots.</span>
-        </div>
-      )}
-
-      {loading && (
-        <div className="events-empty">
-          <span>Loading events...</span>
-        </div>
-      )}
-
-      {selectedDayEvents && selectedDayDate && (
+      {selectedFlyer?.flyer_url && (
         <div
-          className="events-modal-backdrop"
+          className="events-modal-backdrop events-flyer-backdrop"
           role="presentation"
-          onClick={() => {
-            setSelectedDayEvents(null);
-            setSelectedDayDate(null);
-          }}
+          onClick={() => setSelectedFlyer(null)}
         >
           <div
-            className="events-day-list-modal"
+            className="events-flyer-modal"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="events-day-list-title"
+            aria-label={`${selectedFlyer.title} flyer`}
             onClick={(event) => event.stopPropagation()}
           >
             <button
               type="button"
               className="events-modal-close"
-              aria-label="Close daily events"
-              onClick={() => {
-                setSelectedDayEvents(null);
-                setSelectedDayDate(null);
-              }}
+              aria-label="Close flyer"
+              onClick={() => setSelectedFlyer(null)}
             >
               ×
             </button>
 
-            <div className="events-day-list-header">
-              <span className="events-detail-label">Events</span>
-
-              <h2 id="events-day-list-title">
-                {selectedDayDate.toLocaleDateString("en-US", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </h2>
-            </div>
-
-            <div className="events-day-list">
-              {selectedDayEvents.map((event) => (
-                <button
-                  type="button"
-                  className="events-day-list-event"
-                  key={event.id}
-                  onClick={() => {
-                    setSelectedDayEvents(null);
-                    setSelectedDayDate(null);
-                    setSelectedEvent(event);
-                  }}
-                >
-                  <span className="events-day-list-time">
-                    {eventTime(event.starts_at)}
-                  </span>
-
-                  <span className="events-day-list-main">
-                    <strong>{event.title}</strong>
-                    <small>{event.venue_name}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
+            <img
+              src={selectedFlyer.flyer_url}
+              alt={`${selectedFlyer.title} event flyer`}
+            />
           </div>
         </div>
       )}
@@ -403,12 +430,15 @@ export default function EventsCalendar() {
               <div className="events-detail-group">
                 <span className="events-detail-label">When</span>
                 <div className="events-detail-value">
-                  {new Date(selectedEvent.starts_at).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
+                  {new Date(selectedEvent.starts_at).toLocaleDateString(
+                    "en-US",
+                    {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    }
+                  )}
                   {" · "}
                   {eventTime(selectedEvent.starts_at)}
                   {selectedEvent.ends_at && (

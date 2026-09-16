@@ -4025,3 +4025,232 @@
   font-size:23px;
   line-height:1;
 }
+
+/* -------------------------------------------------------
+   Events weekly list view
+------------------------------------------------------- */
+
+.events-week-selector{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:8px 18px;
+  padding:12px 20px 14px;
+  border-bottom:1px solid var(--line);
+  background:var(--cream);
+}
+
+.events-week-link{
+  padding:3px 2px;
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  line-height:1.2;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.events-week-link:hover{
+  color:var(--ink);
+  text-decoration:underline;
+}
+
+.events-week-link-active{
+  color:var(--ink);
+  font-size:15px;
+  font-weight:900;
+}
+
+.events-week-list{
+  display:grid;
+  gap:10px;
+  padding:16px 18px 20px;
+}
+
+.events-list-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 76px;
+  align-items:stretch;
+  gap:12px;
+  width:100%;
+  min-height:76px;
+  padding:8px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+}
+
+.events-list-row:hover{
+  box-shadow:0 5px 14px rgba(9,23,35,.08);
+}
+
+.events-list-row-main{
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  min-width:0;
+  min-height:60px;
+  padding:7px 8px;
+  border:0;
+  background:transparent;
+  color:var(--ink);
+  text-align:left;
+  cursor:pointer;
+}
+
+.events-list-row-top,
+.events-list-row-bottom{
+  display:flex;
+  align-items:baseline;
+  gap:7px;
+  min-width:0;
+}
+
+.events-list-row-top{
+  font-size:15px;
+  line-height:1.25;
+}
+
+.events-list-row-top strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:900;
+}
+
+.events-list-row-top > span:last-child{
+  overflow:hidden;
+  color:var(--muted);
+  font-size:14px;
+  font-weight:700;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.events-list-row-bottom{
+  color:var(--olive);
+  font-size:13px;
+  font-weight:850;
+  line-height:1.2;
+}
+
+.events-list-flyer-button,
+.events-list-flyer-placeholder{
+  width:76px;
+  height:76px;
+  align-self:center;
+  overflow:hidden;
+  padding:0;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--cream);
+}
+
+.events-list-flyer-button{
+  cursor:zoom-in;
+}
+
+.events-list-flyer{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.events-list-flyer-placeholder{
+  display:grid;
+  place-items:center;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.events-flyer-backdrop{
+  z-index:110;
+}
+
+.events-flyer-modal{
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:min(620px,100%);
+  max-height:calc(100vh - 40px);
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 24px 80px rgba(0,0,0,.32);
+}
+
+.events-flyer-modal img{
+  display:block;
+  width:100%;
+  max-height:calc(100vh - 76px);
+  object-fit:contain;
+  border-radius:12px;
+}
+
+@media (max-width:640px){
+  .events-week-selector{
+    gap:7px 12px;
+    padding:10px 8px 12px;
+  }
+
+  .events-week-link{
+    font-size:11px;
+  }
+
+  .events-week-link-active{
+    font-size:13px;
+  }
+
+  .events-week-list{
+    gap:8px;
+    padding:10px;
+  }
+
+  .events-list-row{
+    grid-template-columns:minmax(0,1fr) 68px;
+    gap:7px;
+    min-height:68px;
+    padding:6px;
+    border-radius:12px;
+  }
+
+  .events-list-row-main{
+    min-height:56px;
+    padding:5px 4px;
+  }
+
+  .events-list-row-top{
+    gap:5px;
+    font-size:13px;
+  }
+
+  .events-list-row-top > span:last-child{
+    font-size:12px;
+  }
+
+  .events-list-row-bottom{
+    gap:5px;
+    font-size:11px;
+  }
+
+  .events-list-flyer-button,
+  .events-list-flyer-placeholder{
+    width:68px;
+    height:68px;
+    border-radius:9px;
+  }
+
+  .events-flyer-modal{
+    padding:12px;
+    border-radius:16px;
+  }
+}
