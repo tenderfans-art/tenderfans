@@ -4353,3 +4353,49 @@
     margin-left:2px;
   }
 }
+
+/* Event list reminder refinement:
+   keep the modal full-size; compact only the row trigger. */
+.events-list-reminder .notification-signup{
+  transform:none !important;
+}
+
+.events-list-reminder .notification-trigger{
+  transform:scale(.8);
+  transform-origin:left center;
+}
+
+/* Compact horizontal reminder modal on desktop */
+@media (min-width:761px){
+  .events-list-reminder .notification-modal{
+    width:min(680px,calc(100vw - 36px));
+  }
+
+  .events-list-reminder .notification-modal .notification-form{
+    grid-template-columns:auto auto minmax(180px,1fr) auto;
+    align-items:end;
+    column-gap:12px;
+    row-gap:10px;
+  }
+
+  .events-list-reminder .notification-modal .notification-reminder-options{
+    grid-column:auto;
+  }
+
+  .events-list-reminder .notification-modal .notification-channel{
+    align-self:center;
+    white-space:nowrap;
+    padding-bottom:9px;
+  }
+
+  .events-list-reminder .notification-modal .btn.primary{
+    width:auto;
+    white-space:nowrap;
+    align-self:end;
+  }
+
+  .events-list-reminder .notification-modal .notification-message,
+  .events-list-reminder .notification-modal .notification-sms-consent{
+    grid-column:1 / -1;
+  }
+}
