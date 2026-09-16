@@ -4317,3 +4317,39 @@
     margin-right:-20%;
   }
 }
+
+/* Final weekly event reminder placement */
+.events-list-row{
+  grid-template-columns:minmax(0,1fr) 76px;
+  column-gap:8px;
+}
+
+.events-list-row-bottom{
+  flex-wrap:nowrap;
+}
+
+.events-list-reminder{
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding:0;
+  margin-left:4px;
+  width:auto;
+}
+
+.events-list-reminder > *{
+  transform:scale(.8);
+  transform-origin:left center;
+  margin-right:-20%;
+}
+
+@media (max-width:640px){
+  .events-list-row{
+    grid-template-columns:minmax(0,1fr) 68px;
+    column-gap:7px;
+  }
+
+  .events-list-reminder{
+    margin-left:2px;
+  }
+}

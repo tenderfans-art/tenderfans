@@ -334,19 +334,19 @@ export default function EventsCalendar() {
                       </>
                     )}
                   </span>
+
+                  <span
+                    className="events-list-reminder"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <NotificationSignup
+                      mode="reminder"
+                      eventId={event.id}
+                      eventName={event.title}
+                    />
+                  </span>
                 </span>
               </button>
-
-              <div
-                className="events-list-reminder"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <NotificationSignup
-                  mode="reminder"
-                  eventId={event.id}
-                  eventName={event.title}
-                />
-              </div>
 
               {event.flyer_url ? (
                 <button
