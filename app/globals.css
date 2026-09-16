@@ -4288,3 +4288,32 @@
     padding:0 0 5px;
   }
 }
+
+/* Weekly event row reminder sizing + alignment refinement */
+.events-list-row{
+  column-gap:6px;
+}
+
+.events-list-reminder{
+  justify-content:flex-start;
+  padding-left:0;
+  padding-right:0;
+}
+
+.events-list-reminder > *{
+  transform:scale(.8);
+  transform-origin:left bottom;
+  margin-right:-20%;
+}
+
+@media (max-width:640px){
+  .events-list-row{
+    column-gap:4px;
+  }
+
+  .events-list-reminder > *{
+    transform:scale(.8);
+    transform-origin:left bottom;
+    margin-right:-20%;
+  }
+}
