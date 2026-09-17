@@ -586,148 +586,241 @@ export default function NotificationSignup(props: Props) {
 
                 <form
                   onSubmit={submit}
-                  className="notification-form"
+                  className={[
+                    "notification-form",
+                    props.mode === "reminder"
+                      ? "notification-reminder-form"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 >
-                  {props.mode === "reminder" && (
-                    <div className="notification-reminder-options">
-                      <label>
-                        <span>Remind me</span>
-
-                        <select
-                          value={reminderMinutesBefore}
-                          onChange={(event) =>
-                            setReminderMinutesBefore(
-                              Number(
-                                event.target.value
-                              )
-                            )
-                          }
-                        >
-                          <option value={1440}>
-                            1 day before
-                          </option>
-
-                          <option value={180}>
-                            3 hours before
-                          </option>
-
-                          <option value={60}>
-                            1 hour before
-                          </option>
-                        </select>
-                      </label>
-                    </div>
-                  )}
-
-                  <label className="notification-channel">
-                    <input
-                      type="checkbox"
-                      checked={wantsEmail}
-                      onChange={(event) =>
-                        setWantsEmail(
-                          event.target.checked
-                        )
-                      }
-                    />
-
-                    <span>Email</span>
-                  </label>
-
-                  {wantsEmail && (
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(event) =>
-                        setEmail(
-                          event.target.value
-                        )
-                      }
-                      placeholder="Email address"
-                      autoComplete="email"
-                    />
-                  )}
-
-                  <label className="notification-channel">
-                    <input
-                      type="checkbox"
-                      checked={wantsSms}
-                      onChange={(event) => {
-                        setWantsSms(
-                          event.target.checked
-                        );
-
-                        if (
-                          !event.target.checked
-                        ) {
-                          setSmsConsent(false);
-                        }
-                      }}
-                    />
-
-                    <span>Text</span>
-                  </label>
-
-                  {wantsSms && (
+                  {props.mode === "reminder" ? (
                     <>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(event) =>
-                          setPhone(
-                            event.target.value
-                          )
-                        }
-                        placeholder="Mobile number"
-                        autoComplete="tel"
-                      />
+                      <div className="notification-reminder-grid">
+                        <div className="notification-reminder-when">
+                          <span className="notification-reminder-label">
+                            Remind me
+                          </span>
 
-                      <label className="notification-sms-consent">
+                          <select
+                            value={reminderMinutesBefore}
+                            onChange={(event) =>
+                              setReminderMinutesBefore(
+                                Number(event.target.value)
+                              )
+                            }
+                          >
+                            <option value={1440}>
+                              1 day before
+                            </option>
+
+                            <option value={180}>
+                              3 hours before
+                            </option>
+
+                            <option value={60}>
+                              1 hour before
+                            </option>
+                          </select>
+                        </div>
+
+                        <div className="notification-reminder-channels">
+                          <label className="notification-channel">
+                            <input
+                              type="checkbox"
+                              checked={wantsEmail}
+                              onChange={(event) =>
+                                setWantsEmail(event.target.checked)
+                              }
+                            />
+
+                            <span>Email</span>
+                          </label>
+
+                          <label className="notification-channel">
+                            <input
+                              type="checkbox"
+                              checked={wantsSms}
+                              onChange={(event) => {
+                                setWantsSms(event.target.checked);
+
+                                if (!event.target.checked) {
+                                  setSmsConsent(false);
+                                }
+                              }}
+                            />
+
+                            <span>Text</span>
+                          </label>
+                        </div>
+
+                        <div className="notification-reminder-fields">
+                          {wantsEmail && (
+                            <input
+                              type="email"
+                              value={email}
+                              onChange={(event) =>
+                                setEmail(event.target.value)
+                              }
+                              placeholder="Email address"
+                              autoComplete="email"
+                            />
+                          )}
+
+                          {wantsSms && (
+                            <input
+                              type="tel"
+                              value={phone}
+                              onChange={(event) =>
+                                setPhone(event.target.value)
+                              }
+                              placeholder="Mobile number"
+                              autoComplete="tel"
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {wantsSms && (
+                        <label className="notification-sms-consent">
+                          <input
+                            type="checkbox"
+                            checked={smsConsent}
+                            onChange={(event) =>
+                              setSmsConsent(event.target.checked)
+                            }
+                          />
+
+                          <span>
+                            I agree to receive text
+                            notifications from TenderFans.
+                            Message and data rates may apply.
+                            Reply STOP to unsubscribe.
+                          </span>
+                        </label>
+                      )}
+
+                      {message && (
+                        <div
+                          className={[
+                            "notification-message",
+                            success
+                              ? "notification-message-success"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
+                          {message}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="btn primary notification-reminder-submit"
+                        disabled={submitting}
+                      >
+                        {submitting ? "Saving..." : "Set Reminder"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <label className="notification-channel">
                         <input
                           type="checkbox"
-                          checked={smsConsent}
+                          checked={wantsEmail}
                           onChange={(event) =>
-                            setSmsConsent(
-                              event.target.checked
-                            )
+                            setWantsEmail(event.target.checked)
                           }
                         />
 
-                        <span>
-                          I agree to receive text
-                          notifications from TenderFans.
-                          Message and data rates may apply.
-                          Reply STOP to unsubscribe.
-                        </span>
+                        <span>Email</span>
                       </label>
+
+                      {wantsEmail && (
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(event) =>
+                            setEmail(event.target.value)
+                          }
+                          placeholder="Email address"
+                          autoComplete="email"
+                        />
+                      )}
+
+                      <label className="notification-channel">
+                        <input
+                          type="checkbox"
+                          checked={wantsSms}
+                          onChange={(event) => {
+                            setWantsSms(event.target.checked);
+
+                            if (!event.target.checked) {
+                              setSmsConsent(false);
+                            }
+                          }}
+                        />
+
+                        <span>Text</span>
+                      </label>
+
+                      {wantsSms && (
+                        <>
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(event) =>
+                              setPhone(event.target.value)
+                            }
+                            placeholder="Mobile number"
+                            autoComplete="tel"
+                          />
+
+                          <label className="notification-sms-consent">
+                            <input
+                              type="checkbox"
+                              checked={smsConsent}
+                              onChange={(event) =>
+                                setSmsConsent(event.target.checked)
+                              }
+                            />
+
+                            <span>
+                              I agree to receive text
+                              notifications from TenderFans.
+                              Message and data rates may apply.
+                              Reply STOP to unsubscribe.
+                            </span>
+                          </label>
+                        </>
+                      )}
+
+                      {message && (
+                        <div
+                          className={[
+                            "notification-message",
+                            success
+                              ? "notification-message-success"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
+                          {message}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="btn primary"
+                        disabled={submitting}
+                      >
+                        {submitting ? "Saving..." : "Follow"}
+                      </button>
                     </>
                   )}
-
-                  {message && (
-                    <div
-                      className={[
-                        "notification-message",
-                        success
-                          ? "notification-message-success"
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      {message}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="btn primary"
-                    disabled={submitting}
-                  >
-                    {submitting
-                      ? "Saving..."
-                      : props.mode === "follow"
-                        ? "Follow"
-                        : "Set Reminder"}
-                  </button>
                 </form>
               </>
             )}

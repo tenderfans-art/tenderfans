@@ -4392,3 +4392,99 @@
     grid-column:1 / -1;
   }
 }
+
+/* -------------------------------------------------------
+   Structured reminder form
+------------------------------------------------------- */
+
+.notification-reminder-form{
+  gap:14px;
+}
+
+.notification-reminder-grid{
+  display:grid;
+  grid-template-columns:140px 72px minmax(0,1fr);
+  gap:12px;
+  align-items:start;
+}
+
+.notification-reminder-when,
+.notification-reminder-channels,
+.notification-reminder-fields{
+  display:grid;
+  gap:8px;
+}
+
+.notification-reminder-label{
+  min-height:20px;
+  display:flex;
+  align-items:center;
+  font-size:12px;
+  font-weight:850;
+}
+
+.notification-reminder-when select{
+  width:100%;
+}
+
+.notification-reminder-channels{
+  padding-top:0;
+}
+
+.notification-reminder-channels .notification-channel{
+  min-height:20px;
+}
+
+.notification-reminder-fields{
+  padding-top:0;
+}
+
+.notification-reminder-fields input{
+  width:100%;
+}
+
+.notification-reminder-submit{
+  width:max-content;
+  margin-top:2px;
+}
+
+/* Event-list reminder uses the established modal at a wider desktop size. */
+@media (min-width:761px){
+  .events-list-reminder .notification-modal{
+    width:min(620px,calc(100vw - 36px));
+  }
+
+  .events-list-reminder .notification-modal .notification-form{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+
+  .events-list-reminder .notification-modal .notification-reminder-grid{
+    display:grid;
+    grid-template-columns:140px 72px minmax(0,1fr);
+    gap:12px;
+    align-items:start;
+  }
+
+  .events-list-reminder .notification-modal .notification-reminder-submit{
+    grid-column:auto;
+    width:max-content;
+    align-self:auto;
+  }
+}
+
+@media (max-width:760px){
+  .notification-reminder-grid{
+    grid-template-columns:1fr;
+  }
+
+  .notification-reminder-label{
+    min-height:0;
+  }
+
+  .notification-reminder-channels,
+  .notification-reminder-fields{
+    gap:10px;
+  }
+}
