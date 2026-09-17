@@ -4488,3 +4488,32 @@
     gap:10px;
   }
 }
+
+/* Final event reminder modal proportion refinement */
+@media (min-width:761px){
+  .events-list-reminder .notification-modal{
+    width:min(560px,calc(100vw - 36px));
+  }
+
+  .events-list-reminder .notification-modal > .eyebrow,
+  .events-list-reminder .notification-modal > h2,
+  .events-list-reminder .notification-modal > .notification-modal-intro{
+    text-align:center;
+  }
+
+  .events-list-reminder .notification-modal .notification-reminder-grid{
+    grid-template-columns:180px 72px 210px;
+    justify-content:center;
+    column-gap:12px;
+  }
+
+  .events-list-reminder .notification-modal .notification-reminder-fields input{
+    width:210px;
+  }
+
+  .events-list-reminder .notification-modal .notification-reminder-submit{
+    justify-self:center;
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
