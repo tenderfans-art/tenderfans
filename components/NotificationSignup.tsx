@@ -26,7 +26,7 @@ export default function NotificationSignup(props: Props) {
   const [open, setOpen] = useState(false);
 
   const [wantsEmail, setWantsEmail] = useState(true);
-  const [wantsSms, setWantsSms] = useState(false);
+  const [wantsSms, setWantsSms] = useState(true);
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
