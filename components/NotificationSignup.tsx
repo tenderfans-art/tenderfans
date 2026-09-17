@@ -668,17 +668,15 @@ export default function NotificationSignup(props: Props) {
                             />
                           )}
 
-                          {wantsSms && (
-                            <input
-                              type="tel"
-                              value={phone}
-                              onChange={(event) =>
-                                setPhone(event.target.value)
-                              }
-                              placeholder="Mobile number"
-                              autoComplete="tel"
-                            />
-                          )}
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(event) =>
+                              setPhone(event.target.value)
+                            }
+                            placeholder="Mobile number"
+                            autoComplete="tel"
+                          />
                         </div>
                       </div>
 
