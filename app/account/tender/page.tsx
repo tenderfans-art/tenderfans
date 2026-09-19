@@ -26,6 +26,7 @@ export default function TenderAccountPage() {
   const [contestActionMessage, setContestActionMessage] = useState("");
   const [showContestTools, setShowContestTools] = useState(false);
   const [contestActive, setContestActive] = useState(false);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   const [instagramHandle, setInstagramHandle] = useState("");
   const [facebookHandle, setFacebookHandle] = useState("");
@@ -77,6 +78,21 @@ export default function TenderAccountPage() {
       }
 
       setTender(bartender as TenderProfile);
+
+      const { count: unreadCount, error: unreadError } =
+        await supabase
+          .from("tender_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("bartender_id", bartenderId)
+          .is("read_at", null);
+
+      if (unreadError) {
+        setMessage(unreadError.message);
+        setLoading(false);
+        return;
+      }
+
+      setUnreadMessageCount(unreadCount ?? 0);
 
       const contestNow = new Date().toISOString();
 
@@ -453,7 +469,7 @@ export default function TenderAccountPage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    `repeat(${contestActive ? 5 : 4}, minmax(0, 1fr))`,
+                    `repeat(${contestActive ? 6 : 5}, minmax(0, 1fr))`,
                   gap: "10px",
                 }}
               >
@@ -485,6 +501,46 @@ export default function TenderAccountPage() {
                   <div style={descriptionStyle}>
                     Verified workplaces
                   </div>
+                </Link>
+
+                <Link
+                  href="/account/tender/messages"
+                  style={{
+                    ...cardStyle,
+                    position: "relative",
+                  }}
+                >
+                  <strong>Messages</strong>
+                  <div style={descriptionStyle}>
+                    {unreadMessageCount > 0
+                      ? `${unreadMessageCount} unread`
+                      : "Shouts & updates"}
+                  </div>
+
+                  {unreadMessageCount > 0 && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "7px",
+                        right: "8px",
+                        minWidth: "20px",
+                        height: "20px",
+                        padding: "0 6px",
+                        borderRadius: "999px",
+                        background: "#172735",
+                        color: "#fff",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.68rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {unreadMessageCount > 99
+                        ? "99+"
+                        : unreadMessageCount}
+                    </span>
+                  )}
                 </Link>
 
                 <Link
