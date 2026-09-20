@@ -46,6 +46,13 @@ type Subscription = {
   phone_verified: boolean;
   status: string;
   created_at: string;
+
+  /*
+   * Delivery-only context for Spot events expanded through
+   * current Tender follower networks. These are not DB columns.
+   */
+  followed_tender_id?: string | null;
+  followed_tender_name?: string | null;
 };
 
 type EventReminder = {
@@ -908,19 +915,14 @@ async function processFollowBatch(
      * Reuse the established subscription loader rather than
      * introducing a second recipient-selection implementation.
      *
-     * Merge by subscription id so a Fan following the Spot,
-     * multiple current Tenders, or both still receives this
-     * event only once.
+     * Keep direct Spot follows first. Delivery is deduped by
+     * verified destination/channel below, so a Fan following the
+     * Spot and one or more current Tenders receives one email per
+     * email address and one SMS per phone number.
      */
-    const subscriptionMap =
-      new Map(
-        subscriptions.map(
-          (subscription) => [
-            subscription.id,
-            subscription,
-          ]
-        )
-      );
+    const expandedSubscriptions: Subscription[] = [
+      ...subscriptions,
+    ];
 
     for (
       const bartenderId
@@ -942,26 +944,28 @@ async function processFollowBatch(
           eligibleAt
         );
 
-      for (
-        const subscription
-        of tenderSubscriptions
-      ) {
-        if (
-          !subscriptionMap.has(
-            subscription.id
-          )
-        ) {
-          subscriptionMap.set(
-            subscription.id,
-            subscription
-          );
-        }
-      }
+      const followedTender =
+        await loadBartender(
+          admin,
+          bartenderId
+        );
+
+      expandedSubscriptions.push(
+        ...tenderSubscriptions.map(
+          (subscription) => ({
+            ...subscription,
+            followed_tender_id:
+              bartenderId,
+            followed_tender_name:
+              followedTender?.display_name ??
+              "a Tender",
+          })
+        )
+      );
     }
 
-    subscriptions = [
-      ...subscriptionMap.values(),
-    ];
+    subscriptions =
+      expandedSubscriptions;
   }
 
   const message =
@@ -969,6 +973,50 @@ async function processFollowBatch(
       admin,
       leader
     );
+
+  /*
+   * Follow subscriptions are target-specific, so the same Fan may
+   * legitimately have separate rows for a Spot and its Tenders.
+   * Deduplicate delivery by verified destination per channel.
+   */
+  const deliveredEmailTargets =
+    new Set<string>();
+  const deliveredSmsTargets =
+    new Set<string>();
+
+  const messageForSubscription = (
+    subscription: Subscription
+  ) => {
+    if (
+      leader.event_type !==
+        "spot.event_published" ||
+      !subscription.followed_tender_name
+    ) {
+      return message;
+    }
+
+    const venueName =
+      message.subject.includes(" posted ")
+        ? message.subject.split(" posted ")[0]
+        : "A TenderFans Spot";
+
+    const tenderContext =
+      `${venueName}, where you follow ${subscription.followed_tender_name}`;
+
+    return {
+      ...message,
+      subject:
+        message.subject.replace(
+          venueName,
+          tenderContext
+        ),
+      text:
+        message.text.replace(
+          venueName,
+          tenderContext
+        ),
+    };
+  };
 
   let sent = 0;
   let failed = 0;
@@ -985,7 +1033,21 @@ async function processFollowBatch(
         subscription.email_verified &&
         subscription.email
       ) {
-        sent += 1;
+        const emailTarget =
+          subscription.email
+            .trim()
+            .toLowerCase();
+
+        if (
+          !deliveredEmailTargets.has(
+            emailTarget
+          )
+        ) {
+          deliveredEmailTargets.add(
+            emailTarget
+          );
+          sent += 1;
+        }
       }
 
       if (
@@ -993,10 +1055,23 @@ async function processFollowBatch(
         subscription.phone_verified &&
         subscription.phone_e164
       ) {
-        if (outboundSmsEnabled()) {
-          sent += 1;
-        } else {
-          deferred += 1;
+        const smsTarget =
+          subscription.phone_e164;
+
+        if (
+          !deliveredSmsTargets.has(
+            smsTarget
+          )
+        ) {
+          deliveredSmsTargets.add(
+            smsTarget
+          );
+
+          if (outboundSmsEnabled()) {
+            sent += 1;
+          } else {
+            deferred += 1;
+          }
         }
       }
     }
@@ -1035,12 +1110,33 @@ async function processFollowBatch(
       subscription.email_verified &&
       subscription.email
     ) {
-      const dedupeKey =
-        `follow:${leader.id}:` +
-        `${subscription.id}:email`;
+      const emailTarget =
+        subscription.email
+          .trim()
+          .toLowerCase();
 
-      let deliveryId:
-        string | null = null;
+      if (
+        deliveredEmailTargets.has(
+          emailTarget
+        )
+      ) {
+        skipped += 1;
+      } else {
+        deliveredEmailTargets.add(
+          emailTarget
+        );
+
+        const deliveryMessage =
+          messageForSubscription(
+            subscription
+          );
+
+        const dedupeKey =
+          `follow:${leader.id}:email:` +
+          emailTarget;
+
+        let deliveryId:
+          string | null = null;
 
       try {
         const ready =
@@ -1072,11 +1168,11 @@ async function processFollowBatch(
                 to:
                   subscription.email,
                 subject:
-                  message.subject,
+                  deliveryMessage.subject,
                 text:
-                  message.text,
+                  deliveryMessage.text,
                 url:
-                  message.url,
+                  deliveryMessage.url,
               });
 
             await markDeliverySent(
@@ -1099,6 +1195,7 @@ async function processFollowBatch(
           );
         }
       }
+      }
     }
 
     if (
@@ -1106,9 +1203,30 @@ async function processFollowBatch(
       subscription.phone_verified &&
       subscription.phone_e164
     ) {
+      const smsTarget =
+        subscription.phone_e164;
+
+      if (
+        deliveredSmsTargets.has(
+          smsTarget
+        )
+      ) {
+        skipped += 1;
+        continue;
+      }
+
+      deliveredSmsTargets.add(
+        smsTarget
+      );
+
+      const deliveryMessage =
+        messageForSubscription(
+          subscription
+        );
+
       const dedupeKey =
-        `follow:${leader.id}:` +
-        `${subscription.id}:sms`;
+        `follow:${leader.id}:sms:` +
+        smsTarget;
 
       if (!outboundSmsEnabled()) {
         try {
@@ -1172,9 +1290,9 @@ async function processFollowBatch(
                 to:
                   subscription.phone_e164,
                 text:
-                  message.text,
+                  deliveryMessage.text,
                 url:
-                  message.url,
+                  deliveryMessage.url,
               });
 
             await markDeliverySent(
