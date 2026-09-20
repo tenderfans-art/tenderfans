@@ -855,12 +855,114 @@ async function processFollowBatch(
       leader.created_at
     );
 
-  const subscriptions =
+  let subscriptions =
     await loadSubscriptions(
       admin,
       leader,
       eligibleAt
     );
+
+  /*
+   * A published Spot event is also relevant to Fans who follow
+   * Tenders currently working at that Spot.
+   *
+   * The event itself remains a Spot event. We use the current
+   * Tender <-> Spot relationship only to expand its audience.
+   *
+   * If a Tender later leaves the Spot, future Spot events will
+   * no longer travel through that Tender's follower network.
+   */
+  if (
+    leader.event_type ===
+      "spot.event_published" &&
+    leader.venue_id
+  ) {
+    const {
+      data: currentTenderRows,
+      error: currentTenderError,
+    } = await admin
+      .from("bartender_venues")
+      .select("bartender_id")
+      .eq(
+        "venue_id",
+        leader.venue_id
+      )
+      .eq("is_current", true);
+
+    if (currentTenderError) {
+      throw currentTenderError;
+    }
+
+    const currentTenderIds = [
+      ...new Set(
+        (currentTenderRows ?? [])
+          .map(
+            (row) =>
+              row.bartender_id
+          )
+          .filter(Boolean)
+      ),
+    ];
+
+    /*
+     * Reuse the established subscription loader rather than
+     * introducing a second recipient-selection implementation.
+     *
+     * Merge by subscription id so a Fan following the Spot,
+     * multiple current Tenders, or both still receives this
+     * event only once.
+     */
+    const subscriptionMap =
+      new Map(
+        subscriptions.map(
+          (subscription) => [
+            subscription.id,
+            subscription,
+          ]
+        )
+      );
+
+    for (
+      const bartenderId
+      of currentTenderIds
+    ) {
+      const tenderEvent = {
+        ...leader,
+        entity_kind:
+          "bartender" as const,
+        bartender_id:
+          bartenderId,
+        venue_id: null,
+      };
+
+      const tenderSubscriptions =
+        await loadSubscriptions(
+          admin,
+          tenderEvent,
+          eligibleAt
+        );
+
+      for (
+        const subscription
+        of tenderSubscriptions
+      ) {
+        if (
+          !subscriptionMap.has(
+            subscription.id
+          )
+        ) {
+          subscriptionMap.set(
+            subscription.id,
+            subscription
+          );
+        }
+      }
+    }
+
+    subscriptions = [
+      ...subscriptionMap.values(),
+    ];
+  }
 
   const message =
     await buildFollowMessage(
