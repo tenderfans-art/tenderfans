@@ -971,10 +971,15 @@
 
 .events-heading{
   display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
+  align-items:center;
+  justify-content:center;
   gap:24px;
   margin-bottom:28px;
+  text-align:center;
+}
+
+.events-heading > div{
+  width:100%;
 }
 
 .events-heading h1{
