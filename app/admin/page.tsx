@@ -22,8 +22,8 @@ const tools = [
   {
     title: "Events",
     description: "Add and manage events for the TenderFans calendar.",
-    href: null,
-    status: "COMING SOON",
+    href: "/admin/events",
+    status: "OPEN",
   },
   {
     title: "Contests",
