@@ -124,45 +124,66 @@ export default function SpotAccountPage() {
                     style={{
                       display: "grid",
                       gridTemplateColumns:
-                        "repeat(auto-fit, minmax(140px, 1fr))",
+                        "repeat(5, minmax(120px, 1fr))",
                       gap: "10px",
                     }}
                   >
-                    <Link
-                      href={`/account/spot/${spot.id}/menu`}
+                    <div
                       style={{
-                        display: "block",
-                        padding: "13px 12px",
+                        padding: "10px 12px",
                         border: "1px solid #d7d1c6",
                         borderRadius: "14px",
-                        textDecoration: "none",
-                        color: "inherit",
                         textAlign: "center",
                       }}
                     >
-                      <strong>Menus</strong>
-                      <div style={{ marginTop: "4px", fontSize: "0.78rem", color: "#697177" }}>
-                        Menu images & PDFs
-                      </div>
-                    </Link>
+                      <Link
+                        href={`/account/spot/${spot.id}/menu`}
+                        style={{
+                          display: "block",
+                          paddingBottom: "8px",
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
+                      >
+                        <strong>Menus</strong>
+                        <div
+                          style={{
+                            marginTop: "4px",
+                            fontSize: "0.78rem",
+                            color: "#697177",
+                          }}
+                        >
+                          Menu images & PDFs
+                        </div>
+                      </Link>
 
-                    <Link
-                      href={`/account/spot/${spot.id}/specials`}
-                      style={{
-                        display: "block",
-                        padding: "13px 12px",
-                        border: "1px solid #d7d1c6",
-                        borderRadius: "14px",
-                        textDecoration: "none",
-                        color: "inherit",
-                        textAlign: "center",
-                      }}
-                    >
-                      <strong>Specials</strong>
-                      <div style={{ marginTop: "4px", fontSize: "0.78rem", color: "#697177" }}>
-                        Specials images & PDFs
-                      </div>
-                    </Link>
+                      <div
+                        style={{
+                          borderTop: "1px solid #e3ded4",
+                          margin: "0 -2px 8px",
+                        }}
+                      />
+
+                      <Link
+                        href={`/account/spot/${spot.id}/specials`}
+                        style={{
+                          display: "block",
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
+                      >
+                        <strong>Specials</strong>
+                        <div
+                          style={{
+                            marginTop: "4px",
+                            fontSize: "0.78rem",
+                            color: "#697177",
+                          }}
+                        >
+                          Specials images & PDFs
+                        </div>
+                      </Link>
+                    </div>
 
                     <Link
                       href={`/account/spot/${spot.id}/photos`}
