@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import SpotTenderList from "@/components/SpotTenderList";
+import EventsCalendar from "@/components/EventsCalendar";
 
 type MediaType = "menu" | "special" | "photo";
 
@@ -14,7 +15,7 @@ type Tender = {
   bio: string | null;
 };
 
-type ActiveSection = MediaType | "tenders";
+type ActiveSection = MediaType | "events" | "tenders";
 
 type MediaAsset = {
   id: string;
@@ -64,11 +65,11 @@ export default function PublicSpotMedia({
     setItems((data ?? []) as MediaAsset[]);
   }
 
-  function openTenders() {
+  function openSection(section: "events" | "tenders") {
     setItems([]);
     setLoading(false);
     setActive((current) =>
-      current === "tenders" ? null : "tenders"
+      current === section ? null : section
     );
   }
 
@@ -105,13 +106,17 @@ export default function PublicSpotMedia({
           Awards
         </Link>
 
-        <Link href={`/s/${venueId}/events`} style={buttonStyle}>
+        <button
+          type="button"
+          onClick={() => openSection("events")}
+          style={buttonStyle}
+        >
           Events
-        </Link>
+        </button>
 
         <button
           type="button"
-          onClick={openTenders}
+          onClick={() => openSection("tenders")}
           style={buttonStyle}
         >
           Tenders
@@ -133,6 +138,32 @@ export default function PublicSpotMedia({
               </div>
 
               <SpotTenderList tenders={tenders} />
+            </>
+          ) : active === "events" ? (
+            <>
+              <div
+                className="section-title"
+                style={{ marginBottom: "18px" }}
+              >
+                <div>
+                  <span className="eyebrow">Upcoming Events</span>
+                </div>
+              </div>
+
+              <EventsCalendar
+                venueId={venueId}
+                upcomingOnly
+                limit={5}
+              />
+
+              <div style={{ marginTop: "16px" }}>
+                <Link
+                  href={`/s/${venueId}/events`}
+                  className="button secondary-button"
+                >
+                  View All Events
+                </Link>
+              </div>
             </>
           ) : (
             <>

@@ -65,9 +65,11 @@ function weekLabel(week: CalendarWeek) {
 export default function EventsCalendar({
   venueId,
   upcomingOnly = false,
+  limit,
 }: {
   venueId?: string;
   upcomingOnly?: boolean;
+  limit?: number;
 }) {
   const [requestedEventId, setRequestedEventId] = useState<string | null>(null);
   const [today, setToday] = useState<Date | null>(null);
@@ -254,18 +256,22 @@ export default function EventsCalendar({
   const visibleEvents = useMemo(() => {
     if (!venueId) return selectedWeekEvents;
 
-    if (!upcomingOnly) return events;
+    if (!upcomingOnly) {
+      return limit ? events.slice(0, limit) : events;
+    }
 
     const now = new Date();
 
-    return events.filter((event) => {
+    const upcoming = events.filter((event) => {
       const occurrenceEnd = event.ends_at
         ? new Date(event.ends_at)
         : new Date(event.starts_at);
 
       return occurrenceEnd >= now;
     });
-  }, [events, selectedWeekEvents, venueId, upcomingOnly]);
+
+    return limit ? upcoming.slice(0, limit) : upcoming;
+  }, [events, selectedWeekEvents, venueId, upcomingOnly, limit]);
 
   function selectMonth(nextMonth: Date) {
     setMonth(nextMonth);
