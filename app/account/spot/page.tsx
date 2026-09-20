@@ -124,7 +124,7 @@ export default function SpotAccountPage() {
                     style={{
                       display: "grid",
                       gridTemplateColumns:
-                        "repeat(5, minmax(120px, 1fr))",
+                        "repeat(auto-fit, minmax(140px, 1fr))",
                       gap: "10px",
                     }}
                   >
@@ -238,6 +238,24 @@ export default function SpotAccountPage() {
                         </div>
                       </Link>
                     </div>
+
+                    <Link
+                      href={`/account/spot/${spot.id}/tenders`}
+                      style={{
+                        display: "block",
+                        padding: "13px 12px",
+                        border: "1px solid #d7d1c6",
+                        borderRadius: "14px",
+                        textDecoration: "none",
+                        color: "inherit",
+                        textAlign: "center",
+                      }}
+                    >
+                      <strong>Tenders</strong>
+                      <div style={{ marginTop: "4px", fontSize: "0.78rem", color: "#697177" }}>
+                        Manage current Tenders
+                      </div>
+                    </Link>
 
                     <Link
                       href={`/s/${spot.slug}`}
