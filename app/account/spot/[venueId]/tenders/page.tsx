@@ -9,6 +9,7 @@ type Tender = {
   id: string;
   slug: string;
   display_name: string;
+  started_at: string | null;
 };
 
 export default function SpotTendersPage() {
@@ -73,6 +74,7 @@ export default function SpotTendersPage() {
           .from("bartender_venues")
           .select(`
             bartender_id,
+            started_at,
             bartenders (
               id,
               slug,
@@ -100,6 +102,7 @@ export default function SpotTendersPage() {
             id: bartender.id,
             slug: bartender.slug,
             display_name: bartender.display_name,
+            started_at: relationship.started_at,
           });
         }
       }
@@ -151,7 +154,13 @@ export default function SpotTendersPage() {
   return (
     <main className="flow-page">
       <div className="shell">
-        <div className="flow-card">
+        <div
+          className="flow-card"
+          style={{
+            maxWidth: "760px",
+            margin: "0 auto",
+          }}
+        >
           <div className="eyebrow">Spot Owner Account</div>
           <h1>Manage Tenders</h1>
 
@@ -194,36 +203,48 @@ export default function SpotTendersPage() {
           {!loading && tenders.length > 0 && (
             <div
               style={{
-                display: "grid",
-                gap: "10px",
+                borderTop: "1px solid #d7d1c6",
               }}
             >
               {tenders.map((tender) => (
                 <div
                   key={tender.id}
                   style={{
-                    display: "flex",
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 1fr) 150px auto",
                     alignItems: "center",
-                    justifyContent: "space-between",
                     gap: "16px",
-                    padding: "14px 16px",
-                    border: "1px solid #d7d1c6",
-                    borderRadius: "14px",
+                    padding: "12px 0",
+                    borderBottom: "1px solid #d7d1c6",
                   }}
                 >
                   <div>
-                    <strong>{tender.display_name}</strong>
-
-                    <div
+                    <Link
+                      href={`/t/${tender.slug}`}
                       style={{
-                        marginTop: "4px",
-                        fontSize: "0.82rem",
+                        color: "inherit",
+                        textDecoration: "none",
                       }}
                     >
-                      <Link href={`/t/${tender.slug}`}>
-                        View Tender profile
-                      </Link>
-                    </div>
+                      <strong>{tender.display_name}</strong>
+                    </Link>
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: "0.84rem",
+                      color: "#697177",
+                    }}
+                  >
+                    {tender.started_at
+                      ? new Date(
+                          `${tender.started_at}T00:00:00`
+                        ).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "Start date unavailable"}
                   </div>
 
                   <button
@@ -231,14 +252,15 @@ export default function SpotTendersPage() {
                     disabled={endingId === tender.id}
                     onClick={() => endAssociation(tender)}
                     style={{
-                      padding: "9px 12px",
+                      padding: "7px 10px",
                       border: "1px solid #b9b2a8",
-                      borderRadius: "10px",
+                      borderRadius: "8px",
                       background: "transparent",
                       cursor:
                         endingId === tender.id
                           ? "default"
                           : "pointer",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {endingId === tender.id
