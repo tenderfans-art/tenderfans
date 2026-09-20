@@ -186,7 +186,12 @@ export default function SpotTendersPage() {
             )}
           </div>
 
-          <div style={{ marginBottom: "24px" }}>
+          <div
+            style={{
+              marginTop: "14px",
+              marginBottom: "24px",
+            }}
+          >
             <Link href="/account/spot">
               ← Back to Spot dashboard
             </Link>
