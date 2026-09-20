@@ -15,7 +15,7 @@ type Tender = {
   bio: string | null;
 };
 
-type ActiveSection = MediaType | "events" | "tenders";
+type ActiveSection = MediaType | "awards" | "events" | "tenders";
 
 type MediaAsset = {
   id: string;
@@ -65,7 +65,7 @@ export default function PublicSpotMedia({
     setItems((data ?? []) as MediaAsset[]);
   }
 
-  function openSection(section: "events" | "tenders") {
+  function openSection(section: "awards" | "events" | "tenders") {
     setItems([]);
     setLoading(false);
     setActive((current) =>
@@ -102,9 +102,13 @@ export default function PublicSpotMedia({
           Photos
         </button>
 
-        <Link href={`/s/${venueId}/awards`} style={buttonStyle}>
+        <button
+          type="button"
+          onClick={() => openSection("awards")}
+          style={buttonStyle}
+        >
           Awards
-        </Link>
+        </button>
 
         <button
           type="button"
@@ -125,7 +129,11 @@ export default function PublicSpotMedia({
 
       {active && (
         <div style={{ marginTop: "18px" }}>
-          {active === "tenders" ? (
+          {active === "awards" ? (
+            <div className="gallery-empty">
+              Awards Coming Soon
+            </div>
+          ) : active === "tenders" ? (
             <>
               <div
                 className="section-title spot-tender-heading"
