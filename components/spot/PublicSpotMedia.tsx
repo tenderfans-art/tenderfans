@@ -3,8 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import SpotTenderList from "@/components/SpotTenderList";
 
 type MediaType = "menu" | "special" | "photo";
+
+type Tender = {
+  id: string;
+  slug: string;
+  display_name: string;
+  bio: string | null;
+};
+
+type ActiveSection = MediaType | "tenders";
 
 type MediaAsset = {
   id: string;
@@ -14,10 +24,14 @@ type MediaAsset = {
 
 export default function PublicSpotMedia({
   venueId,
+  venueName,
+  tenders,
 }: {
   venueId: string;
+  venueName: string;
+  tenders: Tender[];
 }) {
-  const [active, setActive] = useState<MediaType | null>(null);
+  const [active, setActive] = useState<ActiveSection | null>(null);
   const [items, setItems] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -48,6 +62,14 @@ export default function PublicSpotMedia({
     }
 
     setItems((data ?? []) as MediaAsset[]);
+  }
+
+  function openTenders() {
+    setItems([]);
+    setLoading(false);
+    setActive((current) =>
+      current === "tenders" ? null : "tenders"
+    );
   }
 
   return (
@@ -86,88 +108,117 @@ export default function PublicSpotMedia({
         <Link href={`/s/${venueId}/events`} style={buttonStyle}>
           Events
         </Link>
+
+        <button
+          type="button"
+          onClick={openTenders}
+          style={buttonStyle}
+        >
+          Tenders
+        </button>
       </div>
 
       {active && (
         <div style={{ marginTop: "18px" }}>
-          <div className="section-title" style={{ marginBottom: "18px" }}>
-            <div>
-              <span className="eyebrow">
-                {active === "menu"
-                  ? "Menus"
-                  : active === "special"
-                  ? "Specials"
-                  : "Photos"}
-              </span>
-            </div>
-          </div>
+          {active === "tenders" ? (
+            <>
+              <div
+                className="section-title spot-tender-heading"
+                style={{ marginBottom: "18px" }}
+              >
+                <div>
+                  <span className="eyebrow">Behind the bar</span>
+                  <h2>Tenders at {venueName}</h2>
+                </div>
+              </div>
 
-          {loading ? (
-            <p className="muted">Loading...</p>
-          ) : items.length === 0 ? (
-            <div className="gallery-empty">
-              Nothing has been added here yet.
-            </div>
+              <SpotTenderList tenders={tenders} />
+            </>
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fill, minmax(180px, 1fr))",
-                gap: "14px",
-              }}
-            >
-              {items.map((item) => {
-                const { data } = supabase.storage
-                  .from("spot-media")
-                  .getPublicUrl(item.storage_path);
+            <>
+              <div
+                className="section-title"
+                style={{ marginBottom: "18px" }}
+              >
+                <div>
+                  <span className="eyebrow">
+                    {active === "menu"
+                      ? "Menus"
+                      : active === "special"
+                      ? "Specials"
+                      : "Photos"}
+                  </span>
+                </div>
+              </div>
 
-                const url = data.publicUrl;
-                const isPdf = item.storage_path
-                  .toLowerCase()
-                  .endsWith(".pdf");
+              {loading ? (
+                <p className="muted">Loading...</p>
+              ) : items.length === 0 ? (
+                <div className="gallery-empty">
+                  Nothing has been added here yet.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(180px, 1fr))",
+                    gap: "14px",
+                  }}
+                >
+                  {items.map((item) => {
+                    const { data } = supabase.storage
+                      .from("spot-media")
+                      .getPublicUrl(item.storage_path);
 
-                return (
-                  <a
-                    key={item.id}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "block",
-                      border: "1px solid #d7d1c6",
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                      background: "#fff",
-                    }}
-                  >
-                    {isPdf ? (
-                      <div
+                    const url = data.publicUrl;
+                    const isPdf = item.storage_path
+                      .toLowerCase()
+                      .endsWith(".pdf");
+
+                    return (
+                      <a
+                        key={item.id}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
-                          minHeight: "160px",
-                          display: "grid",
-                          placeItems: "center",
-                          fontWeight: 800,
+                          display: "block",
+                          border: "1px solid #d7d1c6",
+                          borderRadius: "12px",
+                          overflow: "hidden",
+                          background: "#fff",
                         }}
                       >
-                        View PDF
-                      </div>
-                    ) : (
-                      <img
-                        src={url}
-                        alt=""
-                        style={{
-                          width: "100%",
-                          height: "180px",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
-                    )}
-                  </a>
-                );
-              })}
-            </div>
+                        {isPdf ? (
+                          <div
+                            style={{
+                              minHeight: "160px",
+                              display: "grid",
+                              placeItems: "center",
+                              fontWeight: 800,
+                            }}
+                          >
+                            View PDF
+                          </div>
+                        ) : (
+                          <img
+                            src={url}
+                            alt=""
+                            style={{
+                              width: "100%",
+                              height: "180px",
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                        )}
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

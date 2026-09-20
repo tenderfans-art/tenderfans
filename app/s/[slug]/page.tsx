@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import VenueVisual from "@/components/VenueVisual";
 import { supabase } from "@/lib/supabase";
-import SpotTenderList from "@/components/SpotTenderList";
 import PublicSpotMedia from "@/components/spot/PublicSpotMedia";
 import NotificationSignup from "@/components/NotificationSignup";
 
@@ -268,18 +267,11 @@ export default async function SpotPage({
           </div>
         </div>
 
-        <PublicSpotMedia venueId={venue.id} />
-
-        <section className="subsection full">
-          <div className="section-title spot-tender-heading">
-            <div>
-              <span className="eyebrow">Behind the bar</span>
-              <h2>Tenders at {venue.name}</h2>
-            </div>
-          </div>
-
-          <SpotTenderList tenders={tenders} />
-        </section>
+        <PublicSpotMedia
+          venueId={venue.id}
+          venueName={venue.name}
+          tenders={tenders}
+        />
       </div>
     </section>
     </>
