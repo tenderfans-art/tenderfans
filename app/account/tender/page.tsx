@@ -430,14 +430,16 @@ export default function TenderAccountPage() {
                           gap: "5px",
                         }}
                       >
-                        <strong
+                        <Link
+                          href={`/s/${spot.slug}`}
                           style={{
                             color: "#172735",
                             fontWeight: 700,
+                            textDecoration: "none",
                           }}
                         >
                           {spot.name}
-                        </strong>
+                        </Link>
 
                         {spot.is_primary && (
                           <span
