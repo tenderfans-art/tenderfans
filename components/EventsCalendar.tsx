@@ -63,6 +63,7 @@ function weekLabel(week: CalendarWeek) {
 }
 
 export default function EventsCalendar() {
+  const [requestedEventId, setRequestedEventId] = useState<string | null>(null);
   const [today, setToday] = useState<Date | null>(null);
   const [month, setMonth] = useState<Date | null>(null);
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
@@ -78,7 +79,59 @@ export default function EventsCalendar() {
     setToday(now);
     setMonth(new Date(now.getFullYear(), now.getMonth(), 1));
     setSelectedWeekStart(startOfWeek(now));
+
+    const params = new URLSearchParams(window.location.search);
+    setRequestedEventId(params.get("event"));
   }, []);
+
+  useEffect(() => {
+    async function loadRequestedEvent() {
+      if (!requestedEventId) return;
+
+      const { data, error } = await supabase
+        .from("events")
+        .select(`
+          id,
+          venue_id,
+          title,
+          description,
+          starts_at,
+          ends_at,
+          flyer_url,
+          venues (
+            name,
+            slug
+          )
+        `)
+        .eq("id", requestedEventId)
+        .eq("status", "published")
+        .maybeSingle();
+
+      if (error || !data) return;
+
+      const event: CalendarEvent = {
+        id: data.id,
+        venue_id: data.venue_id,
+        title: data.title,
+        description: data.description,
+        starts_at: data.starts_at,
+        ends_at: data.ends_at,
+        flyer_url: data.flyer_url ?? null,
+        venue_name: (data.venues as any)?.name ?? "TenderFans Spot",
+        venue_slug: (data.venues as any)?.slug ?? null,
+      };
+
+      const eventDate = new Date(event.starts_at);
+
+      setMonth(
+        new Date(eventDate.getFullYear(), eventDate.getMonth(), 1)
+      );
+      setSelectedWeekStart(startOfWeek(eventDate));
+      setSelectedEvent(event);
+    }
+
+    loadRequestedEvent();
+  }, [requestedEventId]);
 
   const calendarWeeks = useMemo<CalendarWeek[]>(() => {
     if (!month) return [];

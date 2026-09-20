@@ -274,7 +274,15 @@ export default function AdminEventsPage() {
                 lineHeight: 1.25,
               }}
             >
-              {event.title}
+              <a
+                href={`/events?event=${event.id}`}
+                style={{
+                  color: "inherit",
+                  textDecoration: "none",
+                }}
+              >
+                {event.title}
+              </a>
             </div>
 
             <div
