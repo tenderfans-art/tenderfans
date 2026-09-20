@@ -28,7 +28,30 @@ export default async function Page({
           <div>
             <div className="eyebrow">SPOT EVENTS</div>
             <h1>{venue.name}</h1>
-            <p>Upcoming events at {venue.name}.</p>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "14px",
+                flexWrap: "wrap",
+              }}
+            >
+              <p style={{ margin: 0 }}>
+                Upcoming events at {venue.name}.
+              </p>
+
+              <Link
+                href={`/s/${venue.slug}`}
+                style={{
+                  fontWeight: 700,
+                  textDecoration: "underline",
+                }}
+              >
+                Back to Spot Profile
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -36,15 +59,6 @@ export default async function Page({
           venueId={venue.id}
           upcomingOnly
         />
-
-        <div style={{ marginTop: 24 }}>
-          <Link
-            href={`/s/${venue.slug}`}
-            className="button secondary-button"
-          >
-            Back to Spot Profile
-          </Link>
-        </div>
       </div>
     </main>
   );
