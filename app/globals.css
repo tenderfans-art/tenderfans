@@ -348,9 +348,15 @@
 }
 
 .spot-tender-list{
-  display:grid;
-  grid-template-columns:repeat(5,minmax(0,1fr));
+  display:flex;
+  flex-wrap:wrap;
   gap:10px;
+}
+
+.spot-tender-card{
+  width:max-content;
+  min-width:180px;
+  max-width:100%;
 }
 
 .spot-tender-card{
