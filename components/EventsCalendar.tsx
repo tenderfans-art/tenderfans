@@ -62,7 +62,13 @@ function weekLabel(week: CalendarWeek) {
   return `${startMonth} ${week.start.getDate()}–${endMonth} ${week.end.getDate()}`;
 }
 
-export default function EventsCalendar() {
+export default function EventsCalendar({
+  venueId,
+  upcomingOnly = false,
+}: {
+  venueId?: string;
+  upcomingOnly?: boolean;
+}) {
   const [requestedEventId, setRequestedEventId] = useState<string | null>(null);
   const [today, setToday] = useState<Date | null>(null);
   const [month, setMonth] = useState<Date | null>(null);
@@ -168,7 +174,7 @@ export default function EventsCalendar() {
       const rangeStart = new Date(calendarWeeks[0].start);
       const rangeEnd = new Date(calendarWeeks[calendarWeeks.length - 1].end);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("events")
         .select(`
           id,
@@ -184,9 +190,17 @@ export default function EventsCalendar() {
           )
         `)
         .eq("status", "published")
-        .gte("starts_at", rangeStart.toISOString())
-        .lte("starts_at", rangeEnd.toISOString())
         .order("starts_at", { ascending: true });
+
+      if (venueId) {
+        query = query.eq("venue_id", venueId);
+      } else {
+        query = query
+          .gte("starts_at", rangeStart.toISOString())
+          .lte("starts_at", rangeEnd.toISOString());
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Unable to load events:", error);
@@ -212,7 +226,7 @@ export default function EventsCalendar() {
     }
 
     loadEvents();
-  }, [calendarWeeks]);
+  }, [calendarWeeks, venueId]);
 
   const selectedWeek = useMemo<CalendarWeek | null>(() => {
     if (!calendarWeeks.length) return null;
@@ -236,6 +250,22 @@ export default function EventsCalendar() {
       return eventDate >= selectedWeek.start && eventDate <= selectedWeek.end;
     });
   }, [events, selectedWeek]);
+
+  const visibleEvents = useMemo(() => {
+    if (!venueId) return selectedWeekEvents;
+
+    if (!upcomingOnly) return events;
+
+    const now = new Date();
+
+    return events.filter((event) => {
+      const occurrenceEnd = event.ends_at
+        ? new Date(event.ends_at)
+        : new Date(event.starts_at);
+
+      return occurrenceEnd >= now;
+    });
+  }, [events, selectedWeekEvents, venueId, upcomingOnly]);
 
   function selectMonth(nextMonth: Date) {
     setMonth(nextMonth);
@@ -296,6 +326,7 @@ export default function EventsCalendar() {
 
   return (
     <section className="events-calendar-card">
+      {!venueId && (
       <div className="events-calendar-toolbar">
         <button
           type="button"
@@ -322,7 +353,9 @@ export default function EventsCalendar() {
           ›
         </button>
       </div>
+      )}
 
+      {!venueId && (
       <nav className="events-week-selector" aria-label="Select event week">
         {calendarWeeks.map((week) => {
           const active = !!selectedWeek && sameWeek(week, selectedWeek);
@@ -345,6 +378,7 @@ export default function EventsCalendar() {
           );
         })}
       </nav>
+      )}
 
       <div className="events-week-list">
         {loading && (
@@ -353,15 +387,23 @@ export default function EventsCalendar() {
           </div>
         )}
 
-        {!loading && selectedWeekEvents.length === 0 && (
+        {!loading && visibleEvents.length === 0 && (
           <div className="events-empty">
-            <strong>No events posted for this week.</strong>
-            <span>Try another week or check back soon.</span>
+            <strong>
+              {venueId
+                ? "No upcoming events posted."
+                : "No events posted for this week."}
+            </strong>
+            <span>
+              {venueId
+                ? "Check back soon."
+                : "Try another week or check back soon."}
+            </span>
           </div>
         )}
 
         {!loading &&
-          selectedWeekEvents.map((event) => (
+          visibleEvents.map((event) => (
             <article className="events-list-row" key={event.id}>
               <button
                 type="button"

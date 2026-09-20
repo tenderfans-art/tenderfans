@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import EventsCalendar from "@/components/EventsCalendar";
+import { supabase } from "@/lib/supabase";
 
 export default async function Page({
   params,
@@ -7,23 +10,41 @@ export default async function Page({
 }) {
   const { slug } = await params;
 
+  const { data: venue, error } = await supabase
+    .from("venues")
+    .select("id, slug, name")
+    .eq("slug", slug)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (error || !venue) {
+    notFound();
+  }
+
   return (
-    <main className="flow-page">
+    <main className="events-page">
       <div className="shell">
-        <section className="flow-card">
-          <div className="eyebrow">SPOT EVENTS</div>
-          <h1>Events are coming soon.</h1>
-
-          <p className="lead-copy">
-            Approved events for this Spot will appear here automatically from the TenderFans calendar in a future release.
-          </p>
-
-          <div style={{ marginTop: 24 }}>
-            <Link href={`/s/${slug}`} className="button secondary-button">
-              Back to Spot Profile
-            </Link>
+        <div className="events-heading">
+          <div>
+            <div className="eyebrow">SPOT EVENTS</div>
+            <h1>{venue.name}</h1>
+            <p>Upcoming events at {venue.name}.</p>
           </div>
-        </section>
+        </div>
+
+        <EventsCalendar
+          venueId={venue.id}
+          upcomingOnly
+        />
+
+        <div style={{ marginTop: 24 }}>
+          <Link
+            href={`/s/${venue.slug}`}
+            className="button secondary-button"
+          >
+            Back to Spot Profile
+          </Link>
+        </div>
       </div>
     </main>
   );
