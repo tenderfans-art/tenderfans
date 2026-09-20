@@ -162,13 +162,29 @@ export default function SpotTendersPage() {
           }}
         >
           <div className="eyebrow">Spot Owner Account</div>
-          <h1>Manage Tenders</h1>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: "14px",
+              flexWrap: "wrap",
+            }}
+          >
+            <h1 style={{ marginBottom: 0 }}>
+              Manage Tenders
+            </h1>
 
-          {spotName && (
-            <p className="lead-copy">
-              Current Tenders at {spotName}.
-            </p>
-          )}
+            {spotName && (
+              <span
+                style={{
+                  color: "#697177",
+                  fontSize: "1rem",
+                }}
+              >
+                Current Tenders at {spotName}.
+              </span>
+            )}
+          </div>
 
           <div style={{ marginBottom: "24px" }}>
             <Link href="/account/spot">
