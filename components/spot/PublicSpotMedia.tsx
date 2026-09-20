@@ -129,11 +129,10 @@ export default function PublicSpotMedia({
             <>
               <div
                 className="section-title spot-tender-heading"
-                style={{ marginBottom: "18px" }}
+                style={{ marginBottom: "12px" }}
               >
                 <div>
                   <span className="eyebrow">Behind the bar</span>
-                  <h2>Tenders at {venueName}</h2>
                 </div>
               </div>
 
