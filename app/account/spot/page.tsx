@@ -124,10 +124,67 @@ export default function SpotAccountPage() {
                     style={{
                       display: "grid",
                       gridTemplateColumns:
-                        "repeat(5, minmax(120px, 1fr))",
+                        "repeat(4, minmax(140px, 1fr))",
                       gap: "10px",
                     }}
                   >
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        border: "1px solid #d7d1c6",
+                        borderRadius: "14px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Link
+                        href={`/s/${spot.slug}`}
+                        style={{
+                          display: "block",
+                          paddingBottom: "8px",
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
+                      >
+                        <strong>View Profile</strong>
+                        <div
+                          style={{
+                            marginTop: "4px",
+                            fontSize: "0.78rem",
+                            color: "#697177",
+                          }}
+                        >
+                          View public Spot page
+                        </div>
+                      </Link>
+
+                      <div
+                        style={{
+                          borderTop: "1px solid #e3ded4",
+                          margin: "0 -2px 8px",
+                        }}
+                      />
+
+                      <Link
+                        href={`/account/spot/${spot.id}/photos`}
+                        style={{
+                          display: "block",
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
+                      >
+                        <strong>Photos</strong>
+                        <div
+                          style={{
+                            marginTop: "4px",
+                            fontSize: "0.78rem",
+                            color: "#697177",
+                          }}
+                        >
+                          Spot photo gallery
+                        </div>
+                      </Link>
+                    </div>
+
                     <div
                       style={{
                         padding: "10px 12px",
@@ -185,23 +242,6 @@ export default function SpotAccountPage() {
                       </Link>
                     </div>
 
-                    <Link
-                      href={`/account/spot/${spot.id}/photos`}
-                      style={{
-                        display: "block",
-                        padding: "13px 12px",
-                        border: "1px solid #d7d1c6",
-                        borderRadius: "14px",
-                        textDecoration: "none",
-                        color: "inherit",
-                        textAlign: "center",
-                      }}
-                    >
-                      <strong>Photos</strong>
-                      <div style={{ marginTop: "4px", fontSize: "0.78rem", color: "#697177" }}>
-                        Spot photo gallery
-                      </div>
-                    </Link>
 
                     <div
                       style={{
@@ -278,23 +318,6 @@ export default function SpotAccountPage() {
                       </div>
                     </Link>
 
-                    <Link
-                      href={`/s/${spot.slug}`}
-                      style={{
-                        display: "block",
-                        padding: "13px 12px",
-                        border: "1px solid #d7d1c6",
-                        borderRadius: "14px",
-                        textDecoration: "none",
-                        color: "inherit",
-                        textAlign: "center",
-                      }}
-                    >
-                      <strong>View Profile</strong>
-                      <div style={{ marginTop: "4px", fontSize: "0.78rem", color: "#697177" }}>
-                        View public Spot page
-                      </div>
-                    </Link>
                   </div>
                 </section>
               ))}
