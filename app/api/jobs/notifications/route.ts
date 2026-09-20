@@ -915,10 +915,9 @@ async function processFollowBatch(
      * Reuse the established subscription loader rather than
      * introducing a second recipient-selection implementation.
      *
-     * Keep direct Spot follows first. Delivery is deduped by
-     * verified destination/channel below, so a Fan following the
-     * Spot and one or more current Tenders receives one email per
-     * email address and one SMS per phone number.
+     * Keep direct Spot follows and Tender follows as independent
+     * subscriptions. Tender-derived subscriptions carry the Tender
+     * context used to explain why that event notification was sent.
      */
     const expandedSubscriptions: Subscription[] = [
       ...subscriptions,
@@ -975,14 +974,10 @@ async function processFollowBatch(
     );
 
   /*
-   * Follow subscriptions are target-specific, so the same Fan may
-   * legitimately have separate rows for a Spot and its Tenders.
-   * Deduplicate delivery by verified destination per channel.
+   * Spot and Tender follows are independent subscriptions.
+   * Preserve both deliveries even when they share contact details;
+   * Tender-derived event messages explain which Tender caused them.
    */
-  const deliveredEmailTargets =
-    new Set<string>();
-  const deliveredSmsTargets =
-    new Set<string>();
 
   const messageForSubscription = (
     subscription: Subscription
@@ -1033,21 +1028,7 @@ async function processFollowBatch(
         subscription.email_verified &&
         subscription.email
       ) {
-        const emailTarget =
-          subscription.email
-            .trim()
-            .toLowerCase();
-
-        if (
-          !deliveredEmailTargets.has(
-            emailTarget
-          )
-        ) {
-          deliveredEmailTargets.add(
-            emailTarget
-          );
-          sent += 1;
-        }
+        sent += 1;
       }
 
       if (
@@ -1055,23 +1036,10 @@ async function processFollowBatch(
         subscription.phone_verified &&
         subscription.phone_e164
       ) {
-        const smsTarget =
-          subscription.phone_e164;
-
-        if (
-          !deliveredSmsTargets.has(
-            smsTarget
-          )
-        ) {
-          deliveredSmsTargets.add(
-            smsTarget
-          );
-
-          if (outboundSmsEnabled()) {
-            sent += 1;
-          } else {
-            deferred += 1;
-          }
+        if (outboundSmsEnabled()) {
+          sent += 1;
+        } else {
+          deferred += 1;
         }
       }
     }
@@ -1105,38 +1073,21 @@ async function processFollowBatch(
     const subscription
     of subscriptions
   ) {
+    const deliveryMessage =
+      messageForSubscription(
+        subscription
+      );
     if (
       subscription.wants_email &&
       subscription.email_verified &&
       subscription.email
     ) {
-      const emailTarget =
-        subscription.email
-          .trim()
-          .toLowerCase();
+      const dedupeKey =
+        `follow:${leader.id}:` +
+        `${subscription.id}:email`;
 
-      if (
-        deliveredEmailTargets.has(
-          emailTarget
-        )
-      ) {
-        skipped += 1;
-      } else {
-        deliveredEmailTargets.add(
-          emailTarget
-        );
-
-        const deliveryMessage =
-          messageForSubscription(
-            subscription
-          );
-
-        const dedupeKey =
-          `follow:${leader.id}:email:` +
-          emailTarget;
-
-        let deliveryId:
-          string | null = null;
+      let deliveryId:
+        string | null = null;
 
       try {
         const ready =
@@ -1195,7 +1146,6 @@ async function processFollowBatch(
           );
         }
       }
-      }
     }
 
     if (
@@ -1203,30 +1153,9 @@ async function processFollowBatch(
       subscription.phone_verified &&
       subscription.phone_e164
     ) {
-      const smsTarget =
-        subscription.phone_e164;
-
-      if (
-        deliveredSmsTargets.has(
-          smsTarget
-        )
-      ) {
-        skipped += 1;
-        continue;
-      }
-
-      deliveredSmsTargets.add(
-        smsTarget
-      );
-
-      const deliveryMessage =
-        messageForSubscription(
-          subscription
-        );
-
       const dedupeKey =
-        `follow:${leader.id}:sms:` +
-        smsTarget;
+        `follow:${leader.id}:` +
+        `${subscription.id}:sms`;
 
       if (!outboundSmsEnabled()) {
         try {
