@@ -142,20 +142,17 @@ export default function PublicSpotMedia({
             <>
               <div
                 className="section-title"
-                style={{ marginBottom: "18px" }}
+                style={{
+                  marginBottom: "18px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
               >
                 <div>
                   <span className="eyebrow">Upcoming Events</span>
                 </div>
-              </div>
 
-              <EventsCalendar
-                venueId={venueId}
-                upcomingOnly
-                limit={5}
-              />
-
-              <div style={{ marginTop: "16px" }}>
                 <Link
                   href={`/s/${venueId}/events`}
                   className="button secondary-button"
@@ -163,6 +160,12 @@ export default function PublicSpotMedia({
                   View All Events
                 </Link>
               </div>
+
+              <EventsCalendar
+                venueId={venueId}
+                upcomingOnly
+                limit={5}
+              />
             </>
           ) : (
             <>
