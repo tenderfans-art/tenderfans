@@ -303,32 +303,30 @@ export default function AdminSpotsPage() {
                     fontSize: "0.88rem",
                   }}
                 >
-                  <div
-                    style={{
-                      minWidth: 0,
-                    }}
-                  >
+                  <div style={{ minWidth: 0 }}>
                     <Link
                       href={`/s/${spot.slug}`}
                       style={{
+                        display: "block",
                         color: "inherit",
                         fontWeight: 800,
                         textDecoration: "none",
+                        lineHeight: 1.25,
                       }}
                     >
                       {spot.name}
                     </Link>
 
-                    <span
+                    <div
                       style={{
-                        marginLeft: "7px",
+                        marginTop: "3px",
                         opacity: 0.55,
                         fontSize: "0.78rem",
-                        whiteSpace: "nowrap",
+                        lineHeight: 1.2,
                       }}
                     >
                       {spot.city}, {spot.state_region}
-                    </span>
+                    </div>
                   </div>
 
                   <div>
