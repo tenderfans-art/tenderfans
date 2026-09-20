@@ -13,7 +13,7 @@ export default async function Page({
   const { data: venue, error } = await supabase
     .from("venues")
     .select("id, slug, name")
-    .eq("slug", slug)
+    .or(`slug.eq.${slug},id.eq.${slug}`)
     .eq("status", "active")
     .maybeSingle();
 
