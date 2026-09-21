@@ -77,15 +77,52 @@ export default function Page({
   }
 
   return (
-    <main className="flow-page">
-      <div className="shell">
-        <section className="flow-card">
-          <div className="eyebrow">SPOT MEDIA</div>
-          <h1>Photos</h1>
+    <main
+      className="flow-page"
+      style={{
+        paddingTop: "18px",
+        paddingBottom: "24px",
+      }}
+    >
+      <div className="shell narrow">
+        <section
+          className="flow-card"
+          style={{
+            paddingTop: "24px",
+            paddingBottom: "24px",
+          }}
+        >
+          <div
+            style={{
+              textAlign: "center",
+            }}
+          >
+            <div
+              className="eyebrow"
+              style={{ marginBottom: "4px" }}
+            >
+              SPOT MEDIA
+            </div>
 
-          <p className="lead-copy">
-            Upload and manage photos for this Spot.
-          </p>
+            <h1
+              style={{
+                marginTop: "4px",
+                marginBottom: "8px",
+              }}
+            >
+              Photos.
+            </h1>
+
+            <p
+              className="lead-copy"
+              style={{
+                marginTop: 0,
+                marginBottom: "12px",
+              }}
+            >
+              Manage up to six photos shown in your Spot gallery.
+            </p>
+          </div>
 
           <SpotMediaGallery
             venueId={venueId}
