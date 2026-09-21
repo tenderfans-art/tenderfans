@@ -92,9 +92,18 @@ export default function Page({
             mediaType="photo"
           />
 
-          <div style={{ marginTop: "24px" }}>
-            <Link href="/account/spot">
-              ← Back to Spot Owner Account
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "22px",
+            }}
+          >
+            <Link
+              href="/account/spot"
+              className="btn outline"
+            >
+              Back to Account
             </Link>
           </div>
         </section>
