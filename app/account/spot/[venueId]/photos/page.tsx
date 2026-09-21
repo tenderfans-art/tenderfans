@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import { use, useEffect, useState } from "react";
 import SpotMediaGallery from "@/components/spot/SpotMediaGallery";
 import { supabase } from "@/lib/supabase";
@@ -84,7 +85,13 @@ export default function Page({
         paddingBottom: "24px",
       }}
     >
-      <div className="shell narrow" style={{ maxWidth: "680px" }}>
+      <div
+        className="shell narrow"
+        style={{
+          width: "100%",
+          maxWidth: "560px",
+        }}
+      >
         <section
           className="flow-card"
           style={{
@@ -129,20 +136,7 @@ export default function Page({
             mediaType="photo"
           />
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              marginTop: "22px",
-            }}
-          >
-            <Link
-              href="/account/spot"
-              className="btn outline"
-            >
-              Back to Account
-            </Link>
-          </div>
+
         </section>
       </div>
     </main>

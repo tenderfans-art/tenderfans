@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -348,6 +349,9 @@ export default function SpotMediaGallery({
             style={{
               display: "flex",
               justifyContent: "center",
+              alignItems: "center",
+              gap: "10px",
+              flexWrap: "wrap",
               marginTop: "14px",
             }}
           >
@@ -394,6 +398,13 @@ export default function SpotMediaGallery({
                 }}
               />
             </label>
+
+            <Link
+              href="/account/spot"
+              className="btn outline"
+            >
+              Back to Account
+            </Link>
           </div>
         </section>
 
