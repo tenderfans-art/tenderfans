@@ -59,22 +59,26 @@ export default function Header() {
           <Link href="/events">Events</Link>
           <Link href="/partners/login">Partners</Link>
           {signedIn ? (
-            <>
-              <Link className="nav-login" href="/account">Account</Link>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginLeft: "8px",
+              }}
+            >
+              <Link className="nav-login" href="/account">
+                Account
+              </Link>
+
               <button
                 type="button"
                 className="nav-login"
                 onClick={handleSignOut}
-                style={{
-                  background: "none",
-                  border: 0,
-                  cursor: "pointer",
-                  font: "inherit",
-                }}
               >
                 Sign Out
               </button>
-            </>
+            </div>
           ) : (
             <Link className="nav-login" href="/login">Sign in</Link>
           )}
