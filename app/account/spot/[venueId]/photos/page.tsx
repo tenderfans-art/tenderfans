@@ -84,7 +84,7 @@ export default function Page({
         paddingBottom: "24px",
       }}
     >
-      <div className="shell narrow">
+      <div className="shell narrow" style={{ maxWidth: "680px" }}>
         <section
           className="flow-card"
           style={{
