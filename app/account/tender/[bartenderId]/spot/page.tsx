@@ -270,7 +270,10 @@ export default function TenderManageSpotsPage() {
 
   return (
     <main className="flow-page">
-      <div className="shell">
+      <div
+        className="shell"
+        style={{ maxWidth: "680px" }}
+      >
         <div className="flow-card">
           <div className="eyebrow">Tender Account</div>
           <h1>Manage your Spots.</h1>
