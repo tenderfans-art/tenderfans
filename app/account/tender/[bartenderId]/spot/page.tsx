@@ -291,11 +291,7 @@ export default function TenderManageSpotsPage() {
 
           {!loading && allowed && (
             <>
-              <section style={{ marginTop: "16px" }}>
-                <h2 style={{ margin: "0 0 8px" }}>
-                  {displayName}&apos;s verified Spots
-                </h2>
-
+              <section style={{ marginTop: "8px" }}>
                 {relationships.length === 0 ? (
                   <p style={{ color: "#697177" }}>
                     No verified Spot affiliations yet.
@@ -432,12 +428,14 @@ export default function TenderManageSpotsPage() {
 
               <section
                 style={{
-                  marginTop: "18px",
-                  paddingTop: "18px",
+                  marginTop: "10px",
+                  paddingTop: "10px",
                   borderTop: "1px solid #ddd",
                 }}
               >
-                <h2>Add another Spot.</h2>
+                <h2 style={{ margin: "8px 0 10px" }}>
+                  Add another Spot.
+                </h2>
 
                 <p style={{ color: "#697177" }}>
                   The Spot will verify your affiliation before it appears
