@@ -575,6 +575,212 @@ export default function TenderAccountPage() {
                 )}
               </div>
 
+              {/* TENDER SERVICES PILLARS */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                  gap: "10px",
+                  width: "80%",
+                  margin: "10px auto 0",
+                }}
+              >
+                <Link
+                  href="/account/tender/health"
+                  style={cardStyle}
+                >
+                  <strong>Tender Health</strong>
+                  <div style={descriptionStyle}>
+                    Health &amp; wellness
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      paddingTop: "7px",
+                      borderTop: "1px solid #e7e2d8",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      color: "#879d20",
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    🏛️ Pillar 1 🏛️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/account/tender/money"
+                  style={cardStyle}
+                >
+                  <strong>Tender Money</strong>
+                  <div style={descriptionStyle}>
+                    Financial resources
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      paddingTop: "7px",
+                      borderTop: "1px solid #e7e2d8",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      color: "#879d20",
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    🏛️ Pillar 2 🏛️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/account/tender/families"
+                  style={cardStyle}
+                >
+                  <strong>Tender Families</strong>
+                  <div style={descriptionStyle}>
+                    Life beyond the shift
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      paddingTop: "7px",
+                      borderTop: "1px solid #e7e2d8",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      color: "#879d20",
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    🏛️ Pillar 3 🏛️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/account/tender/tools"
+                  style={cardStyle}
+                >
+                  <strong>Tender Tools</strong>
+                  <div style={descriptionStyle}>
+                    Career &amp; industry
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      paddingTop: "7px",
+                      borderTop: "1px solid #e7e2d8",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      color: "#879d20",
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    🏛️ Pillar 4 🏛️
+                  </div>
+                </Link>
+              </div>
+
+              {/* TENDER SERVICES PILLARS */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                  gap: "10px",
+                  width: "80%",
+                  margin: "10px auto 0",
+                }}
+              >
+                <Link
+                  href="/account/tender/health"
+                  style={cardStyle}
+                >
+                  <strong>Tender Health</strong>
+                  <div style={descriptionStyle}>
+                    Health &amp; wellness
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      paddingTop: "7px",
+                      borderTop: "1px solid #e7e2d8",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      color: "#879d20",
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    🏛️ Pillar 1 🏛️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/account/tender/money"
+                  style={cardStyle}
+                >
+                  <strong>Tender Money</strong>
+                  <div style={descriptionStyle}>
+                    Financial resources
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      paddingTop: "7px",
+                      borderTop: "1px solid #e7e2d8",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      color: "#879d20",
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    🏛️ Pillar 2 🏛️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/account/tender/families"
+                  style={cardStyle}
+                >
+                  <strong>Tender Families</strong>
+                  <div style={descriptionStyle}>
+                    Life beyond the shift
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      paddingTop: "7px",
+                      borderTop: "1px solid #e7e2d8",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      color: "#879d20",
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    🏛️ Pillar 3 🏛️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/account/tender/tools"
+                  style={cardStyle}
+                >
+                  <strong>Tender Tools</strong>
+                  <div style={descriptionStyle}>
+                    Career &amp; industry
+                  </div>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      paddingTop: "7px",
+                      borderTop: "1px solid #e7e2d8",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      color: "#879d20",
+                      letterSpacing: ".04em",
+                    }}
+                  >
+                    🏛️ Pillar 4 🏛️
+                  </div>
+                </Link>
+              </div>
+
               {contestActive && showContestTools && (
               <div
                 id="contest-tools"
