@@ -46,7 +46,7 @@ export default function Page({
   if (authorized === null) {
     return (
       <main className="flow-page">
-        <div className="shell">
+        <div className="shell narrow">
           <section className="flow-card">
             <p>Checking Spot access...</p>
           </section>
