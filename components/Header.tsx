@@ -52,9 +52,10 @@ export default function Header() {
           className={`nav${menuOpen ? " mobile-open" : ""}`}
           onClick={() => setMenuOpen(false)}
         >
-          <Link href="/discover">Find Em</Link>
-          <Link href="/claim">Claim Profile</Link>
           <Link href="/how-it-works">How it Works</Link>
+          <Link href="/discover">Find Em</Link>
+          <Link href="/shout">Give Em a Shout</Link>
+          <Link href="/claim">Claim Profile</Link>
           <Link href="/events">Events</Link>
           <Link href="/partners/login">Partners</Link>
           {signedIn ? (
