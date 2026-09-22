@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import twilio from "twilio";
 
-type VerificationType = "follow" | "reminder";
+type VerificationType = "follow" | "reminder" | "tender";
 
 function getTable(type: VerificationType) {
-  return type === "follow"
-    ? "notification_subscriptions"
-    : "event_reminders";
+  if (type === "follow") {
+    return "notification_subscriptions";
+  }
+
+  if (type === "reminder") {
+    return "event_reminders";
+  }
+
+  return "tender_notification_preferences";
 }
 
 export async function POST(request: Request) {
@@ -15,7 +21,9 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const type: VerificationType | null =
-      body.type === "follow" || body.type === "reminder"
+      body.type === "follow" ||
+      body.type === "reminder" ||
+      body.type === "tender"
         ? body.type
         : null;
 
@@ -87,11 +95,8 @@ export async function POST(request: Request) {
         .select(`
           id,
           phone_e164,
-          wants_email,
           wants_sms,
-          email_verified,
-          phone_verified,
-          status
+          phone_verified
         `)
         .eq("id", id)
         .maybeSingle();
@@ -114,7 +119,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         ok: true,
         verified: true,
-        active: record.status === "active",
+        active: true,
       });
     }
 
@@ -145,29 +150,53 @@ export async function POST(request: Request) {
       Successful phone verification activates SMS immediately.
       Email may still be verified separately.
     */
+    const verificationUpdate =
+      type === "tender"
+        ? {
+            phone_verified: true,
+            phone_verified_at: now,
+            updated_at: now,
+          }
+        : {
+            phone_verified: true,
+            phone_verified_at: now,
+            phone_verification_code_hash: null,
+            status: "active",
+            updated_at: now,
+          };
+
     const { error: updateError } =
       await adminSupabase
         .from(table)
-        .update({
-          phone_verified: true,
-          phone_verified_at: now,
-          phone_verification_code_hash: null,
-          status: "active",
-          updated_at: now,
-        })
+        .update(verificationUpdate)
         .eq("id", id);
 
     if (updateError) {
       throw updateError;
     }
 
+    if (type === "tender") {
+      return NextResponse.json({
+        ok: true,
+        verified: true,
+        active: true,
+      });
+    }
+
+    const { data: channelRecord } =
+      await adminSupabase
+        .from(table)
+        .select("wants_email, email_verified")
+        .eq("id", id)
+        .maybeSingle();
+
     return NextResponse.json({
       ok: true,
       verified: true,
       active: true,
       emailPending:
-        record.wants_email === true &&
-        record.email_verified !== true,
+        channelRecord?.wants_email === true &&
+        channelRecord?.email_verified !== true,
     });
   } catch (error) {
     console.error(

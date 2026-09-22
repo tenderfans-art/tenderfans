@@ -13,6 +13,21 @@ export default function TenderEditProfilePage() {
   const [bio, setBio] = useState("");
   const [slug, setSlug] = useState("");
 
+  const [userId, setUserId] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
+
+  const [preferenceId, setPreferenceId] = useState<string | null>(null);
+  const [wantsEmail, setWantsEmail] = useState(true);
+  const [wantsSms, setWantsSms] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [savedPhone, setSavedPhone] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
+
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -28,6 +43,9 @@ export default function TenderEditProfilePage() {
         window.location.href = "/login";
         return;
       }
+
+      setUserId(user.id);
+      setAccountEmail(user.email ?? "");
 
       const { data: permission, error: permissionError } =
         await supabase
@@ -49,28 +67,128 @@ export default function TenderEditProfilePage() {
         return;
       }
 
-      const { data: bartender, error: bartenderError } =
-        await supabase
-          .from("bartenders")
-          .select("display_name, bio, slug")
-          .eq("id", bartenderId)
-          .single();
+      const [bartenderResult, preferenceResult] =
+        await Promise.all([
+          supabase
+            .from("bartenders")
+            .select("display_name, bio, slug")
+            .eq("id", bartenderId)
+            .single(),
 
-      if (bartenderError) {
-        setMessage(bartenderError.message);
+          supabase
+            .from("tender_notification_preferences")
+            .select(
+              "id, wants_email, wants_sms, phone_e164, phone_verified"
+            )
+            .eq("bartender_id", bartenderId)
+            .eq("user_id", user.id)
+            .maybeSingle(),
+        ]);
+
+      if (bartenderResult.error) {
+        setMessage(bartenderResult.error.message);
         setLoading(false);
         return;
       }
 
+      if (preferenceResult.error) {
+        setMessage(preferenceResult.error.message);
+        setLoading(false);
+        return;
+      }
+
+      const bartender = bartenderResult.data;
+      const preferences = preferenceResult.data;
+
       setDisplayName(bartender.display_name ?? "");
       setBio(bartender.bio ?? "");
       setSlug(bartender.slug ?? "");
+
+      if (preferences) {
+        setPreferenceId(preferences.id);
+        setWantsEmail(preferences.wants_email);
+        setWantsSms(preferences.wants_sms);
+        setPhone(preferences.phone_e164 ?? "");
+        setSavedPhone(preferences.phone_e164 ?? "");
+        setPhoneVerified(preferences.phone_verified);
+      }
+
       setAllowed(true);
       setLoading(false);
     }
 
     loadProfile();
   }, [bartenderId]);
+
+  function normalizePhone(value: string) {
+    const digits = value.replace(/\D/g, "");
+
+    if (digits.length === 10) {
+      return `+1${digits}`;
+    }
+
+    if (digits.length === 11 && digits.startsWith("1")) {
+      return `+${digits}`;
+    }
+
+    if (value.trim().startsWith("+") && digits.length >= 10) {
+      return `+${digits}`;
+    }
+
+    return "";
+  }
+
+  async function savePreferences() {
+    const normalizedPhone = phone.trim()
+      ? normalizePhone(phone)
+      : "";
+
+    if (wantsSms && !normalizedPhone) {
+      throw new Error(
+        "Enter a valid mobile number before enabling SMS notifications."
+      );
+    }
+
+    const phoneChanged =
+      normalizedPhone !== normalizePhone(savedPhone);
+
+    const payload = {
+      bartender_id: bartenderId,
+      user_id: userId,
+      wants_email: wantsEmail,
+      wants_sms: wantsSms,
+      phone_e164: normalizedPhone || null,
+      phone_verified:
+        wantsSms && !phoneChanged
+          ? phoneVerified
+          : false,
+      sms_consent_at: wantsSms
+        ? new Date().toISOString()
+        : null,
+      sms_consent_source: wantsSms
+        ? "tender_edit_profile"
+        : null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from("tender_notification_preferences")
+      .upsert(payload, {
+        onConflict: "bartender_id,user_id",
+      })
+      .select("id, phone_verified")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    setPreferenceId(data.id);
+    setPhone(normalizedPhone);
+    setSavedPhone(normalizedPhone);
+    setPhoneVerified(data.phone_verified);
+    return data.id as string;
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -85,27 +203,171 @@ export default function TenderEditProfilePage() {
       return;
     }
 
-    setSaving(true);
-    setMessage("");
-
-    const { error } = await supabase
-      .from("bartenders")
-      .update({
-        display_name: cleanName,
-        bio: cleanBio || null,
-      })
-      .eq("id", bartenderId);
-
-    if (error) {
-      setMessage(error.message);
-      setSaving(false);
+    if (!wantsEmail && !wantsSms) {
+      setMessage("Choose at least one notification method.");
       return;
     }
 
-    setDisplayName(cleanName);
-    setBio(cleanBio);
-    setMessage("Profile saved.");
-    setSaving(false);
+    setSaving(true);
+    setMessage("");
+
+    try {
+      await savePreferences();
+
+      const { error } = await supabase
+        .from("bartenders")
+        .update({
+          display_name: cleanName,
+          bio: cleanBio || null,
+        })
+        .eq("id", bartenderId);
+
+      if (error) {
+        throw error;
+      }
+
+      setDisplayName(cleanName);
+      setBio(cleanBio);
+      setMessage("Profile saved.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not save your profile."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function sendVerificationCode() {
+    if (sendingCode) return;
+
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!normalizedPhone) {
+      setMessage("Enter a valid mobile number.");
+      return;
+    }
+
+    setSendingCode(true);
+    setMessage("");
+
+    try {
+      const { data, error } = await supabase
+        .from("tender_notification_preferences")
+        .upsert(
+          {
+            bartender_id: bartenderId,
+            user_id: userId,
+            wants_email: wantsEmail,
+            wants_sms: true,
+            phone_e164: normalizedPhone,
+            phone_verified: false,
+            sms_consent_at: new Date().toISOString(),
+            sms_consent_source: "tender_edit_profile",
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "bartender_id,user_id",
+          }
+        )
+        .select("id")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setPreferenceId(data.id);
+      setWantsSms(true);
+      setPhone(normalizedPhone);
+      setSavedPhone(normalizedPhone);
+      setPhoneVerified(false);
+
+      const response = await fetch(
+        "/api/notifications/verification/send",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "tender",
+            id: data.id,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Could not send verification code."
+        );
+      }
+
+      setVerificationSent(true);
+      setMessage("Verification code sent.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not send verification code."
+      );
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
+  async function verifyPhone() {
+    if (!preferenceId || verifyingCode) return;
+
+    if (!/^\d{6}$/.test(verificationCode.trim())) {
+      setMessage("Enter the 6-digit verification code.");
+      return;
+    }
+
+    setVerifyingCode(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        "/api/notifications/verification/check",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "tender",
+            id: preferenceId,
+            code: verificationCode.trim(),
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Could not verify that phone number."
+        );
+      }
+
+      setPhoneVerified(true);
+      setVerificationSent(false);
+      setVerificationCode("");
+      setMessage("Mobile number verified.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not verify that phone number."
+      );
+    } finally {
+      setVerifyingCode(false);
+    }
   }
 
   return (
@@ -115,10 +377,6 @@ export default function TenderEditProfilePage() {
           <div className="eyebrow">Tender Account</div>
           <h1>Edit your profile.</h1>
 
-          <p className="lead-copy">
-            Update the information shown on your public Tender profile.
-          </p>
-
           {loading && <p>Loading your profile...</p>}
 
           {!loading && message && !allowed && (
@@ -127,76 +385,288 @@ export default function TenderEditProfilePage() {
 
           {!loading && allowed && (
             <form onSubmit={handleSubmit}>
-              <label
-                style={{
-                  display: "block",
-                  fontWeight: 800,
-                  marginBottom: "7px",
-                }}
-              >
-                Display name
-              </label>
+              <section style={{ marginTop: "22px" }}>
+                <h2
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: "1.15rem",
+                  }}
+                >
+                  Notification preferences
+                </h2>
 
-              <input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                maxLength={80}
+                <p
+                  style={{
+                    margin: "0 0 18px",
+                    color: "#697177",
+                    fontSize: "0.9rem",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  This information is private and is only visible to
+                  you in Edit Profile. It is not displayed anywhere
+                  on your public Tender profile.
+                </p>
+
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "9px",
+                    fontWeight: 800,
+                    marginBottom: "8px",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={wantsEmail}
+                    onChange={(e) =>
+                      setWantsEmail(e.target.checked)
+                    }
+                  />
+                  Email
+                </label>
+
+                <input
+                  type="email"
+                  value={accountEmail}
+                  readOnly
+                  aria-label="Account email"
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    border: "1px solid #d7d1c6",
+                    borderRadius: "12px",
+                    font: "inherit",
+                    boxSizing: "border-box",
+                    background: "#f5f3ee",
+                    color: "#697177",
+                  }}
+                />
+
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "9px",
+                    fontWeight: 800,
+                    marginTop: "18px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={wantsSms}
+                    onChange={(e) => {
+                      setWantsSms(e.target.checked);
+
+                      if (!e.target.checked) {
+                        setVerificationSent(false);
+                        setVerificationCode("");
+                      }
+                    }}
+                  />
+                  SMS
+                </label>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      setPhoneVerified(false);
+                      setVerificationSent(false);
+                    }}
+                    placeholder="Mobile number"
+                    style={{
+                      flex: "1 1 260px",
+                      padding: "12px 14px",
+                      border: "1px solid #d7d1c6",
+                      borderRadius: "12px",
+                      font: "inherit",
+                      boxSizing: "border-box",
+                    }}
+                  />
+
+                  {phoneVerified ? (
+                    <strong style={{ color: "#6f8420" }}>
+                      Verified ✓
+                    </strong>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn outline"
+                      onClick={sendVerificationCode}
+                      disabled={sendingCode || !phone.trim()}
+                    >
+                      {sendingCode
+                        ? "Sending..."
+                        : "Verify Number"}
+                    </button>
+                  )}
+                </div>
+
+                {verificationSent && !phoneVerified && (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      marginTop: "10px",
+                    }}
+                  >
+                    <input
+                      inputMode="numeric"
+                      value={verificationCode}
+                      onChange={(e) =>
+                        setVerificationCode(
+                          e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 6)
+                        )
+                      }
+                      placeholder="6-digit code"
+                      maxLength={6}
+                      style={{
+                        width: "180px",
+                        padding: "12px 14px",
+                        border: "1px solid #d7d1c6",
+                        borderRadius: "12px",
+                        font: "inherit",
+                        boxSizing: "border-box",
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      className="btn outline"
+                      onClick={verifyPhone}
+                      disabled={
+                        verifyingCode ||
+                        verificationCode.length !== 6
+                      }
+                    >
+                      {verifyingCode
+                        ? "Verifying..."
+                        : "Confirm Code"}
+                    </button>
+                  </div>
+                )}
+              </section>
+
+              <hr
                 style={{
-                  width: "100%",
-                  padding: "14px",
-                  border: "1px solid #d7d1c6",
-                  borderRadius: "12px",
-                  font: "inherit",
-                  boxSizing: "border-box",
+                  border: 0,
+                  borderTop: "1px solid #e2ddd3",
+                  margin: "28px 0 24px",
                 }}
               />
 
-              <label
-                style={{
-                  display: "block",
-                  fontWeight: 800,
-                  marginTop: "22px",
-                  marginBottom: "7px",
-                }}
-              >
-                Bio
-              </label>
+              <section>
+                <h2
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: "1.15rem",
+                    fontWeight: 800,
+                  }}
+                >
+                  Update your public Tender profile
+                </h2>
 
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                maxLength={300}
-                rows={6}
-                placeholder="Tell your guests a little about yourself..."
-                style={{
-                  width: "100%",
-                  padding: "14px",
-                  border: "1px solid #d7d1c6",
-                  borderRadius: "12px",
-                  font: "inherit",
-                  lineHeight: 1.5,
-                  resize: "vertical",
-                  boxSizing: "border-box",
-                }}
-              />
+                <p
+                  style={{
+                    margin: "0 0 20px",
+                    color: "#697177",
+                  }}
+                >
+                  The information below is displayed on your public
+                  Tender profile.
+                </p>
 
-              <div
-                style={{
-                  marginTop: "6px",
-                  textAlign: "right",
-                  color: "#697177",
-                  fontSize: "0.8rem",
-                }}
-              >
-                {bio.length}/300
-              </div>
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: 800,
+                    marginBottom: "7px",
+                  }}
+                >
+                  Display name
+                </label>
 
-              {message && allowed && (
+                <input
+                  value={displayName}
+                  onChange={(e) =>
+                    setDisplayName(e.target.value)
+                  }
+                  maxLength={80}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    border: "1px solid #d7d1c6",
+                    borderRadius: "12px",
+                    font: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: 800,
+                    marginTop: "22px",
+                    marginBottom: "7px",
+                  }}
+                >
+                  Bio
+                </label>
+
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  maxLength={300}
+                  rows={6}
+                  placeholder="Tell your guests a little about yourself..."
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    border: "1px solid #d7d1c6",
+                    borderRadius: "12px",
+                    font: "inherit",
+                    lineHeight: 1.5,
+                    resize: "vertical",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <div
+                  style={{
+                    marginTop: "6px",
+                    textAlign: "right",
+                    color: "#697177",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  {bio.length}/300
+                </div>
+              </section>
+
+              {message && (
                 <p
                   style={{
                     marginTop: "16px",
                     color:
-                      message === "Profile saved."
+                      message === "Profile saved." ||
+                      message === "Verification code sent." ||
+                      message === "Mobile number verified."
                         ? "#6f8420"
                         : "crimson",
                     fontWeight: 700,

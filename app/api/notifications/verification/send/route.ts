@@ -18,12 +18,18 @@ function getClientIpHash(request: Request) {
     .digest("hex");
 }
 
-type VerificationType = "follow" | "reminder";
+type VerificationType = "follow" | "reminder" | "tender";
 
 function getTable(type: VerificationType) {
-  return type === "follow"
-    ? "notification_subscriptions"
-    : "event_reminders";
+  if (type === "follow") {
+    return "notification_subscriptions";
+  }
+
+  if (type === "reminder") {
+    return "event_reminders";
+  }
+
+  return "tender_notification_preferences";
 }
 
 export async function POST(request: Request) {
@@ -31,7 +37,9 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const type: VerificationType | null =
-      body.type === "follow" || body.type === "reminder"
+      body.type === "follow" ||
+      body.type === "reminder" ||
+      body.type === "tender"
         ? body.type
         : null;
 
@@ -96,8 +104,7 @@ export async function POST(request: Request) {
           phone_e164,
           wants_sms,
           phone_verified,
-          phone_verification_sent_at,
-          status
+          phone_verification_sent_at
         `)
         .eq("id", id)
         .maybeSingle();
