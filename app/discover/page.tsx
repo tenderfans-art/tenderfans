@@ -3,12 +3,14 @@ import { Suspense } from "react";
 
 export default function DiscoverPage() {
   return (
-    <main className="flow-page discover-page">
-      <div className="flow-card discover-card">
-        <Suspense fallback={<div>Loading spots...</div>}>
-          <HomeSearch showDiscoverHeader />
-        </Suspense>
+    <section className="flow-page">
+      <div className="shell narrow shout-shell">
+        <div className="flow-card">
+          <Suspense fallback={<div>Loading spots...</div>}>
+            <HomeSearch showDiscoverHeader />
+          </Suspense>
+        </div>
       </div>
-    </main>
+    </section>
   );
 }
