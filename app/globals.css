@@ -4528,3 +4528,46 @@
     margin-right:auto;
   }
 }
+
+/* -------------------------------------------------------
+   How It Works audience navigation
+-------------------------------------------------------- */
+
+.how-audience-nav{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:16px;
+  padding-top:18px;
+  margin-bottom:4px;
+  font-size:15px;
+  color:var(--muted);
+}
+
+.how-audience-nav a{
+  color:var(--muted);
+  text-decoration:none;
+  font-weight:500;
+  transition:color .15s ease;
+}
+
+.how-audience-nav a:hover{
+  color:var(--ink);
+}
+
+.how-audience-nav a.active{
+  color:var(--ink);
+  font-weight:850;
+}
+
+.how-audience-nav span{
+  color:var(--line);
+}
+
+@media(max-width:650px){
+  .how-audience-nav{
+    gap:10px;
+    padding-top:8px;
+    font-size:14px;
+  }
+}
