@@ -5306,3 +5306,8 @@
   line-height:1;
   font-weight:900;
 }
+
+/* Events calendar — extra room for six-week month selectors */
+.events-calendar-card{
+  width:min(792px,calc(100vw - 32px));
+}
