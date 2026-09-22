@@ -5281,10 +5281,6 @@
 }
 
 /* Events — weekly event counters */
-.events-week-selector{
-  gap:4px;
-}
-
 .events-week-link{
   display:inline-flex;
   align-items:center;
@@ -5307,11 +5303,11 @@
   font-weight:900;
 }
 
-/* Events calendar — widen only for six-week months */
+/* Events calendar — responsive width based on month week count */
 .events-calendar-card{
-  width:min(760px,calc(100vw - 32px));
+  width:min(608px,calc(100vw - 32px));
 }
 
 .events-calendar-card:has(.events-week-link:nth-child(6)){
-  width:min(792px,calc(100vw - 32px));
+  width:min(800px,calc(100vw - 32px));
 }
