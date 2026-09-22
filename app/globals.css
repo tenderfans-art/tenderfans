@@ -4660,3 +4660,12 @@
     margin-bottom:14px;
   }
 }
+
+/* How It Works — tighten space below site header */
+.flow-page:has(.how-it-works-page){
+  padding-top:18px;
+}
+
+.how-hero{
+  padding-top:0;
+}
