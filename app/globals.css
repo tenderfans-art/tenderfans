@@ -5121,3 +5121,48 @@
   border-color:var(--olive) !important;
   color:#fff !important;
 }
+
+/* How It Works audience selector — TenderFans app CTA styling */
+.how-audience-nav{
+  gap:12px;
+}
+
+.how-audience-nav > span{
+  display:none;
+}
+
+.how-audience-nav a{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px 24px;
+  border:1px solid var(--olive);
+  border-radius:999px;
+  background:var(--olive);
+  color:#fff;
+  font-weight:700;
+  line-height:1.2;
+  text-decoration:none;
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease;
+}
+
+.how-audience-nav a:hover{
+  background:var(--olive);
+  border-color:var(--olive);
+  color:#fff;
+  transform:translateY(-1px);
+}
+
+.how-audience-nav a.active{
+  background:var(--olive);
+  border-color:var(--olive);
+  color:#fff;
+  box-shadow:0 0 0 3px rgba(137,160,34,.22);
+}
+
+.how-audience-nav a:focus-visible{
+  outline:2px solid var(--olive);
+  outline-offset:3px;
+}
