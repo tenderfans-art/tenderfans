@@ -387,7 +387,10 @@ export default function HomeSearch({
         <div className="section-title">
           <div>
             <span className="eyebrow">Discover</span>
-            <h2>Find your vibe. Find your Tender.</h2>
+            <h2>
+              Find your vibe.<br />
+              Find your Tender.
+            </h2>
             <p className="discover-intro">
               Search Tenders, Spots or cities to find your favorites and discover somewhere new.
             </p>
