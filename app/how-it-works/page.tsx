@@ -172,6 +172,12 @@ export default async function HowItWorksPage({
     <main className="flow-page">
       <div className="shell how-it-works-page">
 
+        <section className="how-hero">
+          <span className="eyebrow">{page.eyebrow}</span>
+          <h1>{page.title}</h1>
+          <p>{page.intro}</p>
+        </section>
+
         <nav
           className="how-audience-nav"
           aria-label="How TenderFans works for"
@@ -201,12 +207,6 @@ export default async function HowItWorksPage({
             Spots &amp; Reps
           </Link>
         </nav>
-
-        <section className="how-hero">
-          <span className="eyebrow">{page.eyebrow}</span>
-          <h1>{page.title}</h1>
-          <p>{page.intro}</p>
-        </section>
 
         <section className="how-steps">
           {page.steps.map((step, index) => (

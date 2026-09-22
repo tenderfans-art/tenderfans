@@ -4571,3 +4571,59 @@
     font-size:14px;
   }
 }
+
+/* -------------------------------------------------------
+   How It Works audience navigation — prominent selector
+--------------------------------------------------------- */
+
+.how-audience-nav{
+  width:max-content;
+  max-width:100%;
+  margin:0 auto 24px;
+  padding:8px;
+  gap:6px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  font-size:16px;
+}
+
+.how-audience-nav a{
+  display:block;
+  padding:11px 18px;
+  border-radius:11px;
+  font-weight:700;
+  color:var(--muted);
+}
+
+.how-audience-nav a:hover{
+  background:rgba(0,0,0,.035);
+  color:var(--ink);
+}
+
+.how-audience-nav a.active{
+  background:var(--ink);
+  color:#fff;
+  font-weight:850;
+}
+
+.how-audience-nav span{
+  display:none;
+}
+
+@media(max-width:650px){
+  .how-audience-nav{
+    width:100%;
+    padding:6px;
+    margin-bottom:18px;
+    gap:4px;
+  }
+
+  .how-audience-nav a{
+    flex:1;
+    padding:10px 8px;
+    text-align:center;
+    font-size:13px;
+  }
+}
