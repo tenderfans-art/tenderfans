@@ -150,11 +150,6 @@
 .discover-card .search-results{position:static;top:auto;left:auto;right:auto;margin-top:28px;width:100%;box-shadow:none}
 .discover-card .section-title{margin:0 0 10px}
 .discover-card{min-height:560px}
-.discover-card{
-  background:transparent;
-  border:none;
-  box-shadow:none;
-}
 .discover-card .section-title {
   display: flex;
   position: static;
