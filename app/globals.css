@@ -4734,3 +4734,17 @@
   box-shadow:none;
   border:1px solid var(--line);
 }
+
+/* How It Works — balance spacing around intro copy */
+.how-hero h1{
+  margin-bottom:24px;
+}
+
+.how-hero p{
+  margin-top:0;
+  margin-bottom:0;
+}
+
+.how-hero{
+  padding-bottom:24px;
+}
