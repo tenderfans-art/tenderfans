@@ -15,6 +15,9 @@ export default function TenderEditProfilePage() {
 
   const [userId, setUserId] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
+  const [showEmailUpdate, setShowEmailUpdate] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [updatingEmail, setUpdatingEmail] = useState(false);
 
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [wantsEmail, setWantsEmail] = useState(true);
@@ -188,6 +191,40 @@ export default function TenderEditProfilePage() {
     setSavedPhone(normalizedPhone);
     setPhoneVerified(data.phone_verified);
     return data.id as string;
+  }
+
+  async function updateAccountEmail() {
+    const cleanEmail = newEmail.trim().toLowerCase();
+
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setMessage("Enter a valid email address.");
+      return;
+    }
+
+    if (cleanEmail === accountEmail.toLowerCase()) {
+      setMessage("That is already your account email.");
+      return;
+    }
+
+    setUpdatingEmail(true);
+    setMessage("");
+
+    const { error } = await supabase.auth.updateUser({
+      email: cleanEmail,
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setUpdatingEmail(false);
+      return;
+    }
+
+    setNewEmail("");
+    setShowEmailUpdate(false);
+    setMessage(
+      "Email update requested. Check your email to confirm the change."
+    );
+    setUpdatingEmail(false);
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -432,22 +469,86 @@ export default function TenderEditProfilePage() {
                   Email
                 </label>
 
-                <input
-                  type="email"
-                  value={accountEmail}
-                  readOnly
-                  aria-label="Account email"
+                <div
                   style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    border: "1px solid #d7d1c6",
-                    borderRadius: "12px",
-                    font: "inherit",
-                    boxSizing: "border-box",
-                    background: "#f5f3ee",
-                    color: "#697177",
+                    display: "flex",
+                    gap: "10px",
+                    alignItems: "stretch",
                   }}
-                />
+                >
+                  <input
+                    type="email"
+                    value={accountEmail}
+                    readOnly
+                    aria-label="Account email"
+                    style={{
+                      flex: "1 1 auto",
+                      minWidth: 0,
+                      padding: "10px 12px",
+                      border: "1px solid #d7d1c6",
+                      borderRadius: "12px",
+                      font: "inherit",
+                      boxSizing: "border-box",
+                      background: "#f5f3ee",
+                      color: "#697177",
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    className="btn outline"
+                    onClick={() => {
+                      setShowEmailUpdate((current) => !current);
+                      setNewEmail("");
+                    }}
+                    style={{
+                      flex: "0 0 150px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {showEmailUpdate ? "Cancel" : "Update Email"}
+                  </button>
+                </div>
+
+                {showEmailUpdate && (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="New email address"
+                      autoComplete="email"
+                      style={{
+                        flex: "1 1 auto",
+                        minWidth: 0,
+                        padding: "10px 12px",
+                        border: "1px solid #d7d1c6",
+                        borderRadius: "12px",
+                        font: "inherit",
+                        boxSizing: "border-box",
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      className="btn primary"
+                      onClick={updateAccountEmail}
+                      disabled={updatingEmail}
+                      style={{
+                        flex: "0 0 150px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {updatingEmail ? "Updating..." : "Save Email"}
+                    </button>
+                  </div>
+                )}
 
                 <label
                   style={{
@@ -671,7 +772,9 @@ export default function TenderEditProfilePage() {
                     color:
                       message === "Profile saved." ||
                       message === "Verification code sent." ||
-                      message === "Mobile number verified."
+                      message === "Mobile number verified." ||
+                      message ===
+                        "Email update requested. Check your email to confirm the change."
                         ? "#6f8420"
                         : "crimson",
                     fontWeight: 700,
