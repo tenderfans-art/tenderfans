@@ -4748,3 +4748,147 @@
 .how-hero{
   padding-bottom:24px;
 }
+
+/* ------------------------------------------------------------
+   Landing hero — GOOD PEOPLE random Tender discovery
+   ------------------------------------------------------------ */
+
+.good-people-hotspot{
+  left:47.2%;
+  top:25.4%;
+  width:10.8%;
+  height:3.7%;
+  padding:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+}
+
+.good-people-hotspot:hover{
+  background:rgba(255,255,255,.035);
+}
+
+.good-people-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:rgba(5,10,14,.76);
+  backdrop-filter:blur(4px);
+}
+
+.good-people-panel{
+  width:min(920px,100%);
+  max-height:calc(100vh - 48px);
+  overflow:auto;
+  padding:30px;
+  border:1px solid var(--line);
+  border-radius:24px;
+  background:var(--paper);
+  color:var(--ink);
+  box-shadow:0 28px 80px rgba(0,0,0,.38);
+}
+
+.good-people-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:24px;
+  margin-bottom:22px;
+}
+
+.good-people-heading h2{
+  margin:6px 0 0;
+  font-family:Georgia,serif;
+  font-size:clamp(30px,4vw,44px);
+  letter-spacing:-.04em;
+}
+
+.good-people-close{
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border:1px solid var(--line);
+  border-radius:50%;
+  background:#fff;
+  color:var(--ink);
+  font-size:28px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.good-people-grid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:14px;
+}
+
+.good-people-card{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+  color:var(--ink);
+  text-decoration:none;
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+
+.good-people-card:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--shadow);
+}
+
+.good-people-photo{
+  aspect-ratio:1/1;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  background:var(--navy);
+  color:#fff;
+  font-family:Georgia,serif;
+  font-size:44px;
+}
+
+.good-people-photo img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.good-people-copy{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:12px;
+}
+
+.good-people-copy strong{
+  font-size:16px;
+  line-height:1.2;
+}
+
+.good-people-copy span{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+
+.good-people-again{
+  display:block;
+  margin:22px auto 0;
+}
+
+@media(max-width:900px){
+  .good-people-backdrop{
+    display:none;
+  }
+}
+
+@media(max-width:760px){
+  .good-people-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
