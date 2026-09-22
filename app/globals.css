@@ -4627,3 +4627,36 @@
     font-size:13px;
   }
 }
+
+/* -------------------------------------------------------
+   How It Works — tighter hero + full-width audience switch
+--------------------------------------------------------- */
+
+.how-hero{
+  padding-top:12px;
+  padding-bottom:30px;
+}
+
+.how-audience-nav{
+  width:100%;
+  margin:0 auto 18px;
+  padding:7px;
+}
+
+.how-audience-nav a{
+  flex:1;
+  text-align:center;
+  padding:12px 18px;
+}
+
+@media(max-width:650px){
+  .how-hero{
+    padding-top:4px;
+    padding-bottom:24px;
+  }
+
+  .how-audience-nav{
+    width:100%;
+    margin-bottom:14px;
+  }
+}
