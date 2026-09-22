@@ -378,10 +378,9 @@ export default function TenderEditProfilePage() {
       >
         <div
           className="flow-card"
-          style={{ padding: "24px" }}
+          style={{ padding: "18px 24px 24px" }}
         >
-          <div className="eyebrow">Tender Account</div>
-          <h1>Edit your profile.</h1>
+          <h1 style={{ marginTop: 0 }}>Edit your profile.</h1>
 
           {loading && <p>Loading your profile...</p>}
 
