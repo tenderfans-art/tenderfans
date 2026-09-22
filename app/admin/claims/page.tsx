@@ -139,6 +139,8 @@ export default function AdminClaimsPage() {
   async function reviewClaim(id: string, approve: boolean) {
     setMessage("");
 
+    const claim = claims.find((item) => item.id === id);
+
     const { error } = await supabase.rpc("admin_review_claim", {
       p_claim_id: id,
       p_approve: approve,
@@ -147,6 +149,46 @@ export default function AdminClaimsPage() {
     if (error) {
       setMessage(error.message);
       return;
+    }
+
+    if (
+      approve &&
+      claim?.entity_kind === "bartender" &&
+      claim.claimant_email
+    ) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const tenderName =
+        claim.claimed_name ||
+        claim.requested_tender_name ||
+        "your Tender profile";
+
+      try {
+        const response = await fetch("/api/admin/claim-approved", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token ?? ""}`,
+          },
+          body: JSON.stringify({
+            email: claim.claimant_email,
+            tenderName,
+          }),
+        });
+
+        if (!response.ok) {
+          console.error(
+            "Claim approved, but approval email could not be sent."
+          );
+        }
+      } catch (emailError) {
+        console.error(
+          "Claim approved, but approval email could not be sent:",
+          emailError
+        );
+      }
     }
 
     setMessage(approve ? "Claim approved." : "Claim rejected.");
