@@ -47,9 +47,9 @@ const content: Record<Audience, HowContent> = {
           "Tell the community what they do well using positive traits and a shout style. No anonymous rants. No comment section. Just recognition for great hospitality.",
       },
       {
-        title: "Build a reputation.",
+        title: "Stay connected.",
         text:
-          "Shouts add up. Over time, they show what each Tender is known for and help people discover the personalities behind their favorite spots.",
+          "Follow your favorite Tenders and Spots, and set reminders for Events so you can keep up with the people, places and things you don't want to miss.",
       },
     ],
     whyTitle: "People are more than a star rating.",
