@@ -5088,3 +5088,23 @@
   border-color:var(--olive);
   color:#fff;
 }
+
+/* Center Good People / Good Times popup headings */
+.good-people-heading,
+.good-times-heading{
+  position:relative;
+  display:block;
+  text-align:center;
+}
+
+.good-people-heading > div,
+.good-times-heading > div{
+  width:100%;
+}
+
+.good-people-close,
+.good-times-close{
+  position:absolute;
+  top:0;
+  right:0;
+}
