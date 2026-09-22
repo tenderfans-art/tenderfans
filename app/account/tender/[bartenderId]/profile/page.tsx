@@ -372,8 +372,14 @@ export default function TenderEditProfilePage() {
 
   return (
     <main className="flow-page">
-      <div className="shell narrow">
-        <div className="flow-card">
+      <div
+        className="shell narrow"
+        style={{ maxWidth: "680px" }}
+      >
+        <div
+          className="flow-card"
+          style={{ padding: "24px" }}
+        >
           <div className="eyebrow">Tender Account</div>
           <h1>Edit your profile.</h1>
 
@@ -385,7 +391,7 @@ export default function TenderEditProfilePage() {
 
           {!loading && allowed && (
             <form onSubmit={handleSubmit}>
-              <section style={{ marginTop: "22px" }}>
+              <section style={{ marginTop: "14px" }}>
                 <h2
                   style={{
                     margin: "0 0 6px",
@@ -397,7 +403,7 @@ export default function TenderEditProfilePage() {
 
                 <p
                   style={{
-                    margin: "0 0 18px",
+                    margin: "0 0 12px",
                     color: "#697177",
                     fontSize: "0.9rem",
                     lineHeight: 1.5,
@@ -434,7 +440,7 @@ export default function TenderEditProfilePage() {
                   aria-label="Account email"
                   style={{
                     width: "100%",
-                    padding: "12px 14px",
+                    padding: "10px 12px",
                     border: "1px solid #d7d1c6",
                     borderRadius: "12px",
                     font: "inherit",
@@ -450,8 +456,8 @@ export default function TenderEditProfilePage() {
                     alignItems: "center",
                     gap: "9px",
                     fontWeight: 800,
-                    marginTop: "18px",
-                    marginBottom: "8px",
+                    marginTop: "12px",
+                    marginBottom: "6px",
                   }}
                 >
                   <input
@@ -487,8 +493,8 @@ export default function TenderEditProfilePage() {
                     }}
                     placeholder="Mobile number"
                     style={{
-                      flex: "1 1 260px",
-                      padding: "12px 14px",
+                      flex: "1 1 240px",
+                      padding: "10px 12px",
                       border: "1px solid #d7d1c6",
                       borderRadius: "12px",
                       font: "inherit",
@@ -521,7 +527,7 @@ export default function TenderEditProfilePage() {
                       gap: "10px",
                       alignItems: "center",
                       flexWrap: "wrap",
-                      marginTop: "10px",
+                      marginTop: "8px",
                     }}
                   >
                     <input
@@ -538,7 +544,7 @@ export default function TenderEditProfilePage() {
                       maxLength={6}
                       style={{
                         width: "180px",
-                        padding: "12px 14px",
+                        padding: "10px 12px",
                         border: "1px solid #d7d1c6",
                         borderRadius: "12px",
                         font: "inherit",
@@ -567,7 +573,7 @@ export default function TenderEditProfilePage() {
                 style={{
                   border: 0,
                   borderTop: "1px solid #e2ddd3",
-                  margin: "28px 0 24px",
+                  margin: "20px 0 18px",
                 }}
               />
 
@@ -584,7 +590,7 @@ export default function TenderEditProfilePage() {
 
                 <p
                   style={{
-                    margin: "0 0 20px",
+                    margin: "0 0 14px",
                     color: "#697177",
                   }}
                 >
@@ -610,7 +616,7 @@ export default function TenderEditProfilePage() {
                   maxLength={80}
                   style={{
                     width: "100%",
-                    padding: "14px",
+                    padding: "11px 12px",
                     border: "1px solid #d7d1c6",
                     borderRadius: "12px",
                     font: "inherit",
@@ -622,8 +628,8 @@ export default function TenderEditProfilePage() {
                   style={{
                     display: "block",
                     fontWeight: 800,
-                    marginTop: "22px",
-                    marginBottom: "7px",
+                    marginTop: "15px",
+                    marginBottom: "6px",
                   }}
                 >
                   Bio
@@ -633,7 +639,7 @@ export default function TenderEditProfilePage() {
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   maxLength={300}
-                  rows={6}
+                  rows={4}
                   placeholder="Tell your guests a little about yourself..."
                   style={{
                     width: "100%",
@@ -681,7 +687,7 @@ export default function TenderEditProfilePage() {
                   display: "flex",
                   gap: "10px",
                   flexWrap: "wrap",
-                  marginTop: "22px",
+                  marginTop: "16px",
                 }}
               >
                 <button
