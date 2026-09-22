@@ -5305,7 +5305,7 @@
 
 /* Events calendar — responsive width based on month week count */
 .events-calendar-card{
-  width:min(608px,calc(100vw - 32px));
+  width:min(680px,calc(100vw - 32px));
 }
 
 .events-calendar-card:has(.events-week-link:nth-child(6)){
