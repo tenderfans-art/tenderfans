@@ -5031,3 +5031,45 @@
     display:none;
   }
 }
+
+/* Good People / Good Times — "Show me 5 more" app button */
+.good-people-again,
+.good-times-again{
+  display:block;
+  width:max-content;
+  margin:22px auto 0;
+  padding:12px 24px;
+  border:1px solid var(--navy);
+  border-radius:999px;
+  background:transparent;
+  color:var(--navy);
+  font:inherit;
+  font-size:16px;
+  font-weight:700;
+  line-height:1.2;
+  cursor:pointer;
+  transition:
+    background .16s ease,
+    color .16s ease,
+    transform .16s ease;
+}
+
+.good-people-again:hover,
+.good-times-again:hover{
+  background:var(--navy);
+  color:#fff;
+  transform:translateY(-1px);
+}
+
+.good-people-again:focus-visible,
+.good-times-again:focus-visible{
+  outline:2px solid var(--olive);
+  outline-offset:3px;
+}
+
+.good-people-again:disabled,
+.good-times-again:disabled{
+  opacity:.55;
+  cursor:default;
+  transform:none;
+}
