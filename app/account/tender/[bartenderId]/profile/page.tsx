@@ -602,22 +602,36 @@ export default function TenderEditProfilePage() {
                     }}
                   />
 
-                  {phoneVerified ? (
-                    <strong style={{ color: "#6f8420" }}>
-                      Verified ✓
-                    </strong>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn outline"
-                      onClick={sendVerificationCode}
-                      disabled={sendingCode || !phone.trim()}
-                    >
-                      {sendingCode
-                        ? "Sending..."
+                  <button
+                    type="button"
+                    className="btn outline"
+                    onClick={() => {
+                      if (phoneVerified) {
+                        setPhone("");
+                        setPhoneVerified(false);
+                        setVerificationSent(false);
+                        setVerificationCode("");
+                        setMessage("");
+                        return;
+                      }
+
+                      sendVerificationCode();
+                    }}
+                    disabled={
+                      sendingCode ||
+                      (!phoneVerified && !phone.trim())
+                    }
+                    style={{
+                      flex: "0 0 150px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {sendingCode
+                      ? "Sending..."
+                      : phoneVerified
+                        ? "Update Number"
                         : "Verify Number"}
-                    </button>
-                  )}
+                  </button>
                 </div>
 
                 {verificationSent && !phoneVerified && (
