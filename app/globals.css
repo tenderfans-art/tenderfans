@@ -4664,3 +4664,73 @@
 .how-hero{
   padding-top:0;
 }
+
+/* -------------------------------------------------------
+   Discover flow card
+--------------------------------------------------------- */
+
+.discover-flow-card .search-wrap{
+  margin-top:0;
+}
+
+.discover-flow-card .section-title{
+  margin-bottom:24px;
+}
+
+.discover-flow-card .section-title > div{
+  width:100%;
+}
+
+.discover-flow-card .discover-intro{
+  margin:12px 0 0;
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.55;
+  max-width:620px;
+}
+
+.discover-flow-card .search-results{
+  position:static;
+  top:auto;
+  left:auto;
+  right:auto;
+  width:100%;
+  margin-top:14px;
+  box-shadow:none;
+  border:1px solid var(--line);
+}
+
+/* -------------------------------------------------------
+   Discover flow card
+--------------------------------------------------------- */
+
+.discover-flow-card .search-wrap{
+  margin-top:0;
+}
+
+.discover-flow-card .section-title{
+  margin-bottom:24px;
+}
+
+.discover-flow-card .section-title > div{
+  width:100%;
+}
+
+.discover-flow-card .discover-intro{
+  margin:12px 0 0;
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.55;
+  max-width:620px;
+}
+
+.discover-flow-card .search-results{
+  position:static;
+  top:auto;
+  left:auto;
+  right:auto;
+  width:100%;
+  margin-top:14px;
+  box-shadow:none;
+  border:1px solid var(--line);
+}
