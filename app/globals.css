@@ -5189,3 +5189,16 @@
   color:#fff;
   box-shadow:none;
 }
+
+/* Discover search field — match app form-field treatment */
+.discover-flow-card .search-box{
+  background:#fff;
+  border:1px solid #cfcabf;
+  border-radius:13px;
+  box-shadow:none;
+}
+
+.discover-flow-card .search-box:focus-within{
+  border-color:var(--olive);
+  box-shadow:0 0 0 3px rgba(137,156,42,.12);
+}
