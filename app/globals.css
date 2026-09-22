@@ -5242,3 +5242,40 @@
     padding:8px 4px 2px;
   }
 }
+
+/* Events — day label sits above full-width event tiles */
+.events-day-group{
+  display:block;
+}
+
+.events-day-heading{
+  padding:0 4px 7px;
+  color:var(--olive);
+  font-size:11px;
+  line-height:1.2;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.events-day-events{
+  display:grid;
+  gap:10px;
+  width:100%;
+}
+
+.events-day-group + .events-day-group{
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid var(--line);
+}
+
+@media(max-width:640px){
+  .events-day-group{
+    display:block;
+  }
+
+  .events-day-heading{
+    padding:0 4px 7px;
+  }
+}
