@@ -402,7 +402,19 @@ export default function EventsCalendar({
               onClick={() => setSelectedWeekStart(new Date(week.start))}
               aria-pressed={active}
             >
-              {weekLabel(week)}
+              <span>{weekLabel(week)}</span>
+              <span
+                className="events-week-count"
+                aria-label={`${events.filter((event) => {
+                  const eventDate = new Date(event.starts_at);
+                  return eventDate >= week.start && eventDate <= week.end;
+                }).length} events`}
+              >
+                {events.filter((event) => {
+                  const eventDate = new Date(event.starts_at);
+                  return eventDate >= week.start && eventDate <= week.end;
+                }).length}
+              </span>
             </button>
           );
         })}
