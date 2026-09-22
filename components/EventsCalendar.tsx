@@ -330,6 +330,29 @@ export default function EventsCalendar({
       })
     : "";
 
+  const eventsByDay = useMemo(() => {
+    const groups = new Map<string, CalendarEvent[]>();
+
+    for (const event of visibleEvents) {
+      const date = new Date(event.starts_at);
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+      const existing = groups.get(key) ?? [];
+      existing.push(event);
+      groups.set(key, existing);
+    }
+
+    return Array.from(groups.values());
+  }, [visibleEvents]);
+
+  function eventDayLabel(startsAt: string) {
+    return new Date(startsAt).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
   return (
     <section className="events-calendar-card">
       {!venueId && (
@@ -409,68 +432,79 @@ export default function EventsCalendar({
         )}
 
         {!loading &&
-          visibleEvents.map((event) => (
-            <article className="events-list-row" key={event.id}>
-              <button
-                type="button"
-                className="events-list-row-main"
-                onClick={() => setSelectedEvent(event)}
-                aria-label={`View ${event.title} event details`}
-              >
-                <span className="events-list-row-top">
-                  <strong>{event.title}</strong>
-                  <span aria-hidden="true">·</span>
-                  <span>{event.venue_name}</span>
-                </span>
+          eventsByDay.map((dayEvents) => (
+            <section
+              className="events-day-group"
+              key={eventDayLabel(dayEvents[0].starts_at)}
+            >
+              <div className="events-day-heading">
+                {eventDayLabel(dayEvents[0].starts_at)}
+              </div>
 
-                <span className="events-list-row-bottom">
-                  <span>{eventDate(event.starts_at)}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>
-                    {eventTime(event.starts_at)}
-                    {event.ends_at && (
-                      <>
-                        {" – "}
-                        {eventTime(event.ends_at)}
-                      </>
+              <div className="events-day-events">
+                {dayEvents.map((event) => (
+                  <article className="events-list-row" key={event.id}>
+                    <button
+                      type="button"
+                      className="events-list-row-main"
+                      onClick={() => setSelectedEvent(event)}
+                      aria-label={`View ${event.title} event details`}
+                    >
+                      <span className="events-list-row-top">
+                        <strong>{event.title}</strong>
+                        <span aria-hidden="true">·</span>
+                        <span>{event.venue_name}</span>
+                      </span>
+
+                      <span className="events-list-row-bottom">
+                        <span>
+                          {eventTime(event.starts_at)}
+                          {event.ends_at && (
+                            <>
+                              {" – "}
+                              {eventTime(event.ends_at)}
+                            </>
+                          )}
+                        </span>
+
+                        <span
+                          className="events-list-reminder"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <NotificationSignup
+                            mode="reminder"
+                            eventId={event.id}
+                            eventName={event.title}
+                          />
+                        </span>
+                      </span>
+                    </button>
+
+                    {event.flyer_url ? (
+                      <button
+                        type="button"
+                        className="events-list-flyer-button"
+                        onClick={() => setSelectedFlyer(event)}
+                        aria-label={`Enlarge ${event.title} flyer`}
+                      >
+                        <img
+                          src={event.flyer_url}
+                          alt={`${event.title} event flyer`}
+                          className="events-list-flyer"
+                        />
+                      </button>
+                    ) : (
+                      <div
+                        className="events-list-flyer-placeholder"
+                        aria-hidden="true"
+                      >
+                        Event
+                      </div>
                     )}
-                  </span>
-
-                  <span
-                    className="events-list-reminder"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <NotificationSignup
-                      mode="reminder"
-                      eventId={event.id}
-                      eventName={event.title}
-                    />
-                  </span>
-                </span>
-              </button>
-
-              {event.flyer_url ? (
-                <button
-                  type="button"
-                  className="events-list-flyer-button"
-                  onClick={() => setSelectedFlyer(event)}
-                  aria-label={`Enlarge ${event.title} flyer`}
-                >
-                  <img
-                    src={event.flyer_url}
-                    alt={`${event.title} event flyer`}
-                    className="events-list-flyer"
-                  />
-                </button>
-              ) : (
-                <div
-                  className="events-list-flyer-placeholder"
-                  aria-hidden="true"
-                >
-                  Event
-                </div>
-              )}
-            </article>
+                  </article>
+                ))}
+              </div>
+            </section>
           ))}
       </div>
 

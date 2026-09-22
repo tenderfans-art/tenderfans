@@ -5202,3 +5202,43 @@
   border-color:var(--olive);
   box-shadow:0 0 0 3px rgba(137,156,42,.12);
 }
+
+/* Events — group populated week days */
+.events-day-group{
+  display:grid;
+  grid-template-columns:110px minmax(0,1fr);
+  gap:16px;
+  align-items:start;
+}
+
+.events-day-group + .events-day-group{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid var(--line);
+}
+
+.events-day-heading{
+  padding:14px 4px;
+  color:var(--olive);
+  font-size:12px;
+  line-height:1.35;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.events-day-events{
+  display:grid;
+  gap:10px;
+}
+
+@media(max-width:640px){
+  .events-day-group{
+    grid-template-columns:1fr;
+    gap:4px;
+  }
+
+  .events-day-heading{
+    padding:8px 4px 2px;
+  }
+}
