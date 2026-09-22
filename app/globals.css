@@ -5073,3 +5073,18 @@
   cursor:default;
   transform:none;
 }
+
+/* Random discovery buttons — green app CTA */
+.good-people-again,
+.good-times-again{
+  background:var(--olive);
+  border-color:var(--olive);
+  color:#fff;
+}
+
+.good-people-again:hover,
+.good-times-again:hover{
+  background:var(--olive);
+  border-color:var(--olive);
+  color:#fff;
+}
