@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import GoodPeopleRandom from "@/components/GoodPeopleRandom";
+import GoodTimesRandom from "@/components/GoodTimesRandom";
 
 export default function LandingHero() {
   const router = useRouter();
@@ -71,6 +72,7 @@ export default function LandingHero() {
         <div className="hide-start-line" aria-hidden="true" />
 
         <GoodPeopleRandom />
+        <GoodTimesRandom />
 
         {/* Draft-board Easter egg links */}
         <a
