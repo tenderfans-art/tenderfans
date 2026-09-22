@@ -5307,7 +5307,11 @@
   font-weight:900;
 }
 
-/* Events calendar — extra room for six-week month selectors */
+/* Events calendar — widen only for six-week months */
 .events-calendar-card{
+  width:min(760px,calc(100vw - 32px));
+}
+
+.events-calendar-card:has(.events-week-link:nth-child(6)){
   width:min(792px,calc(100vw - 32px));
 }
