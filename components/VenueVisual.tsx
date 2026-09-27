@@ -126,9 +126,33 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
       console.log(
         "Chosen Street View",
         venue.name,
-        chosen?.location?.pano ?? null,
-        Number.isFinite(bestScore) ? bestScore : null
+        {
+          pano: chosen?.location?.pano ?? null,
+          lat: chosen?.location?.latLng?.lat() ?? null,
+          lng: chosen?.location?.latLng?.lng() ?? null,
+          distance: Number.isFinite(bestScore) ? bestScore : null,
+        }
       );
+
+      if (venue.name.toLowerCase().includes("enigma")) {
+        const knownGood = await requestPanorama(
+          { lat: 27.771065, lng: -82.650218 },
+          12
+        );
+
+        console.log("ENIGMA KNOWN GOOD", {
+          pano: knownGood?.location?.pano ?? null,
+          lat: knownGood?.location?.latLng?.lat() ?? null,
+          lng: knownGood?.location?.latLng?.lng() ?? null,
+          links: knownGood?.links?.length ?? 0,
+          distanceFromVenue: knownGood?.location?.latLng
+            ? google.maps.geometry.spherical.computeDistanceBetween(
+                knownGood.location.latLng,
+                position
+              )
+            : null,
+        });
+      }
 
       if (cancelled || !visualRef.current) return;
 
