@@ -38,11 +38,30 @@ export default function GooglePlacePicker({
       "displayName",
       "formattedAddress",
       "location",
+      "viewport",
       "addressComponents",
       "nationalPhoneNumber",
       "websiteURI",
       "regularOpeningHours",
     ],
+  });
+
+  console.log("GOOGLE PLACE GEOMETRY", {
+    name: place.displayName,
+    location: place.location
+      ? {
+          lat: place.location.lat(),
+          lng: place.location.lng(),
+        }
+      : null,
+    viewport: place.viewport
+      ? {
+          north: place.viewport.getNorthEast().lat(),
+          east: place.viewport.getNorthEast().lng(),
+          south: place.viewport.getSouthWest().lat(),
+          west: place.viewport.getSouthWest().lng(),
+        }
+      : null,
   });
 
   const city = place.addressComponents?.find((c:any) => c.types.includes("locality"))?.longText ?? "";
