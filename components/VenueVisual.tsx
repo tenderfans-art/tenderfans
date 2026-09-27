@@ -140,11 +140,18 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
           12
         );
 
+        console.log("ENIGMA CURRENT", {
+          pano: chosen?.location?.pano ?? null,
+          description: chosen?.location?.description ?? null,
+          links: chosen?.links ?? [],
+        });
+
         console.log("ENIGMA KNOWN GOOD", {
           pano: knownGood?.location?.pano ?? null,
           lat: knownGood?.location?.latLng?.lat() ?? null,
           lng: knownGood?.location?.latLng?.lng() ?? null,
-          links: knownGood?.links?.length ?? 0,
+          description: knownGood?.location?.description ?? null,
+          links: knownGood?.links ?? [],
           distanceFromVenue: knownGood?.location?.latLng
             ? google.maps.geometry.spherical.computeDistanceBetween(
                 knownGood.location.latLng,
