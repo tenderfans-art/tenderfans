@@ -153,8 +153,8 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
       // TEMP DEBUG: inspect known-good Intermezzo frontage panorama.
       if (venue.name.toLowerCase().includes("intermezzo")) {
         const intermezzoFront = await requestPanorama(
-          { lat: 27.771283772678903, lng: -82.65037145465483 },
-          3
+          { lat: 27.7711414, lng: -82.6504041 },
+          5
         );
 
         console.log("INTERMEZZO FRONT", {
