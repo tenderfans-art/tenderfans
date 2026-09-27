@@ -172,6 +172,47 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
         });
       }
 
+      // TEMP DEBUG: ask Google for its BEST panorama from the venue location.
+      if (venue.name.toLowerCase().includes("intermezzo")) {
+        const bestPreference = await new Promise<
+          google.maps.StreetViewPanoramaData | null
+        >((resolve) => {
+          service.getPanorama(
+            {
+              location: position,
+              radius: 75,
+              preference: google.maps.StreetViewPreference.BEST,
+              sources: [
+                google.maps.StreetViewSource.GOOGLE,
+                google.maps.StreetViewSource.OUTDOOR,
+              ],
+            },
+            (data, status) => {
+              resolve(
+                status === google.maps.StreetViewStatus.OK &&
+                  data?.location?.latLng
+                  ? data
+                  : null
+              );
+            }
+          );
+        });
+
+        console.log("INTERMEZZO BEST", {
+          pano: bestPreference?.location?.pano ?? null,
+          lat: bestPreference?.location?.latLng?.lat() ?? null,
+          lng: bestPreference?.location?.latLng?.lng() ?? null,
+          description: bestPreference?.location?.description ?? null,
+          links: bestPreference?.links?.length ?? 0,
+          distanceFromVenue: bestPreference?.location?.latLng
+            ? google.maps.geometry.spherical.computeDistanceBetween(
+                bestPreference.location.latLng,
+                position
+              )
+            : null,
+        });
+      }
+
       const selectedPanorama =
         best as google.maps.StreetViewPanoramaData | null;
 
