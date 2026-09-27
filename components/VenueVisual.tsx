@@ -58,6 +58,25 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
 
       let chosen = await requestPanorama(position);
 
+      // TEMP TEST: use Enigma's known-good Central Ave Street View position.
+      if (venue.name.toLowerCase().includes("enigma")) {
+        const enigmaTest = await requestPanorama(
+          { lat: 27.771065, lng: -82.650218 },
+          12
+        );
+
+        if (enigmaTest?.location?.latLng) {
+          chosen = enigmaTest;
+        }
+
+        console.log("ENIGMA TEST PANORAMA", enigmaTest);
+        console.log(
+          "ENIGMA TEST LOCATION",
+          enigmaTest?.location?.latLng?.lat(),
+          enigmaTest?.location?.latLng?.lng()
+        );
+      }
+
       if (chosen?.location?.latLng) {
         const naturalDistance = google.maps.geometry.spherical.computeDistanceBetween(
           chosen.location.latLng,
