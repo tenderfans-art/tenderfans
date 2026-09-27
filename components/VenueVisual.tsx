@@ -150,6 +150,28 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
         }
       }
 
+      // TEMP DEBUG: inspect known-good Intermezzo frontage panorama.
+      if (venue.name.toLowerCase().includes("intermezzo")) {
+        const intermezzoFront = await requestPanorama(
+          { lat: 27.771283772678903, lng: -82.65037145465483 },
+          3
+        );
+
+        console.log("INTERMEZZO FRONT", {
+          pano: intermezzoFront?.location?.pano ?? null,
+          lat: intermezzoFront?.location?.latLng?.lat() ?? null,
+          lng: intermezzoFront?.location?.latLng?.lng() ?? null,
+          description: intermezzoFront?.location?.description ?? null,
+          links: intermezzoFront?.links?.length ?? 0,
+          distanceFromVenue: intermezzoFront?.location?.latLng
+            ? google.maps.geometry.spherical.computeDistanceBetween(
+                intermezzoFront.location.latLng,
+                position
+              )
+            : null,
+        });
+      }
+
       const selectedPanorama =
         best as google.maps.StreetViewPanoramaData | null;
 
