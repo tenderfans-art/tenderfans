@@ -68,7 +68,7 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
        * address, then use physical distance as the tie-breaker.
        */
       const bearings = [0, 45, 90, 135, 180, 225, 270, 315];
-      const searchDistances = [15, 20, 25, 30, 35, 40, 50];
+      const searchDistances = [5, 8, 12, 15, 20, 25, 30, 35, 40, 50];
 
       const normalize = (value?: string | null) =>
         (value ?? "")
