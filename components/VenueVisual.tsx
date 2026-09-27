@@ -61,32 +61,81 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
       /*
        * Street View candidate selection
        *
-       * Google's single NEAREST result is not always the useful street-facing
-       * panorama. Search around the venue as well and keep the connected
-       * Google panorama whose actual camera position is closest to the venue.
+       * Google can return several nearby road panoramas. The physically
+       * nearest panorama is not always the storefront side of the venue.
        *
-       * This generalizes the recovery logic previously used for cases such as
-       * The Galley and avoids venue-specific Street View overrides.
+       * Prefer panoramas whose Google description matches the venue's street
+       * address, then use physical distance as the tie-breaker.
        */
       const bearings = [0, 45, 90, 135, 180, 225, 270, 315];
-      const searchDistances = [15, 25, 35, 50];
+      const searchDistances = [15, 20, 25, 30, 35, 40, 50];
 
-      let best: google.maps.StreetViewPanoramaData | null =
-        chosen?.location?.latLng && chosen.links?.length ? chosen : null;
+      const normalize = (value?: string | null) =>
+        (value ?? "")
+          .toLowerCase()
+          .replace(/\b(avenue)\b/g, "ave")
+          .replace(/\b(street)\b/g, "st")
+          .replace(/\b(road)\b/g, "rd")
+          .replace(/\b(boulevard)\b/g, "blvd")
+          .replace(/\b(drive)\b/g, "dr")
+          .replace(/\b(lane)\b/g, "ln")
+          .replace(/\b(court)\b/g, "ct")
+          .replace(/\b(place)\b/g, "pl")
+          .replace(/[^a-z0-9]/g, "");
 
-      let bestScore =
-        best?.location?.latLng
-          ? google.maps.geometry.spherical.computeDistanceBetween(
-              best.location.latLng,
-              position
-            )
-          : Infinity;
+      const venueAddress = normalize(venue.street_address);
+
+      const addressMatches = (
+        candidate: google.maps.StreetViewPanoramaData | null
+      ) => {
+        if (!candidate?.location?.description || !venueAddress) return false;
+
+        const description = normalize(candidate.location.description);
+
+        return (
+          description.includes(venueAddress) ||
+          venueAddress.includes(description)
+        );
+      };
+
+      let best: google.maps.StreetViewPanoramaData | null = null;
+      let bestAddressMatch = false;
+      let bestDistance = Infinity;
 
       const seenPanos = new Set<string>();
 
-      if (best?.location?.pano) {
-        seenPanos.add(best.location.pano);
-      }
+      const considerCandidate = (
+        candidate: google.maps.StreetViewPanoramaData | null
+      ) => {
+        if (!candidate?.location?.latLng || !candidate.links?.length) return;
+
+        const panoId = candidate.location.pano;
+
+        if (panoId && seenPanos.has(panoId)) return;
+        if (panoId) seenPanos.add(panoId);
+
+        const distance =
+          google.maps.geometry.spherical.computeDistanceBetween(
+            candidate.location.latLng,
+            position
+          );
+
+        if (distance > 90) return;
+
+        const match = addressMatches(candidate);
+
+        if (
+          best === null ||
+          (match && !bestAddressMatch) ||
+          (match === bestAddressMatch && distance < bestDistance)
+        ) {
+          best = candidate;
+          bestAddressMatch = match;
+          bestDistance = distance;
+        }
+      };
+
+      considerCandidate(chosen);
 
       for (const searchDistance of searchDistances) {
         for (const bearing of bearings) {
@@ -97,78 +146,28 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
           );
 
           const candidate = await requestPanorama(searchPoint, 12);
-
-          if (!candidate?.location?.latLng || !candidate.links?.length) continue;
-
-          const panoId = candidate.location.pano;
-
-          if (panoId && seenPanos.has(panoId)) continue;
-          if (panoId) seenPanos.add(panoId);
-
-          const distance =
-            google.maps.geometry.spherical.computeDistanceBetween(
-              candidate.location.latLng,
-              position
-            );
-
-          // Reject panoramas that are clearly unrelated to the venue.
-          if (distance > 90) continue;
-
-          if (distance < bestScore) {
-            best = candidate;
-            bestScore = distance;
-          }
+          considerCandidate(candidate);
         }
       }
 
-      chosen = best;
+      const selectedPanorama =
+        best as google.maps.StreetViewPanoramaData | null;
 
-      console.log(
-        "Chosen Street View",
-        venue.name,
-        {
-          pano: chosen?.location?.pano ?? null,
-          lat: chosen?.location?.latLng?.lat() ?? null,
-          lng: chosen?.location?.latLng?.lng() ?? null,
-          distance: Number.isFinite(bestScore) ? bestScore : null,
-        }
-      );
-
-      if (venue.name.toLowerCase().includes("enigma")) {
-        const knownGood = await requestPanorama(
-          { lat: 27.771065, lng: -82.650218 },
-          12
-        );
-
-        console.log("ENIGMA CURRENT", {
-          pano: chosen?.location?.pano ?? null,
-          description: chosen?.location?.description ?? null,
-          links: chosen?.links ?? [],
-        });
-
-        console.log("ENIGMA KNOWN GOOD", {
-          pano: knownGood?.location?.pano ?? null,
-          lat: knownGood?.location?.latLng?.lat() ?? null,
-          lng: knownGood?.location?.latLng?.lng() ?? null,
-          description: knownGood?.location?.description ?? null,
-          links: knownGood?.links ?? [],
-          distanceFromVenue: knownGood?.location?.latLng
-            ? google.maps.geometry.spherical.computeDistanceBetween(
-                knownGood.location.latLng,
-                position
-              )
-            : null,
-        });
-      }
+      console.log("Chosen Street View", venue.name, {
+        pano: selectedPanorama?.location?.pano ?? null,
+        description: selectedPanorama?.location?.description ?? null,
+        distance: Number.isFinite(bestDistance) ? bestDistance : null,
+        addressMatch: bestAddressMatch,
+      });
 
       if (cancelled || !visualRef.current) return;
 
-      if (chosen?.location?.latLng && chosen.links?.length) {
+      if (selectedPanorama?.location?.latLng && selectedPanorama.links?.length) {
         new StreetViewPanorama(visualRef.current, {
-          position: chosen.location.latLng,
+          position: selectedPanorama.location.latLng,
           pov: {
             heading: google.maps.geometry.spherical.computeHeading(
-              chosen.location.latLng,
+              selectedPanorama.location.latLng,
               position
             ),
             pitch: 0,
