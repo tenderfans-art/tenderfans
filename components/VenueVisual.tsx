@@ -210,28 +210,19 @@ export default function VenueVisual({
                 : sideB;
           }
 
-          console.log(
-            "STOREFRONT HEADING TEST",
-            venue.name,
-            {
-              coordinateHeading,
-              roadHeading,
-              storefrontHeading,
-              difference:
-                storefrontHeading != null
-                  ? headingDifference(
-                      coordinateHeading,
-                      storefrontHeading
-                    )
-                  : null,
-              links: (current.links ?? []).map(
-                (link) => ({
-                  pano: link.pano,
-                  heading: link.heading,
-                })
-              ),
-            }
-          );
+          const storefrontDifference =
+            storefrontHeading != null
+              ? headingDifference(
+                  coordinateHeading,
+                  storefrontHeading
+                )
+              : Infinity;
+
+          const finalHeading =
+            storefrontHeading != null &&
+            storefrontDifference <= 30
+              ? storefrontHeading
+              : coordinateHeading;
 
           console.log(
             "Address Street View walk",
@@ -263,11 +254,7 @@ export default function VenueVisual({
               {
                 pano: selectedPano,
                 pov: {
-                  heading:
-                    google.maps.geometry.spherical.computeHeading(
-                      selectedPosition,
-                      position
-                    ),
+                  heading: finalHeading,
                   pitch: 0,
                 },
                 zoom: 1,
