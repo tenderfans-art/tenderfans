@@ -73,6 +73,95 @@ export default function VenueVisual({
           ),
         });
 
+        // TEMP DIAGNOSTIC:
+        // Inspect only the immediate Street View links from Google's
+        // address-selected panorama. This does not change selection.
+        await new Promise<void>((resolve) => {
+          service.getPanorama(
+            { pano: streetViewStart.panoId },
+            async (startData, startStatus) => {
+              if (
+                startStatus !== google.maps.StreetViewStatus.OK ||
+                !startData?.location?.latLng
+              ) {
+                console.log("STREET LINK TEST", venue.name, {
+                  error: "Could not load starting panorama",
+                  status: startStatus,
+                });
+                resolve();
+                return;
+              }
+
+              const startDistance =
+                google.maps.geometry.spherical.computeDistanceBetween(
+                  startData.location.latLng,
+                  position
+                );
+
+              const links = startData.links ?? [];
+              const linkedResults: Array<{
+                pano: string;
+                heading: number;
+                description: string | null;
+                latitude: number | null;
+                longitude: number | null;
+                distance: number | null;
+              }> = [];
+
+              for (const link of links) {
+                if (!link.pano) continue;
+
+                const linkedData =
+                  await new Promise<google.maps.StreetViewPanoramaData | null>(
+                    (done) => {
+                      service.getPanorama(
+                        { pano: link.pano! },
+                        (data, status) => {
+                          done(
+                            status === google.maps.StreetViewStatus.OK &&
+                              data?.location?.latLng
+                              ? data
+                              : null
+                          );
+                        }
+                      );
+                    }
+                  );
+
+                linkedResults.push({
+                  pano: link.pano,
+                  heading: link.heading ?? 0,
+                  description:
+                    linkedData?.location?.description ?? null,
+                  latitude:
+                    linkedData?.location?.latLng?.lat() ?? null,
+                  longitude:
+                    linkedData?.location?.latLng?.lng() ?? null,
+                  distance: linkedData?.location?.latLng
+                    ? google.maps.geometry.spherical.computeDistanceBetween(
+                        linkedData.location.latLng,
+                        position
+                      )
+                    : null,
+                });
+              }
+
+              console.log("STREET LINK TEST", venue.name, {
+                start: {
+                  pano: startData.location.pano,
+                  description: startData.location.description,
+                  latitude: startData.location.latLng.lat(),
+                  longitude: startData.location.latLng.lng(),
+                  distance: startDistance,
+                },
+                links: linkedResults,
+              });
+
+              resolve();
+            }
+          );
+        });
+
         if (cancelled || !visualRef.current) return;
 
         new StreetViewPanorama(visualRef.current, {
