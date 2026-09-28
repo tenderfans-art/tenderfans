@@ -10,9 +10,21 @@ type VenueVisualVenue = {
   longitude?: number | null;
 };
 
+type StreetViewStart = {
+  panoId: string;
+  latitude: number;
+  longitude: number;
+};
+
 let configured = false;
 
-export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
+export default function VenueVisual({
+  venue,
+  streetViewStart,
+}: {
+  venue: VenueVisualVenue;
+  streetViewStart?: StreetViewStart | null;
+}) {
   const visualRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,6 +48,52 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
         await importLibrary("streetView") as google.maps.StreetViewLibrary;
 
       const service = new StreetViewService();
+
+      /*
+       * Spot profile pages receive a panorama chosen by Google's
+       * Street View metadata service from the venue's verified address.
+       * Use that panorama directly and point the camera at the venue.
+       *
+       * Popular Spot cards do not receive streetViewStart and continue
+       * through the existing candidate-selection logic below.
+       */
+      if (streetViewStart?.panoId) {
+        const panoPosition = new google.maps.LatLng(
+          streetViewStart.latitude,
+          streetViewStart.longitude
+        );
+
+        console.log("Address Street View", venue.name, {
+          pano: streetViewStart.panoId,
+          latitude: streetViewStart.latitude,
+          longitude: streetViewStart.longitude,
+          heading: google.maps.geometry.spherical.computeHeading(
+            panoPosition,
+            position
+          ),
+        });
+
+        if (cancelled || !visualRef.current) return;
+
+        new StreetViewPanorama(visualRef.current, {
+          pano: streetViewStart.panoId,
+          pov: {
+            heading: google.maps.geometry.spherical.computeHeading(
+              panoPosition,
+              position
+            ),
+            pitch: 0,
+          },
+          zoom: 1,
+          addressControl: false,
+          linksControl: true,
+          panControl: true,
+          enableCloseButton: false,
+          fullscreenControl: false,
+        });
+
+        return;
+      }
 
       const requestPanorama = (location: google.maps.LatLng | google.maps.LatLngLiteral, radius = 75) =>
         new Promise<google.maps.StreetViewPanoramaData | null>((resolve) => {
@@ -208,7 +266,14 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
     return () => {
       cancelled = true;
     };
-  }, [venue.latitude, venue.longitude, venue.name]);
+  }, [
+    venue.latitude,
+    venue.longitude,
+    venue.name,
+    streetViewStart?.panoId,
+    streetViewStart?.latitude,
+    streetViewStart?.longitude,
+  ]);
 
   if (venue.latitude == null || venue.longitude == null) {
     return (
