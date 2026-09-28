@@ -153,6 +153,86 @@ export default function VenueVisual({
           const selectedPano =
             current.location?.pano;
 
+          const coordinateHeading =
+            google.maps.geometry.spherical.computeHeading(
+              selectedPosition,
+              position
+            );
+
+          const normalizeHeading = (heading: number) =>
+            ((heading % 360) + 360) % 360;
+
+          const headingDifference = (
+            a: number,
+            b: number
+          ) => {
+            const diff = Math.abs(
+              normalizeHeading(a) - normalizeHeading(b)
+            );
+            return Math.min(diff, 360 - diff);
+          };
+
+          /*
+           * TEMP FRAMING DIAGNOSTIC
+           *
+           * Street View link headings describe the road direction from
+           * this panorama. Use the first usable road link to infer the
+           * road axis, then compare the two perpendicular directions
+           * against the venue-coordinate heading.
+           */
+          const roadLink = (current.links ?? []).find(
+            (link) => link.heading != null
+          );
+
+          const roadHeading =
+            roadLink?.heading ?? null;
+
+          let storefrontHeading:
+            | number
+            | null = null;
+
+          if (roadHeading != null) {
+            const sideA =
+              normalizeHeading(roadHeading + 90);
+            const sideB =
+              normalizeHeading(roadHeading - 90);
+
+            storefrontHeading =
+              headingDifference(
+                sideA,
+                coordinateHeading
+              ) <=
+              headingDifference(
+                sideB,
+                coordinateHeading
+              )
+                ? sideA
+                : sideB;
+          }
+
+          console.log(
+            "STOREFRONT HEADING TEST",
+            venue.name,
+            {
+              coordinateHeading,
+              roadHeading,
+              storefrontHeading,
+              difference:
+                storefrontHeading != null
+                  ? headingDifference(
+                      coordinateHeading,
+                      storefrontHeading
+                    )
+                  : null,
+              links: (current.links ?? []).map(
+                (link) => ({
+                  pano: link.pano,
+                  heading: link.heading,
+                })
+              ),
+            }
+          );
+
           console.log(
             "Address Street View walk",
             venue.name,
