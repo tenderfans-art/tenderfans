@@ -157,6 +157,85 @@ export default function VenueVisual({
                 links: linkedResults,
               });
 
+              const closerLink = linkedResults
+                .filter(
+                  (item) =>
+                    item.distance != null &&
+                    item.distance < startDistance
+                )
+                .sort(
+                  (a, b) =>
+                    (a.distance ?? Infinity) -
+                    (b.distance ?? Infinity)
+                )[0];
+
+              if (closerLink) {
+                service.getPanorama(
+                  { pano: closerLink.pano },
+                  async (nextData, nextStatus) => {
+                    if (
+                      nextStatus !== google.maps.StreetViewStatus.OK ||
+                      !nextData?.location?.latLng
+                    ) {
+                      return;
+                    }
+
+                    const nextLinks = [];
+
+                    for (const link of nextData.links ?? []) {
+                      if (!link.pano) continue;
+
+                      const linkedData =
+                        await new Promise<google.maps.StreetViewPanoramaData | null>(
+                          (done) => {
+                            service.getPanorama(
+                              { pano: link.pano! },
+                              (data, status) => {
+                                done(
+                                  status === google.maps.StreetViewStatus.OK &&
+                                    data?.location?.latLng
+                                    ? data
+                                    : null
+                                );
+                              }
+                            );
+                          }
+                        );
+
+                      nextLinks.push({
+                        pano: link.pano,
+                        heading: link.heading ?? 0,
+                        description:
+                          linkedData?.location?.description ?? null,
+                        latitude:
+                          linkedData?.location?.latLng?.lat() ?? null,
+                        longitude:
+                          linkedData?.location?.latLng?.lng() ?? null,
+                        distance: linkedData?.location?.latLng
+                          ? google.maps.geometry.spherical.computeDistanceBetween(
+                              linkedData.location.latLng,
+                              position
+                            )
+                          : null,
+                      });
+                    }
+
+                    console.log("STREET LINK STEP 2", venue.name, {
+                      from: {
+                        pano: nextData.location.pano,
+                        description: nextData.location.description,
+                        distance:
+                          google.maps.geometry.spherical.computeDistanceBetween(
+                            nextData.location.latLng,
+                            position
+                          ),
+                      },
+                      links: nextLinks,
+                    });
+                  }
+                );
+              }
+
               resolve();
             }
           );
