@@ -145,72 +145,9 @@ export default function VenueVisual({ venue }: { venue: VenueVisualVenue }) {
             bearing
           );
 
-          const candidate = await requestPanorama(searchPoint, 12);
+          const candidate = await requestPanorama(searchPoint, 5);
           considerCandidate(candidate);
         }
-      }
-
-      // TEMP DEBUG: inspect known-good Intermezzo frontage panorama.
-      if (venue.name.toLowerCase().includes("intermezzo")) {
-        const intermezzoFront = await requestPanorama(
-          { lat: 27.7711414, lng: -82.6504041 },
-          5
-        );
-
-        console.log("INTERMEZZO FRONT", {
-          pano: intermezzoFront?.location?.pano ?? null,
-          lat: intermezzoFront?.location?.latLng?.lat() ?? null,
-          lng: intermezzoFront?.location?.latLng?.lng() ?? null,
-          description: intermezzoFront?.location?.description ?? null,
-          links: intermezzoFront?.links?.length ?? 0,
-          distanceFromVenue: intermezzoFront?.location?.latLng
-            ? google.maps.geometry.spherical.computeDistanceBetween(
-                intermezzoFront.location.latLng,
-                position
-              )
-            : null,
-        });
-      }
-
-      // TEMP DEBUG: ask Google for its BEST panorama from the venue location.
-      if (venue.name.toLowerCase().includes("intermezzo")) {
-        const bestPreference = await new Promise<
-          google.maps.StreetViewPanoramaData | null
-        >((resolve) => {
-          service.getPanorama(
-            {
-              location: position,
-              radius: 75,
-              preference: google.maps.StreetViewPreference.BEST,
-              sources: [
-                google.maps.StreetViewSource.GOOGLE,
-                google.maps.StreetViewSource.OUTDOOR,
-              ],
-            },
-            (data, status) => {
-              resolve(
-                status === google.maps.StreetViewStatus.OK &&
-                  data?.location?.latLng
-                  ? data
-                  : null
-              );
-            }
-          );
-        });
-
-        console.log("INTERMEZZO BEST", {
-          pano: bestPreference?.location?.pano ?? null,
-          lat: bestPreference?.location?.latLng?.lat() ?? null,
-          lng: bestPreference?.location?.latLng?.lng() ?? null,
-          description: bestPreference?.location?.description ?? null,
-          links: bestPreference?.links?.length ?? 0,
-          distanceFromVenue: bestPreference?.location?.latLng
-            ? google.maps.geometry.spherical.computeDistanceBetween(
-                bestPreference.location.latLng,
-                position
-              )
-            : null,
-        });
       }
 
       const selectedPanorama =
