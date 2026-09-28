@@ -5,7 +5,6 @@ import VenueVisual from "@/components/VenueVisual";
 import { supabase } from "@/lib/supabase";
 import PublicSpotMedia from "@/components/spot/PublicSpotMedia";
 import NotificationSignup from "@/components/NotificationSignup";
-import { getStreetViewMetadata } from "@/lib/street-view";
 
 export async function generateMetadata({
   params,
@@ -110,8 +109,6 @@ export default async function SpotPage({
     notFound();
   }
 
-  const streetViewMetadata = await getStreetViewMetadata(venue);
-
   const { data: relationships, error: relationshipError } = await supabase
     .from("bartender_venues")
     .select(`
@@ -194,10 +191,7 @@ export default async function SpotPage({
       <section className="profile-page">
       <div className="shell profile-shell">
         <div className="venue-profile-visual">
-          <VenueVisual
-            venue={venue as any}
-            streetViewStart={streetViewMetadata}
-          />
+          <VenueVisual venue={venue as any} />
         </div>
 
         <div className="venue-profile-copy">
