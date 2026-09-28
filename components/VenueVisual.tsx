@@ -50,217 +50,158 @@ export default function VenueVisual({
       const service = new StreetViewService();
 
       /*
-       * Spot profile pages receive a panorama chosen by Google's
-       * Street View metadata service from the venue's verified address.
-       * Use that panorama directly and point the camera at the venue.
+       * Spot profile pages start with the panorama Google's Street View
+       * metadata service associates with the venue's verified address.
        *
-       * Popular Spot cards do not receive streetViewStart and continue
-       * through the existing candidate-selection logic below.
+       * From there, walk Google's actual Street View road links toward
+       * the venue. At each step, move only to a linked panorama that is
+       * physically closer to the venue. Stop as soon as no link improves
+       * the distance.
+       *
+       * This keeps us on Google's address-selected road sequence instead
+       * of probing arbitrary coordinates around the building.
        */
       if (streetViewStart?.panoId) {
-        const panoPosition = new google.maps.LatLng(
-          streetViewStart.latitude,
-          streetViewStart.longitude
-        );
-
-        console.log("Address Street View", venue.name, {
-          pano: streetViewStart.panoId,
-          latitude: streetViewStart.latitude,
-          longitude: streetViewStart.longitude,
-          heading: google.maps.geometry.spherical.computeHeading(
-            panoPosition,
-            position
-          ),
-        });
-
-        // TEMP DIAGNOSTIC:
-        // Inspect only the immediate Street View links from Google's
-        // address-selected panorama. This does not change selection.
-        await new Promise<void>((resolve) => {
-          service.getPanorama(
-            { pano: streetViewStart.panoId },
-            async (startData, startStatus) => {
-              if (
-                startStatus !== google.maps.StreetViewStatus.OK ||
-                !startData?.location?.latLng
-              ) {
-                console.log("STREET LINK TEST", venue.name, {
-                  error: "Could not load starting panorama",
-                  status: startStatus,
-                });
-                resolve();
-                return;
-              }
-
-              const startDistance =
-                google.maps.geometry.spherical.computeDistanceBetween(
-                  startData.location.latLng,
-                  position
-                );
-
-              const links = startData.links ?? [];
-              const linkedResults: Array<{
-                pano: string;
-                heading: number;
-                description: string | null;
-                latitude: number | null;
-                longitude: number | null;
-                distance: number | null;
-              }> = [];
-
-              for (const link of links) {
-                if (!link.pano) continue;
-
-                const linkedData =
-                  await new Promise<google.maps.StreetViewPanoramaData | null>(
-                    (done) => {
-                      service.getPanorama(
-                        { pano: link.pano! },
-                        (data, status) => {
-                          done(
-                            status === google.maps.StreetViewStatus.OK &&
-                              data?.location?.latLng
-                              ? data
-                              : null
-                          );
-                        }
-                      );
-                    }
+        const getPanoramaById = (pano: string) =>
+          new Promise<google.maps.StreetViewPanoramaData | null>(
+            (resolve) => {
+              service.getPanorama(
+                { pano },
+                (data, status) => {
+                  resolve(
+                    status === google.maps.StreetViewStatus.OK &&
+                      data?.location?.latLng
+                      ? data
+                      : null
                   );
-
-                linkedResults.push({
-                  pano: link.pano,
-                  heading: link.heading ?? 0,
-                  description:
-                    linkedData?.location?.description ?? null,
-                  latitude:
-                    linkedData?.location?.latLng?.lat() ?? null,
-                  longitude:
-                    linkedData?.location?.latLng?.lng() ?? null,
-                  distance: linkedData?.location?.latLng
-                    ? google.maps.geometry.spherical.computeDistanceBetween(
-                        linkedData.location.latLng,
-                        position
-                      )
-                    : null,
-                });
-              }
-
-              console.log("STREET LINK TEST", venue.name, {
-                start: {
-                  pano: startData.location.pano,
-                  description: startData.location.description,
-                  latitude: startData.location.latLng.lat(),
-                  longitude: startData.location.latLng.lng(),
-                  distance: startDistance,
-                },
-                links: linkedResults,
-              });
-
-              const closerLink = linkedResults
-                .filter(
-                  (item) =>
-                    item.distance != null &&
-                    item.distance < startDistance
-                )
-                .sort(
-                  (a, b) =>
-                    (a.distance ?? Infinity) -
-                    (b.distance ?? Infinity)
-                )[0];
-
-              if (closerLink) {
-                service.getPanorama(
-                  { pano: closerLink.pano },
-                  async (nextData, nextStatus) => {
-                    if (
-                      nextStatus !== google.maps.StreetViewStatus.OK ||
-                      !nextData?.location?.latLng
-                    ) {
-                      return;
-                    }
-
-                    const nextLinks = [];
-
-                    for (const link of nextData.links ?? []) {
-                      if (!link.pano) continue;
-
-                      const linkedData =
-                        await new Promise<google.maps.StreetViewPanoramaData | null>(
-                          (done) => {
-                            service.getPanorama(
-                              { pano: link.pano! },
-                              (data, status) => {
-                                done(
-                                  status === google.maps.StreetViewStatus.OK &&
-                                    data?.location?.latLng
-                                    ? data
-                                    : null
-                                );
-                              }
-                            );
-                          }
-                        );
-
-                      nextLinks.push({
-                        pano: link.pano,
-                        heading: link.heading ?? 0,
-                        description:
-                          linkedData?.location?.description ?? null,
-                        latitude:
-                          linkedData?.location?.latLng?.lat() ?? null,
-                        longitude:
-                          linkedData?.location?.latLng?.lng() ?? null,
-                        distance: linkedData?.location?.latLng
-                          ? google.maps.geometry.spherical.computeDistanceBetween(
-                              linkedData.location.latLng,
-                              position
-                            )
-                          : null,
-                      });
-                    }
-
-                    console.log("STREET LINK STEP 2", venue.name, {
-                      from: {
-                        pano: nextData.location.pano,
-                        description: nextData.location.description,
-                        distance:
-                          google.maps.geometry.spherical.computeDistanceBetween(
-                            nextData.location.latLng,
-                            position
-                          ),
-                      },
-                      links: nextLinks,
-                    });
-                  }
-                );
-              }
-
-              resolve();
+                }
+              );
             }
           );
-        });
 
-        if (cancelled || !visualRef.current) return;
+        const distanceToVenue = (
+          data: google.maps.StreetViewPanoramaData
+        ) =>
+          google.maps.geometry.spherical.computeDistanceBetween(
+            data.location!.latLng!,
+            position
+          );
 
-        new StreetViewPanorama(visualRef.current, {
-          pano: streetViewStart.panoId,
-          pov: {
-            heading: google.maps.geometry.spherical.computeHeading(
-              panoPosition,
-              position
-            ),
-            pitch: 0,
-          },
-          zoom: 1,
-          addressControl: false,
-          linksControl: true,
-          panControl: true,
-          enableCloseButton: false,
-          fullscreenControl: false,
-        });
+        let current = await getPanoramaById(
+          streetViewStart.panoId
+        );
 
-        return;
+        if (current?.location?.latLng) {
+          const visited = new Set<string>();
+
+          let currentDistance =
+            distanceToVenue(current);
+
+          const startDistance = currentDistance;
+          let steps = 0;
+
+          while (steps < 10) {
+            const currentPano =
+              current.location?.pano;
+
+            if (!currentPano) break;
+
+            visited.add(currentPano);
+
+            let next:
+              | google.maps.StreetViewPanoramaData
+              | null = null;
+
+            let nextDistance = currentDistance;
+
+            for (const link of current.links ?? []) {
+              if (
+                !link.pano ||
+                visited.has(link.pano)
+              ) {
+                continue;
+              }
+
+              const candidate =
+                await getPanoramaById(link.pano);
+
+              if (!candidate?.location?.latLng) {
+                continue;
+              }
+
+              const candidateDistance =
+                distanceToVenue(candidate);
+
+              if (candidateDistance < nextDistance) {
+                next = candidate;
+                nextDistance = candidateDistance;
+              }
+            }
+
+            if (!next) {
+              break;
+            }
+
+            current = next;
+            currentDistance = nextDistance;
+            steps += 1;
+          }
+
+          const selectedPosition =
+            current.location!.latLng!;
+
+          const selectedPano =
+            current.location?.pano;
+
+          console.log(
+            "Address Street View walk",
+            venue.name,
+            {
+              startPano: streetViewStart.panoId,
+              startDistance,
+              selectedPano,
+              description:
+                current.location?.description ?? null,
+              selectedDistance: currentDistance,
+              steps,
+              visited: Array.from(visited),
+              heading:
+                google.maps.geometry.spherical.computeHeading(
+                  selectedPosition,
+                  position
+                ),
+            }
+          );
+
+          if (
+            !cancelled &&
+            visualRef.current &&
+            selectedPano
+          ) {
+            new StreetViewPanorama(
+              visualRef.current,
+              {
+                pano: selectedPano,
+                pov: {
+                  heading:
+                    google.maps.geometry.spherical.computeHeading(
+                      selectedPosition,
+                      position
+                    ),
+                  pitch: 0,
+                },
+                zoom: 1,
+                addressControl: false,
+                linksControl: true,
+                panControl: true,
+                enableCloseButton: false,
+                fullscreenControl: false,
+              }
+            );
+
+            return;
+          }
+        }
       }
 
       const requestPanorama = (location: google.maps.LatLng | google.maps.LatLngLiteral, radius = 75) =>
