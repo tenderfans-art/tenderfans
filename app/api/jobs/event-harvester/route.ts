@@ -1466,32 +1466,67 @@ export async function POST(
                 : null;
 
             if (candidateId) {
+              /*
+               * Before creating a new canonical event, give the
+               * cross-source identity layer a chance to attach this
+               * Ticketmaster candidate to an existing event at the
+               * same Spot with the exact same fingerprint.
+               *
+               * This makes dedupe provider-order independent:
+               * first-party -> Ticketmaster and
+               * Ticketmaster -> first-party both converge on one
+               * canonical event.
+               */
               const {
-                data: graduatedEventId,
-                error: graduateError,
+                data: linkedEventId,
+                error: linkError,
               } = await supabase.rpc(
-                "graduate_harvest_candidate",
+                "link_harvest_candidate_to_existing_event",
                 {
                   p_candidate_id: candidateId,
-                  p_reviewed_by: null,
                 }
               );
 
-              if (graduateError) {
+              if (linkError) {
                 throw new Error(
-                  `Could not graduate harvest candidate ${candidateId}: ${graduateError.message}`
+                  `Could not cross-link Ticketmaster candidate ${candidateId}: ${linkError.message}`
                 );
               }
 
               canonicalEventId =
-                typeof graduatedEventId === "string"
-                  ? graduatedEventId
+                typeof linkedEventId === "string"
+                  ? linkedEventId
                   : null;
 
+              if (!canonicalEventId) {
+                const {
+                  data: graduatedEventId,
+                  error: graduateError,
+                } = await supabase.rpc(
+                  "graduate_harvest_candidate",
+                  {
+                    p_candidate_id: candidateId,
+                    p_reviewed_by: null,
+                  }
+                );
+
+                if (graduateError) {
+                  throw new Error(
+                    `Could not graduate harvest candidate ${candidateId}: ${graduateError.message}`
+                  );
+                }
+
+                canonicalEventId =
+                  typeof graduatedEventId === "string"
+                    ? graduatedEventId
+                    : null;
+              }
+
               /*
-               * Run the authoritative sync once after initial
-               * graduation as well. This keeps the same lifecycle
-               * contract for first publication and later harvests.
+               * Whether Ticketmaster linked to an existing canonical
+               * or created a new one, run the authoritative lifecycle
+               * sync. Ticketmaster owns the imported event lifecycle
+               * once its provenance is attached.
                */
               if (canonicalEventId) {
                 const {
