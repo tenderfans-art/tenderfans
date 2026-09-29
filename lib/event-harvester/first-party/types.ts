@@ -1,0 +1,11 @@
+export type FirstPartyHarvestEvent = {
+  externalEventId: string;
+  title: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  sourceUrl: string | null;
+  flyerUrl: string | null;
+  location: string | null;
+  rawPayload: Record<string, unknown>;
+};
