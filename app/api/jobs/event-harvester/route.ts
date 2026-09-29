@@ -1,6 +1,10 @@
-import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  eventFingerprint,
+  normalizeTitle,
+} from "@/lib/event-harvester/identity";
+import { ingestFirstPartySource } from "@/lib/event-harvester/first-party/ingest";
 
 type TicketmasterVenueRef = {
   venue_id: string;
@@ -316,13 +320,6 @@ function safeError(error: unknown) {
   return "Unknown error.";
 }
 
-function normalizeTitle(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
-}
-
 function ticketmasterFlyerUrl(event: any): string | null {
   const images = Array.isArray(event?.images)
     ? event.images
@@ -356,23 +353,6 @@ function ticketmasterFlyerUrl(event: any): string | null {
     .sort((a: any, b: any) => score(b) - score(a))[0]
     ?.url?.trim() || null;
 }
-
-function eventFingerprint(input: {
-  venueId: string;
-  title: string;
-  startsAt: string;
-}) {
-  return createHash("sha256")
-    .update(
-      [
-        input.venueId,
-        normalizeTitle(input.title),
-        input.startsAt,
-      ].join("|")
-    )
-    .digest("hex");
-}
-
 
 const TICKETMASTER_VENUE_REQUEST_DELAY_MS = 300;
 const TICKETMASTER_VENUE_MAX_ATTEMPTS = 3;
@@ -470,19 +450,6 @@ export async function POST(
     );
   }
 
-  const ticketmasterKey =
-    process.env.TICKETMASTER_API_KEY;
-
-  if (!ticketmasterKey) {
-    return NextResponse.json(
-      {
-        error:
-          "Ticketmaster API key is not configured.",
-      },
-      { status: 500 }
-    );
-  }
-
   let dryRun = true;
 
   try {
@@ -498,6 +465,62 @@ export async function POST(
     }
 
     const supabase = getAdminClient();
+
+    const requestedSource =
+      body &&
+      typeof body === "object" &&
+      "source" in body &&
+      typeof body.source === "string"
+        ? body.source.trim()
+        : "ticketmaster";
+
+    if (requestedSource === "first_party") {
+      const sourceId =
+        body &&
+        typeof body === "object" &&
+        "sourceId" in body &&
+        typeof body.sourceId === "string"
+          ? body.sourceId.trim()
+          : "";
+
+      if (!sourceId) {
+        return NextResponse.json(
+          {
+            error:
+              "sourceId is required for first-party ingestion.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const result = await ingestFirstPartySource(
+        supabase,
+        sourceId,
+        { dryRun }
+      );
+
+      return NextResponse.json(result);
+    }
+
+    if (requestedSource !== "ticketmaster") {
+      return NextResponse.json(
+        { error: "Unsupported event harvest source." },
+        { status: 400 }
+      );
+    }
+
+    const ticketmasterKey =
+      process.env.TICKETMASTER_API_KEY;
+
+    if (!ticketmasterKey) {
+      return NextResponse.json(
+        {
+          error:
+            "Ticketmaster API key is not configured.",
+        },
+        { status: 500 }
+      );
+    }
 
     const requestedVenueId =
       body &&

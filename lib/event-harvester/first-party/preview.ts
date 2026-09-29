@@ -1,0 +1,142 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import {
+  eventFingerprint,
+  normalizeTitle,
+} from "../identity";
+
+import { parseIcsEvents } from "./ics";
+
+export type FirstPartySource = {
+  id: string;
+  provider: string;
+  source_type: string;
+  name: string;
+  source_url: string | null;
+  external_source_id: string | null;
+  venue_id: string;
+  is_enabled: boolean;
+  trust_level: string;
+  config: Record<string, unknown>;
+  bootstrapped_at: string | null;
+};
+
+export type FirstPartyEventPreview = {
+  sourceId: string;
+  venueId: string;
+  externalEventId: string;
+  sourceUrl: string | null;
+  title: string;
+  normalizedTitle: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  flyerUrl: string | null;
+  location: string | null;
+  eventFingerprint: string;
+  rawPayload: Record<string, unknown>;
+};
+
+export async function loadFirstPartySource(
+  supabase: SupabaseClient,
+  sourceId: string
+): Promise<FirstPartySource> {
+  const { data, error } = await supabase
+    .from("event_harvest_sources")
+    .select(`
+      id,
+      provider,
+      source_type,
+      name,
+      source_url,
+      external_source_id,
+      venue_id,
+      is_enabled,
+      trust_level,
+      config,
+      bootstrapped_at
+    `)
+    .eq("id", sourceId)
+    .eq("provider", "first_party")
+    .eq("is_enabled", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Could not load first-party source: ${error.message}`
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      "Enabled first-party event source was not found."
+    );
+  }
+
+  if (!data.venue_id) {
+    throw new Error(
+      "First-party source is not attached to a TenderFans Spot."
+    );
+  }
+
+  if (!data.source_url) {
+    throw new Error(
+      "First-party source has no source URL."
+    );
+  }
+
+  return data as FirstPartySource;
+}
+
+export async function previewFirstPartySource(
+  source: FirstPartySource
+): Promise<FirstPartyEventPreview[]> {
+  if (source.source_type !== "ics") {
+    throw new Error(
+      `Unsupported first-party source type: ${source.source_type}`
+    );
+  }
+
+  if (!source.source_url) {
+    throw new Error(
+      "First-party source has no source URL."
+    );
+  }
+
+  const response = await fetch(source.source_url, {
+    headers: {
+      Accept: "text/calendar,text/plain;q=0.9,*/*;q=0.8",
+      "User-Agent": "TenderFans-Event-Harvester/1.0",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `First-party source returned HTTP ${response.status}.`
+    );
+  }
+
+  const rawIcs = await response.text();
+  const events = parseIcsEvents(rawIcs);
+
+  return events.map((event) => ({
+    sourceId: source.id,
+    venueId: source.venue_id,
+    externalEventId: event.externalEventId,
+    sourceUrl: event.sourceUrl ?? source.source_url,
+    title: event.title,
+    normalizedTitle: normalizeTitle(event.title),
+    description: event.description,
+    startsAt: event.startsAt,
+    endsAt: event.endsAt,
+    flyerUrl: event.flyerUrl,
+    location: event.location,
+    eventFingerprint: eventFingerprint({
+      venueId: source.venue_id,
+      title: event.title,
+      startsAt: event.startsAt,
+    }),
+    rawPayload: event.rawPayload,
+  }));
+}
