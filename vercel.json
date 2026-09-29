@@ -3,6 +3,10 @@
     {
       "path": "/api/jobs/event-harvester",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/jobs/first-party-event-harvester",
+      "schedule": "30 10 * * *"
     }
   ]
 }

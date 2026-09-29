@@ -287,6 +287,7 @@ export async function ingestFirstPartySource(
    */
   const completeInitialRun =
     bootstrap &&
+    allPreview.length > 0 &&
     options.title === undefined &&
     options.limit === undefined &&
     preview.length === allPreview.length;
