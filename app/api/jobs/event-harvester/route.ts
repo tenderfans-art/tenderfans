@@ -76,6 +76,217 @@ type TicketmasterResponse = {
   };
 };
 
+type TicketmasterVenue = {
+  id?: string;
+  name?: string;
+  address?: {
+    line1?: string;
+  };
+  city?: {
+    name?: string;
+  };
+  state?: {
+    name?: string;
+    stateCode?: string;
+  };
+  postalCode?: string;
+  location?: {
+    latitude?: string;
+    longitude?: string;
+  };
+};
+
+type TicketmasterVenueResponse = {
+  _embedded?: {
+    venues?: TicketmasterVenue[];
+  };
+  page?: {
+    size?: number;
+    totalElements?: number;
+    totalPages?: number;
+    number?: number;
+  };
+};
+
+function normalizeMatchText(
+  value: string | null | undefined
+) {
+  return (value ?? "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((token) => {
+      const aliases: Record<string, string> = {
+        street: "st",
+        avenue: "ave",
+        boulevard: "blvd",
+        road: "rd",
+        drive: "dr",
+        lane: "ln",
+        court: "ct",
+        circle: "cir",
+        highway: "hwy",
+        parkway: "pkwy",
+        place: "pl",
+        terrace: "ter",
+        trail: "trl",
+        north: "n",
+        south: "s",
+        east: "e",
+        west: "w",
+        northeast: "ne",
+        northwest: "nw",
+        southeast: "se",
+        southwest: "sw",
+      };
+
+      return aliases[token] ?? token;
+    })
+    .join(" ");
+}
+
+function normalizePostalCode(
+  value: string | null | undefined
+) {
+  return (value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+}
+
+function tokenSimilarity(
+  left: string | null | undefined,
+  right: string | null | undefined
+) {
+  const a = new Set(
+    normalizeMatchText(left)
+      .split(" ")
+      .filter(Boolean)
+  );
+
+  const b = new Set(
+    normalizeMatchText(right)
+      .split(" ")
+      .filter(Boolean)
+  );
+
+  if (a.size === 0 || b.size === 0) {
+    return 0;
+  }
+
+  let intersection = 0;
+
+  for (const token of a) {
+    if (b.has(token)) intersection += 1;
+  }
+
+  const union = new Set([...a, ...b]).size;
+
+  return union === 0
+    ? 0
+    : intersection / union;
+}
+
+function ticketmasterVenueMatch(input: {
+  spot: {
+    name: string;
+    street_address: string | null;
+    city: string;
+    state_region: string;
+    postal_code: string | null;
+    latitude: number | null;
+    longitude: number | null;
+  };
+  candidate: TicketmasterVenue;
+}) {
+  const candidate = input.candidate;
+
+  const nameExact =
+    normalizeMatchText(input.spot.name) !== "" &&
+    normalizeMatchText(input.spot.name) ===
+      normalizeMatchText(candidate.name);
+
+  const nameSimilarity = tokenSimilarity(
+    input.spot.name,
+    candidate.name
+  );
+
+  const addressExact =
+    normalizeMatchText(input.spot.street_address) !== "" &&
+    normalizeMatchText(input.spot.street_address) ===
+      normalizeMatchText(candidate.address?.line1);
+
+  const cityExact =
+    normalizeMatchText(input.spot.city) !== "" &&
+    normalizeMatchText(input.spot.city) ===
+      normalizeMatchText(candidate.city?.name);
+
+  const stateExact =
+    normalizeMatchText(input.spot.state_region) !== "" &&
+    (
+      normalizeMatchText(input.spot.state_region) ===
+        normalizeMatchText(candidate.state?.stateCode) ||
+      normalizeMatchText(input.spot.state_region) ===
+        normalizeMatchText(candidate.state?.name)
+    );
+
+  const postalExact =
+    normalizePostalCode(input.spot.postal_code) !== "" &&
+    normalizePostalCode(input.spot.postal_code) ===
+      normalizePostalCode(candidate.postalCode);
+
+  /*
+   * Identity evidence is intentionally conservative.
+   *
+   * Name is the strongest signal, but location evidence must
+   * support it before we automatically attach an external ID.
+   */
+  let score = 0;
+
+  score += nameExact
+    ? 0.55
+    : Math.min(nameSimilarity, 1) * 0.45;
+
+  if (addressExact) score += 0.20;
+  if (postalExact) score += 0.10;
+  if (cityExact) score += 0.10;
+  if (stateExact) score += 0.05;
+
+  score = Math.min(1, Number(score.toFixed(4)));
+
+  const autoAttach =
+    score >= 0.9 &&
+    (addressExact || postalExact) &&
+    cityExact &&
+    stateExact;
+
+  const needsReview =
+    !autoAttach &&
+    score >= 0.65 &&
+    nameSimilarity >= 0.5 &&
+    cityExact &&
+    stateExact;
+
+  return {
+    score,
+    autoAttach,
+    needsReview,
+    evidence: {
+      nameExact,
+      nameSimilarity: Number(
+        nameSimilarity.toFixed(4)
+      ),
+      addressExact,
+      cityExact,
+      stateExact,
+      postalExact,
+    },
+  };
+}
+
 function getAdminClient() {
   const url =
     process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -160,6 +371,74 @@ function eventFingerprint(input: {
       ].join("|")
     )
     .digest("hex");
+}
+
+
+const TICKETMASTER_VENUE_REQUEST_DELAY_MS = 300;
+const TICKETMASTER_VENUE_MAX_ATTEMPTS = 3;
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) =>
+    setTimeout(resolve, ms)
+  );
+}
+
+async function fetchTicketmasterVenueSearch(
+  url: string
+): Promise<Response | null> {
+  for (
+    let attempt = 1;
+    attempt <= TICKETMASTER_VENUE_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    /*
+     * Ticketmaster's default Discovery API rate limit is low enough
+     * that an unrestricted Spot-matching loop can receive HTTP 429.
+     * Keep venue discovery deliberately paced.
+     */
+    await sleep(
+      TICKETMASTER_VENUE_REQUEST_DELAY_MS
+    );
+
+    const response = await fetch(url, {
+      cache: "no-store",
+    });
+
+    if (response.ok) {
+      return response;
+    }
+
+    if (response.status !== 429) {
+      throw new Error(
+        `Ticketmaster venue search failed: ${response.status}`
+      );
+    }
+
+    if (
+      attempt ===
+      TICKETMASTER_VENUE_MAX_ATTEMPTS
+    ) {
+      return null;
+    }
+
+    const retryAfter =
+      response.headers.get("retry-after");
+
+    const retryAfterSeconds =
+      retryAfter !== null
+        ? Number(retryAfter)
+        : NaN;
+
+    const waitMs =
+      Number.isFinite(retryAfterSeconds) &&
+      retryAfterSeconds >= 0
+        ? retryAfterSeconds * 1000
+        : attempt * 1000;
+
+    await sleep(waitMs);
+  }
+
+  return null;
 }
 
 export async function POST(
@@ -252,6 +531,518 @@ export async function POST(
       throw new Error(
         "Enabled Ticketmaster harvest source was not found."
       );
+    }
+
+    /*
+     * VENUE MATCHER
+     *
+     * Spot-first discovery:
+     *   existing active TenderFans Spot
+     *   -> Ticketmaster venue search
+     *   -> deterministic identity score
+     *   -> auto-attach / Admin review / ignore
+     *
+     * This initial pass is observation-only. It does not write
+     * mappings or review candidates yet.
+     */
+    let unmappedVenuesQuery = supabase
+      .from("venues")
+      .select(`
+        id,
+        name,
+        street_address,
+        city,
+        state_region,
+        postal_code,
+        latitude,
+        longitude
+      `)
+      .eq("status", "active");
+
+    if (requestedVenueId) {
+      unmappedVenuesQuery =
+        unmappedVenuesQuery.eq(
+          "id",
+          requestedVenueId
+        );
+    }
+
+    const {
+      data: activeVenuesData,
+      error: activeVenuesError,
+    } = await unmappedVenuesQuery;
+
+    if (activeVenuesError) {
+      throw new Error(
+        `Could not load active TenderFans Spots for venue matching: ${activeVenuesError.message}`
+      );
+    }
+
+    const activeVenues =
+      (activeVenuesData ?? []) as Array<{
+        id: string;
+        name: string;
+        street_address: string | null;
+        city: string;
+        state_region: string;
+        postal_code: string | null;
+        latitude: number | null;
+        longitude: number | null;
+      }>;
+
+    const activeVenueIds =
+      activeVenues.map((venue) => venue.id);
+
+    let mappedVenueIds = new Set<string>();
+
+    if (activeVenueIds.length > 0) {
+      const {
+        data: mappedVenueData,
+        error: mappedVenueError,
+      } = await supabase
+        .from("venue_external_refs")
+        .select("venue_id")
+        .eq("provider", "ticketmaster")
+        .in("venue_id", activeVenueIds);
+
+      if (mappedVenueError) {
+        throw new Error(
+          `Could not determine existing Ticketmaster venue mappings: ${mappedVenueError.message}`
+        );
+      }
+
+      mappedVenueIds = new Set(
+        (mappedVenueData ?? []).map(
+          (row: { venue_id: string }) =>
+            row.venue_id
+        )
+      );
+    }
+
+    const allUnmappedVenues =
+      activeVenues.filter(
+        (venue) =>
+          !mappedVenueIds.has(venue.id)
+      );
+
+    /*
+     * Venue discovery runs in bounded batches.
+     *
+     * Targeted venueId requests always check that Spot.
+     * Normal runs prioritize never-scanned Spots, then the
+     * least-recently scanned Spots.
+     */
+    let unmappedVenues = allUnmappedVenues;
+
+    if (
+      !requestedVenueId &&
+      allUnmappedVenues.length > 0
+    ) {
+      const unmappedVenueIds =
+        allUnmappedVenues.map(
+          (venue) => venue.id
+        );
+
+      const {
+        data: scanStateData,
+        error: scanStateError,
+      } = await supabase
+        .from("event_harvest_venue_scan_state")
+        .select(
+          "venue_id,last_checked_at,last_result"
+        )
+        .eq("provider", "ticketmaster")
+        .in("venue_id", unmappedVenueIds);
+
+      if (scanStateError) {
+        throw new Error(
+          `Could not load venue matcher scan state: ${scanStateError.message}`
+        );
+      }
+
+      const scanState = new Map<
+        string,
+        {
+          last_checked_at: string;
+          last_result: string;
+        }
+      >();
+
+      for (const row of scanStateData ?? []) {
+        scanState.set(row.venue_id, {
+          last_checked_at:
+            row.last_checked_at,
+          last_result:
+            row.last_result,
+        });
+      }
+
+      unmappedVenues = [
+        ...allUnmappedVenues,
+      ]
+        .sort((a, b) => {
+          const aState =
+            scanState.get(a.id);
+          const bState =
+            scanState.get(b.id);
+
+          // Never scanned always comes first.
+          if (!aState && bState) return -1;
+          if (aState && !bState) return 1;
+
+          // Stable ordering among never-scanned Spots.
+          if (!aState && !bState) {
+            return a.id.localeCompare(b.id);
+          }
+
+          // Oldest scan gets another turn first.
+          const timeDifference =
+            new Date(
+              aState!.last_checked_at
+            ).getTime() -
+            new Date(
+              bState!.last_checked_at
+            ).getTime();
+
+          if (timeDifference !== 0) {
+            return timeDifference;
+          }
+
+          return a.id.localeCompare(b.id);
+        })
+        .slice(0, 20);
+    }
+
+    const venueMatchPreviews: Array<{
+      tenderfansVenueId: string;
+      tenderfansVenueName: string;
+      result:
+        | "auto_attach"
+        | "needs_review"
+        | "no_match";
+      ticketmasterVenueId: string | null;
+      ticketmasterVenueName: string | null;
+      ticketmasterAddress: string | null;
+      ticketmasterCity: string | null;
+      ticketmasterState: string | null;
+      ticketmasterPostalCode: string | null;
+      confidenceScore: number | null;
+      evidence: Record<string, unknown> | null;
+    }> = [];
+
+    for (const venue of unmappedVenues) {
+      const venueUrl = new URL(
+        "https://app.ticketmaster.com/discovery/v2/venues.json"
+      );
+
+      venueUrl.searchParams.set(
+        "apikey",
+        ticketmasterKey
+      );
+
+      venueUrl.searchParams.set(
+        "keyword",
+        venue.name
+      );
+
+      venueUrl.searchParams.set(
+        "countryCode",
+        "US"
+      );
+
+      if (venue.state_region) {
+        venueUrl.searchParams.set(
+          "stateCode",
+          venue.state_region
+        );
+      }
+
+      venueUrl.searchParams.set("size", "20");
+
+      const venueResponse =
+        await fetchTicketmasterVenueSearch(
+          venueUrl.toString()
+        );
+
+      /*
+       * Exhausted 429 retries should not abort harvesting for every
+       * other TenderFans Spot. Skip this Spot and continue.
+       */
+      if (!venueResponse) {
+        if (!dryRun) {
+          const { error: scanError } =
+            await supabase.rpc(
+              "record_event_harvest_venue_scan",
+              {
+                p_venue_id: venue.id,
+                p_provider: "ticketmaster",
+                p_result: "rate_limited",
+                p_error:
+                  "Ticketmaster venue search exhausted 429 retries",
+              }
+            );
+
+          if (scanError) {
+            throw new Error(
+              `Could not record venue scan state for ${venue.name}: ${scanError.message}`
+            );
+          }
+        }
+
+        venueMatchPreviews.push({
+          tenderfansVenueId: venue.id,
+          tenderfansVenueName: venue.name,
+          result: "no_match",
+          ticketmasterVenueId: null,
+          ticketmasterVenueName: null,
+          ticketmasterAddress: null,
+          ticketmasterCity: null,
+          ticketmasterState: null,
+          ticketmasterPostalCode: null,
+          confidenceScore: null,
+          evidence: {
+            skipped: true,
+            reason: "ticketmaster_rate_limited",
+          },
+        });
+
+        continue;
+      }
+
+      const venuePayload =
+        (await venueResponse.json()) as
+          TicketmasterVenueResponse;
+
+      const candidates =
+        venuePayload._embedded?.venues ?? [];
+
+      const scored = candidates
+        .filter(
+          (candidate) =>
+            typeof candidate.id === "string" &&
+            candidate.id.trim() !== "" &&
+            typeof candidate.name === "string" &&
+            candidate.name.trim() !== ""
+        )
+        .map((candidate) => ({
+          candidate,
+          match: ticketmasterVenueMatch({
+            spot: venue,
+            candidate,
+          }),
+        }))
+        .sort(
+          (a, b) =>
+            b.match.score - a.match.score
+        );
+
+      const best = scored[0];
+      let blockedByRejection = false;
+
+      /*
+       * Persist only credible venue matches.
+       *
+       * Weak matches remain observation-only. Pending/rejected state is
+       * durable in event_harvest_venue_matches, and a prior human
+       * rejection must never be reversed by the automated matcher.
+       */
+      if (
+        !dryRun &&
+        best &&
+        (best.match.autoAttach ||
+          best.match.needsReview) &&
+        best.candidate.id
+      ) {
+        const providerPlaceId =
+          best.candidate.id.trim();
+
+        const {
+          data: existingMatch,
+          error: existingMatchError,
+        } = await supabase
+          .from("event_harvest_venue_matches")
+          .select("id,status")
+          .eq("venue_id", venue.id)
+          .eq("provider", "ticketmaster")
+          .eq(
+            "provider_place_id",
+            providerPlaceId
+          )
+          .maybeSingle();
+
+        if (existingMatchError) {
+          throw new Error(
+            `Could not inspect existing venue match for ${venue.name}: ${existingMatchError.message}`
+          );
+        }
+
+        const wasRejected =
+          existingMatch?.status === "rejected";
+
+        blockedByRejection = wasRejected;
+
+        const {
+          data: matchId,
+          error: upsertMatchError,
+        } = await supabase.rpc(
+          "upsert_event_harvest_venue_match",
+          {
+            p_venue_id: venue.id,
+            p_provider: "ticketmaster",
+            p_provider_place_id:
+              providerPlaceId,
+            p_provider_venue_name:
+              best.candidate.name ?? "",
+            p_provider_address:
+              best.candidate.address?.line1 ??
+              null,
+            p_provider_city:
+              best.candidate.city?.name ?? null,
+            p_provider_state_region:
+              best.candidate.state?.stateCode ??
+              best.candidate.state?.name ??
+              null,
+            p_provider_postal_code:
+              best.candidate.postalCode ?? null,
+            p_confidence_score:
+              best.match.score,
+            p_evidence:
+              best.match.evidence,
+            p_raw_payload:
+              best.candidate,
+          }
+        );
+
+        if (upsertMatchError) {
+          throw new Error(
+            `Could not persist venue match for ${venue.name}: ${upsertMatchError.message}`
+          );
+        }
+
+        if (
+          best.match.autoAttach &&
+          !wasRejected
+        ) {
+          const {
+            error: approveMatchError,
+          } = await supabase.rpc(
+            "auto_approve_event_harvest_venue_match",
+            {
+              p_match_id: matchId,
+            }
+          );
+
+          if (approveMatchError) {
+            throw new Error(
+              `Could not auto-approve Ticketmaster venue match for ${venue.name}: ${approveMatchError.message}`
+            );
+          }
+        }
+      }
+
+      if (!best || best.match.score < 0.65) {
+        if (!dryRun) {
+          const { error: scanError } =
+            await supabase.rpc(
+              "record_event_harvest_venue_scan",
+              {
+                p_venue_id: venue.id,
+                p_provider: "ticketmaster",
+                p_result: "no_match",
+                p_error: null,
+              }
+            );
+
+          if (scanError) {
+            throw new Error(
+              `Could not record venue scan state for ${venue.name}: ${scanError.message}`
+            );
+          }
+        }
+
+        venueMatchPreviews.push({
+          tenderfansVenueId: venue.id,
+          tenderfansVenueName: venue.name,
+          result: "no_match",
+          ticketmasterVenueId:
+            best?.candidate.id ?? null,
+          ticketmasterVenueName:
+            best?.candidate.name ?? null,
+          ticketmasterAddress:
+            best?.candidate.address?.line1 ?? null,
+          ticketmasterCity:
+            best?.candidate.city?.name ?? null,
+          ticketmasterState:
+            best?.candidate.state?.stateCode ??
+            best?.candidate.state?.name ??
+            null,
+          ticketmasterPostalCode:
+            best?.candidate.postalCode ?? null,
+          confidenceScore:
+            best?.match.score ?? null,
+          evidence:
+            best?.match.evidence ?? null,
+        });
+
+        continue;
+      }
+
+      const finalMatchResult =
+        best.match.autoAttach &&
+        !blockedByRejection
+          ? "auto_attach"
+          : best.match.needsReview ||
+              blockedByRejection
+            ? "needs_review"
+            : "no_match";
+
+      if (!dryRun) {
+        const scanResult =
+          finalMatchResult === "auto_attach"
+            ? "auto_attached"
+            : finalMatchResult === "needs_review"
+              ? "needs_review"
+              : "no_match";
+
+        const { error: scanError } =
+          await supabase.rpc(
+            "record_event_harvest_venue_scan",
+            {
+              p_venue_id: venue.id,
+              p_provider: "ticketmaster",
+              p_result: scanResult,
+              p_error: null,
+            }
+          );
+
+        if (scanError) {
+          throw new Error(
+            `Could not record venue scan state for ${venue.name}: ${scanError.message}`
+          );
+        }
+      }
+
+      venueMatchPreviews.push({
+        tenderfansVenueId: venue.id,
+        tenderfansVenueName: venue.name,
+        result: finalMatchResult,
+        ticketmasterVenueId:
+          best.candidate.id ?? null,
+        ticketmasterVenueName:
+          best.candidate.name ?? null,
+        ticketmasterAddress:
+          best.candidate.address?.line1 ?? null,
+        ticketmasterCity:
+          best.candidate.city?.name ?? null,
+        ticketmasterState:
+          best.candidate.state?.stateCode ??
+          best.candidate.state?.name ??
+          null,
+        ticketmasterPostalCode:
+          best.candidate.postalCode ?? null,
+        confidenceScore: best.match.score,
+        evidence: best.match.evidence,
+      });
     }
 
     let refsQuery = supabase
@@ -1004,6 +1795,19 @@ export async function POST(
       dryRun,
       provider: "ticketmaster",
       sourceId: source.id,
+      venueMatcher: {
+        spotsChecked: venueMatchPreviews.length,
+        autoAttach: venueMatchPreviews.filter(
+          (match) => match.result === "auto_attach"
+        ).length,
+        needsReview: venueMatchPreviews.filter(
+          (match) => match.result === "needs_review"
+        ).length,
+        noMatch: venueMatchPreviews.filter(
+          (match) => match.result === "no_match"
+        ).length,
+        matches: venueMatchPreviews,
+      },
       spotsChecked: previews.length,
       eventsFound: previews.reduce(
         (sum, preview) =>
