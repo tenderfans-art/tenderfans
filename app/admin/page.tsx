@@ -14,6 +14,12 @@ const tools = [
     status: "OPEN",
   },
   {
+    title: "Venue Matches",
+    description: "Review provider venue matches that need administrator approval.",
+    href: "/admin/venue-matches",
+    status: "OPEN",
+  },
+  {
     title: "Manage Tenders",
     description: "Search, edit, hide or remove Tender profiles.",
     href: "/admin/tenders",
