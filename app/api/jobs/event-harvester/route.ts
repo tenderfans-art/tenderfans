@@ -112,6 +112,40 @@ function normalizeTitle(value: string) {
     .replace(/\s+/g, " ");
 }
 
+function ticketmasterFlyerUrl(event: any): string | null {
+  const images = Array.isArray(event?.images)
+    ? event.images
+    : [];
+
+  const usable = images.filter(
+    (image: any) =>
+      typeof image?.url === "string" &&
+      image.url.trim().length > 0
+  );
+
+  if (usable.length === 0) return null;
+
+  const score = (image: any) => {
+    const nonFallbackBonus =
+      image?.fallback === true ? 0 : 1_000_000_000;
+
+    const ratioBonus =
+      image?.ratio === "16_9" ? 100_000_000 : 0;
+
+    const width =
+      typeof image?.width === "number" ? image.width : 0;
+
+    const height =
+      typeof image?.height === "number" ? image.height : 0;
+
+    return nonFallbackBonus + ratioBonus + width * height;
+  };
+
+  return [...usable]
+    .sort((a: any, b: any) => score(b) - score(a))[0]
+    ?.url?.trim() || null;
+}
+
 function eventFingerprint(input: {
   venueId: string;
   title: string;
@@ -546,6 +580,7 @@ export async function POST(
                   ticketmasterStatus,
                 p_has_definite_start:
                   hasDefiniteStart,
+                p_flyer_url: ticketmasterFlyerUrl(event),
                 p_raw_payload: event,
               }
             );
@@ -674,6 +709,7 @@ export async function POST(
                     p_ticketmaster_status:
                       ticketmasterStatus,
                     p_has_definite_start: true,
+                    p_flyer_url: ticketmasterFlyerUrl(event),
                     p_raw_payload: event,
                   }
                 );
@@ -927,6 +963,7 @@ export async function POST(
                 ticketmasterStatus,
               p_has_definite_start:
                 hasDefiniteStart,
+              p_flyer_url: ticketmasterFlyerUrl(event),
               p_raw_payload: event,
             }
           );
