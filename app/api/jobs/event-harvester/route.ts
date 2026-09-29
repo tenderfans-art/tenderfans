@@ -304,6 +304,15 @@ export async function POST(
       }>;
     }> = [];
 
+    /*
+     * Ticketmaster events returned by venue discovery have already
+     * been observed from the provider during this run. Pass 2 only
+     * needs direct event-ID verification for known events that were
+     * not returned by discovery.
+     */
+    const seenTicketmasterEventIds =
+      new Set<string>();
+
     for (const [
       tenderfansVenueId,
       mapped,
@@ -439,6 +448,10 @@ export async function POST(
         if (deduped.has(externalEventId)) {
           continue;
         }
+
+        seenTicketmasterEventIds.add(
+          externalEventId
+        );
 
         const sourceUrl =
           event.url?.trim() || null;
@@ -700,6 +713,255 @@ export async function POST(
       });
     }
 
+    /*
+     * Pass 2 — lifecycle verification.
+     *
+     * Venue search discovers events. Once TenderFans has accepted a
+     * Ticketmaster event, its Ticketmaster event ID becomes the
+     * authoritative lifecycle lookup key. Verify those known events
+     * directly rather than interpreting absence from venue search as
+     * a cancellation or other state change.
+     */
+    const lifecycleResults: Array<{
+      candidateId: string;
+      canonicalEventId: string;
+      externalEventId: string;
+      tenderfansVenueId: string;
+      ticketmasterStatus: string | null;
+      hasDefiniteStart: boolean;
+      startsAt: string | null;
+      action: "verified" | "would_verify";
+    }> = [];
+
+    const scopedVenueIds = [...spotMap.keys()];
+
+    if (scopedVenueIds.length > 0) {
+      const {
+        data: lifecycleCandidatesData,
+        error: lifecycleCandidatesError,
+      } = await supabase
+        .from("event_harvest_candidates")
+        .select(`
+          id,
+          canonical_event_id,
+          external_event_id,
+          venue_id,
+          raw_title,
+          event_fingerprint,
+          status
+        `)
+        .eq("source_id", source.id)
+        .in("venue_id", scopedVenueIds)
+        .not("canonical_event_id", "is", null)
+        .in("status", ["published", "stale"]);
+
+      if (lifecycleCandidatesError) {
+        throw new Error(
+          `Could not load Ticketmaster lifecycle candidates: ${lifecycleCandidatesError.message}`
+        );
+      }
+
+      for (const candidate of lifecycleCandidatesData ?? []) {
+        const candidateId =
+          typeof candidate.id === "string"
+            ? candidate.id
+            : null;
+
+        const canonicalEventId =
+          typeof candidate.canonical_event_id === "string"
+            ? candidate.canonical_event_id
+            : null;
+
+        const externalEventId =
+          typeof candidate.external_event_id === "string"
+            ? candidate.external_event_id.trim()
+            : "";
+
+        const tenderfansVenueId =
+          typeof candidate.venue_id === "string"
+            ? candidate.venue_id
+            : null;
+
+        if (
+          !candidateId ||
+          !canonicalEventId ||
+          !externalEventId ||
+          !tenderfansVenueId
+        ) {
+          continue;
+        }
+
+        /*
+         * Pass 1 already received current provider data for this
+         * event, so do not immediately spend another Ticketmaster
+         * request verifying the same ID.
+         */
+        if (
+          seenTicketmasterEventIds.has(
+            externalEventId
+          )
+        ) {
+          continue;
+        }
+
+        const eventUrl = new URL(
+          `https://app.ticketmaster.com/discovery/v2/events/${encodeURIComponent(
+            externalEventId
+          )}.json`
+        );
+
+        eventUrl.searchParams.set(
+          "apikey",
+          ticketmasterKey
+        );
+
+        const response = await fetch(eventUrl, {
+          headers: {
+            accept: "application/json",
+          },
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Ticketmaster returned HTTP ${response.status} while verifying event ${externalEventId}.`
+          );
+        }
+
+        const event =
+          (await response.json()) as TicketmasterEvent;
+
+        /*
+         * The direct lookup must resolve to the same permanent
+         * Ticketmaster event identity we requested.
+         */
+        if (event.id?.trim() !== externalEventId) {
+          throw new Error(
+            `Ticketmaster lifecycle identity mismatch for ${externalEventId}.`
+          );
+        }
+
+        const start = event.dates?.start;
+        const startsAt =
+          start?.dateTime?.trim() || null;
+
+        const ticketmasterStatus =
+          event.dates?.status?.code
+            ?.trim()
+            .toLowerCase() || null;
+
+        const hasDefiniteStart =
+          Boolean(startsAt) &&
+          start?.dateTBD !== true &&
+          start?.dateTBA !== true &&
+          start?.timeTBA !== true &&
+          start?.noSpecificTime !== true;
+
+        const title =
+          event.name?.trim() ||
+          (typeof candidate.raw_title === "string"
+            ? candidate.raw_title.trim()
+            : "");
+
+        const tmVenue =
+          event._embedded?.venues?.[0];
+
+        const rawAddress = [
+          tmVenue?.address?.line1,
+          tmVenue?.city?.name,
+          tmVenue?.state?.stateCode,
+          tmVenue?.postalCode,
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        const fingerprint =
+          hasDefiniteStart &&
+          startsAt &&
+          title
+            ? eventFingerprint({
+                venueId: tenderfansVenueId,
+                title,
+                startsAt,
+              })
+            : typeof candidate.event_fingerprint ===
+                "string"
+              ? candidate.event_fingerprint
+              : null;
+
+        if (!dryRun) {
+          const {
+            data: syncedEventId,
+            error: syncError,
+          } = await supabase.rpc(
+            "sync_ticketmaster_event",
+            {
+              p_candidate_id: candidateId,
+              p_source_url:
+                event.url?.trim() || null,
+              p_raw_title: title || null,
+              p_raw_venue_name:
+                tmVenue?.name?.trim() || null,
+              p_raw_address:
+                rawAddress || null,
+              p_raw_starts_at: startsAt,
+              p_raw_ends_at:
+                event.dates?.end?.dateTime ??
+                null,
+              p_normalized_title:
+                title
+                  ? normalizeTitle(title)
+                  : null,
+              p_starts_at:
+                hasDefiniteStart
+                  ? startsAt
+                  : null,
+              p_ends_at:
+                hasDefiniteStart
+                  ? event.dates?.end?.dateTime ??
+                    null
+                  : null,
+              p_event_fingerprint:
+                fingerprint,
+              p_ticketmaster_status:
+                ticketmasterStatus,
+              p_has_definite_start:
+                hasDefiniteStart,
+              p_raw_payload: event,
+            }
+          );
+
+          if (syncError) {
+            throw new Error(
+              `Could not verify Ticketmaster event ${externalEventId}: ${syncError.message}`
+            );
+          }
+
+          if (
+            typeof syncedEventId === "string" &&
+            syncedEventId !== canonicalEventId
+          ) {
+            throw new Error(
+              `Ticketmaster lifecycle sync changed canonical identity for ${externalEventId}.`
+            );
+          }
+        }
+
+        lifecycleResults.push({
+          candidateId,
+          canonicalEventId,
+          externalEventId,
+          tenderfansVenueId,
+          ticketmasterStatus,
+          hasDefiniteStart,
+          startsAt,
+          action: dryRun
+            ? "would_verify"
+            : "verified",
+        });
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       dryRun,
@@ -711,6 +973,9 @@ export async function POST(
           sum + preview.events.length,
         0
       ),
+      directLifecycleChecked:
+        lifecycleResults.length,
+      lifecycle: lifecycleResults,
       spots: previews,
     });
   } catch (error) {
