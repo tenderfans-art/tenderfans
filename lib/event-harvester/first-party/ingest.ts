@@ -200,6 +200,13 @@ export async function ingestFirstPartySource(
    */
   const bootstrap = source.bootstrapped_at === null;
 
+  /*
+   * Absence reconciliation compares candidate last_seen_at against
+   * the instant this complete source scan began. Capture this before
+   * fetching/parsing so every event observed by this run is newer.
+   */
+  const scanStartedAt = new Date().toISOString();
+
   const allPreview = await previewFirstPartySource(source);
 
   const selectedPreview = options.title
@@ -303,6 +310,34 @@ export async function ingestFirstPartySource(
     if (bootstrapError) {
       throw new Error(
         `Could not mark first-party source bootstrapped: ${bootstrapError.message}`
+      );
+    }
+  }
+
+  /*
+   * Only an unfiltered, unlimited, successfully completed source run
+   * is evidence that an existing candidate was absent.
+   *
+   * Bootstrap runs establish initial inventory and do not reconcile
+   * disappearance. Normal complete runs do.
+   */
+  const completeNormalRun =
+    !bootstrap &&
+    options.title === undefined &&
+    options.limit === undefined;
+
+  if (completeNormalRun) {
+    const { error: reconcileError } = await supabase.rpc(
+      "reconcile_first_party_source_absences",
+      {
+        p_source_id: source.id,
+        p_scan_started_at: scanStartedAt,
+      }
+    );
+
+    if (reconcileError) {
+      throw new Error(
+        `Could not reconcile first-party source absences: ${reconcileError.message}`
       );
     }
   }
