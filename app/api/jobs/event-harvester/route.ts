@@ -1828,3 +1828,48 @@ export async function POST(
     );
   }
 }
+
+/*
+ * Vercel Cron entry point.
+ *
+ * Vercel invokes cron routes with GET and supplies CRON_SECRET as
+ * Authorization: Bearer <CRON_SECRET>. After authenticating the cron
+ * request, reuse the existing POST harvester so scheduled and manual
+ * runs execute exactly the same harvesting logic.
+ */
+export async function GET(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret) {
+    return NextResponse.json(
+      { error: "Cron is not configured." },
+      { status: 500 }
+    );
+  }
+
+  if (
+    request.headers.get("authorization") !==
+    `Bearer ${cronSecret}`
+  ) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const scheduledRequest = new NextRequest(request.url, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${
+        process.env.EVENT_HARVESTER_JOB_SECRET ?? ""
+      }`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      dryRun: false,
+      source: "ticketmaster",
+    }),
+  });
+
+  return POST(scheduledRequest);
+}

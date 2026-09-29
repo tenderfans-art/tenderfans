@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/jobs/event-harvester",
+      "schedule": "0 10 * * *"
+    }
+  ]
+}
