@@ -253,6 +253,7 @@ function mapTribeEvent(
     })(),
     startsAt,
     endsAt,
+    allDay: false,
     sourceUrl,
     flyerUrl,
     location: null,

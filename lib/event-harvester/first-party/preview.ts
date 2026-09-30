@@ -32,6 +32,7 @@ export type FirstPartyEventPreview = {
   description: string | null;
   startsAt: string;
   endsAt: string | null;
+  allDay: boolean;
   flyerUrl: string | null;
   location: string | null;
   eventFingerprint: string;
@@ -151,6 +152,7 @@ export async function previewFirstPartySource(
     description: event.description,
     startsAt: event.startsAt,
     endsAt: event.endsAt,
+    allDay: event.allDay,
     flyerUrl: event.flyerUrl,
     location: event.location,
     eventFingerprint: eventFingerprint({

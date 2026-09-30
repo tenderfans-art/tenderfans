@@ -75,6 +75,7 @@ export function parseIcsEvents(
       description,
       startsAt,
       endsAt,
+      allDay: component.start.dateOnly === true,
       sourceUrl,
       flyerUrl: null,
       location,
@@ -86,6 +87,7 @@ export function parseIcsEvents(
         sourceUrl,
         startsAt,
         endsAt,
+        isAllDay: component.start.dateOnly === true,
         recurrenceId:
           component.recurrenceid instanceof Date
             ? component.recurrenceid.toISOString()

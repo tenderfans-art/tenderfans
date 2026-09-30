@@ -11,6 +11,7 @@ type CalendarEvent = {
   description: string | null;
   starts_at: string;
   ends_at: string | null;
+  is_all_day: boolean;
   flyer_url: string | null;
   venue_name: string;
   venue_slug: string | null;
@@ -45,6 +46,43 @@ function sameDay(a: Date, b: Date) {
 
 function sameWeek(a: CalendarWeek, b: CalendarWeek) {
   return sameDay(a.start, b.start) && sameDay(a.end, b.end);
+}
+
+function eventCalendarDate(event: CalendarEvent) {
+  const instant = new Date(event.starts_at);
+
+  if (!event.is_all_day) {
+    return instant;
+  }
+
+  return new Date(
+    instant.getUTCFullYear(),
+    instant.getUTCMonth(),
+    instant.getUTCDate()
+  );
+}
+
+function eventOccurrenceEnd(event: CalendarEvent) {
+  if (!event.is_all_day) {
+    return new Date(event.ends_at ?? event.starts_at);
+  }
+
+  if (event.ends_at) {
+    const exclusiveEnd = new Date(event.ends_at);
+
+    const end = new Date(
+      exclusiveEnd.getUTCFullYear(),
+      exclusiveEnd.getUTCMonth(),
+      exclusiveEnd.getUTCDate()
+    );
+
+    end.setMilliseconds(-1);
+    return end;
+  }
+
+  const end = eventCalendarDate(event);
+  end.setHours(23, 59, 59, 999);
+  return end;
 }
 
 function weekLabel(week: CalendarWeek) {
@@ -105,6 +143,7 @@ export default function EventsCalendar({
           description,
           starts_at,
           ends_at,
+          is_all_day,
           flyer_url,
           venues (
             name,
@@ -124,12 +163,13 @@ export default function EventsCalendar({
         description: data.description,
         starts_at: data.starts_at,
         ends_at: data.ends_at,
+        is_all_day: data.is_all_day ?? false,
         flyer_url: data.flyer_url ?? null,
         venue_name: (data.venues as any)?.name ?? "TenderFans Spot",
         venue_slug: (data.venues as any)?.slug ?? null,
       };
 
-      const eventDate = new Date(event.starts_at);
+      const eventDate = eventCalendarDate(event);
 
       setMonth(
         new Date(eventDate.getFullYear(), eventDate.getMonth(), 1)
@@ -174,7 +214,10 @@ export default function EventsCalendar({
       setLoading(true);
 
       const rangeStart = new Date(calendarWeeks[0].start);
+      rangeStart.setDate(rangeStart.getDate() - 1);
+
       const rangeEnd = new Date(calendarWeeks[calendarWeeks.length - 1].end);
+      rangeEnd.setDate(rangeEnd.getDate() + 1);
 
       let query = supabase
         .from("events")
@@ -185,6 +228,7 @@ export default function EventsCalendar({
           description,
           starts_at,
           ends_at,
+          is_all_day,
           flyer_url,
           venues (
             name,
@@ -218,6 +262,7 @@ export default function EventsCalendar({
         description: event.description,
         starts_at: event.starts_at,
         ends_at: event.ends_at,
+        is_all_day: event.is_all_day ?? false,
         flyer_url: event.flyer_url ?? null,
         venue_name: event.venues?.name ?? "TenderFans Spot",
         venue_slug: event.venues?.slug ?? null,
@@ -248,7 +293,7 @@ export default function EventsCalendar({
     if (!selectedWeek) return [];
 
     return events.filter((event) => {
-      const eventDate = new Date(event.starts_at);
+      const eventDate = eventCalendarDate(event);
       return eventDate >= selectedWeek.start && eventDate <= selectedWeek.end;
     });
   }, [events, selectedWeek]);
@@ -263,11 +308,7 @@ export default function EventsCalendar({
     const now = new Date();
 
     const upcoming = events.filter((event) => {
-      const occurrenceEnd = event.ends_at
-        ? new Date(event.ends_at)
-        : new Date(event.starts_at);
-
-      return occurrenceEnd >= now;
+      return eventOccurrenceEnd(event) >= now;
     });
 
     return limit ? upcoming.slice(0, limit) : upcoming;
@@ -308,16 +349,25 @@ export default function EventsCalendar({
     setSelectedWeekStart(startOfWeek(today));
   }
 
-  function eventTime(startsAt: string) {
-    return new Date(startsAt).toLocaleTimeString("en-US", {
+  function eventTime(value: string) {
+    return new Date(value).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
     });
   }
 
-  function eventDate(startsAt: string) {
-    return new Date(startsAt).toLocaleDateString("en-US", {
-      weekday: "short",
+  function eventDateLabel(event: CalendarEvent) {
+    return eventCalendarDate(event).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
+  function eventDayLabel(event: CalendarEvent) {
+    return eventCalendarDate(event).toLocaleDateString("en-US", {
+      weekday: "long",
       month: "short",
       day: "numeric",
     });
@@ -334,7 +384,7 @@ export default function EventsCalendar({
     const groups = new Map<string, CalendarEvent[]>();
 
     for (const event of visibleEvents) {
-      const date = new Date(event.starts_at);
+      const date = eventCalendarDate(event);
       const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
       const existing = groups.get(key) ?? [];
@@ -344,14 +394,6 @@ export default function EventsCalendar({
 
     return Array.from(groups.values());
   }, [visibleEvents]);
-
-  function eventDayLabel(startsAt: string) {
-    return new Date(startsAt).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-    });
-  }
 
   return (
     <section className="events-calendar-card">
@@ -406,12 +448,12 @@ export default function EventsCalendar({
               <span
                 className="events-week-count"
                 aria-label={`${events.filter((event) => {
-                  const eventDate = new Date(event.starts_at);
+                  const eventDate = eventCalendarDate(event);
                   return eventDate >= week.start && eventDate <= week.end;
                 }).length} events`}
               >
                 {events.filter((event) => {
-                  const eventDate = new Date(event.starts_at);
+                  const eventDate = eventCalendarDate(event);
                   return eventDate >= week.start && eventDate <= week.end;
                 }).length}
               </span>
@@ -447,10 +489,10 @@ export default function EventsCalendar({
           eventsByDay.map((dayEvents) => (
             <section
               className="events-day-group"
-              key={eventDayLabel(dayEvents[0].starts_at)}
+              key={eventDayLabel(dayEvents[0])}
             >
               <div className="events-day-heading">
-                {eventDayLabel(dayEvents[0].starts_at)}
+                {eventDayLabel(dayEvents[0])}
               </div>
 
               <div className="events-day-events">
@@ -470,11 +512,17 @@ export default function EventsCalendar({
 
                       <span className="events-list-row-bottom">
                         <span>
-                          {eventTime(event.starts_at)}
-                          {event.ends_at && (
+                          {event.is_all_day ? (
+                            "All day"
+                          ) : (
                             <>
-                              {" – "}
-                              {eventTime(event.ends_at)}
+                              {eventTime(event.starts_at)}
+                              {event.ends_at && (
+                                <>
+                                  {" – "}
+                                  {eventTime(event.ends_at)}
+                                </>
+                              )}
                             </>
                           )}
                         </span>
@@ -588,21 +636,19 @@ export default function EventsCalendar({
               <div className="events-detail-group">
                 <span className="events-detail-label">When</span>
                 <div className="events-detail-value">
-                  {new Date(selectedEvent.starts_at).toLocaleDateString(
-                    "en-US",
-                    {
-                      weekday: "long",
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    }
-                  )}
+                  {eventDateLabel(selectedEvent)}
                   {" · "}
-                  {eventTime(selectedEvent.starts_at)}
-                  {selectedEvent.ends_at && (
+                  {selectedEvent.is_all_day ? (
+                    "All day"
+                  ) : (
                     <>
-                      {" – "}
-                      {eventTime(selectedEvent.ends_at)}
+                      {eventTime(selectedEvent.starts_at)}
+                      {selectedEvent.ends_at && (
+                        <>
+                          {" – "}
+                          {eventTime(selectedEvent.ends_at)}
+                        </>
+                      )}
                     </>
                   )}
                 </div>

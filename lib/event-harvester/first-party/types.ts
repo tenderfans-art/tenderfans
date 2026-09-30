@@ -4,6 +4,7 @@ export type FirstPartyHarvestEvent = {
   description: string | null;
   startsAt: string;
   endsAt: string | null;
+  allDay: boolean;
   sourceUrl: string | null;
   flyerUrl: string | null;
   location: string | null;

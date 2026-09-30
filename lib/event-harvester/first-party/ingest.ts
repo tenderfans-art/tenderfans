@@ -38,6 +38,11 @@ async function ingestEvent(
   canonicalEventId: string;
   action: "linked_existing" | "graduated";
 }> {
+  const harvestPayload = {
+    ...event.rawPayload,
+    isAllDay: event.allDay,
+  };
+
   const { data: candidateData, error: candidateError } =
     await supabase.rpc("upsert_event_harvest_candidate", {
       p_source_id: event.sourceId,
@@ -55,7 +60,7 @@ async function ingestEvent(
       p_venue_id: event.venueId,
       p_confidence_score: 1,
       p_event_fingerprint: event.eventFingerprint,
-      p_raw_payload: event.rawPayload,
+      p_raw_payload: harvestPayload,
     });
 
   if (candidateError) {
@@ -151,7 +156,7 @@ async function ingestEvent(
       p_ends_at: event.endsAt,
       p_event_fingerprint: event.eventFingerprint,
       p_flyer_url: event.flyerUrl,
-      p_raw_payload: event.rawPayload,
+      p_raw_payload: harvestPayload,
     });
 
   if (syncedError) {
