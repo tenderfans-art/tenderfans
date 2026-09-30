@@ -454,40 +454,77 @@ export default function EventsCalendar({
       )}
 
       {!venueId && (
-      <nav className="events-week-selector" aria-label="Select event week">
-        {calendarWeeks.map((week) => {
-          const active = !!selectedWeek && sameWeek(week, selectedWeek);
+      <div className="events-date-filters">
+        <nav className="events-week-selector" aria-label="Select event week">
+          {calendarWeeks.map((week) => {
+            const active = !!selectedWeek && sameWeek(week, selectedWeek);
 
-          return (
-            <button
-              type="button"
-              key={week.start.toISOString()}
-              className={[
-                "events-week-link",
-                active ? "events-week-link-active" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onClick={() => setSelectedWeekStart(new Date(week.start))}
-              aria-pressed={active}
-            >
-              <span>{weekLabel(week)}</span>
-              <span
-                className="events-week-count"
-                aria-label={`${events.filter((event) => {
-                  const eventDate = eventCalendarDate(event);
-                  return eventDate >= week.start && eventDate <= week.end;
-                }).length} events`}
+            return (
+              <button
+                type="button"
+                key={week.start.toISOString()}
+                className={[
+                  "events-week-link",
+                  active ? "events-week-link-active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => setSelectedWeekStart(new Date(week.start))}
+                aria-pressed={active}
               >
-                {events.filter((event) => {
-                  const eventDate = eventCalendarDate(event);
-                  return eventDate >= week.start && eventDate <= week.end;
-                }).length}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+                <span>{weekLabel(week)}</span>
+                <span
+                  className="events-week-count"
+                  aria-label={`${events.filter((event) => {
+                    const eventDate = eventCalendarDate(event);
+                    return eventDate >= week.start && eventDate <= week.end;
+                  }).length} events`}
+                >
+                  {events.filter((event) => {
+                    const eventDate = eventCalendarDate(event);
+                    return eventDate >= week.start && eventDate <= week.end;
+                  }).length}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <nav
+          className="events-weekday-selector"
+          aria-label="Filter events by day of week"
+        >
+          {[
+            { label: "All", value: null },
+            { label: "Sun", value: 0 },
+            { label: "Mon", value: 1 },
+            { label: "Tue", value: 2 },
+            { label: "Wed", value: 3 },
+            { label: "Thu", value: 4 },
+            { label: "Fri", value: 5 },
+            { label: "Sat", value: 6 },
+          ].map((day) => {
+            const active = selectedWeekday === day.value;
+
+            return (
+              <button
+                type="button"
+                key={day.label}
+                className={[
+                  "events-weekday-link",
+                  active ? "events-weekday-link-active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => setSelectedWeekday(day.value)}
+                aria-pressed={active}
+              >
+                {day.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
       )}
 
       {!venueId && (
@@ -500,41 +537,6 @@ export default function EventsCalendar({
             onChange={(event) => setEventSearch(event.target.value)}
             aria-label="Search events or spots"
           />
-
-          <nav
-            className="events-weekday-selector"
-            aria-label="Filter events by day of week"
-          >
-            {[
-              { label: "All", value: null },
-              { label: "Sun", value: 0 },
-              { label: "Mon", value: 1 },
-              { label: "Tue", value: 2 },
-              { label: "Wed", value: 3 },
-              { label: "Thu", value: 4 },
-              { label: "Fri", value: 5 },
-              { label: "Sat", value: 6 },
-            ].map((day) => {
-              const active = selectedWeekday === day.value;
-
-              return (
-                <button
-                  type="button"
-                  key={day.label}
-                  className={[
-                    "events-weekday-link",
-                    active ? "events-weekday-link-active" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => setSelectedWeekday(day.value)}
-                  aria-pressed={active}
-                >
-                  {day.label}
-                </button>
-              );
-            })}
-          </nav>
         </div>
       )}
 

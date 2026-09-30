@@ -5397,3 +5397,40 @@
     font-size:9px;
   }
 }
+
+/* Calendar date-filter grouping refinement */
+.events-date-filters{
+  background:#fff;
+  border-bottom:1px solid var(--line);
+}
+
+.events-date-filters .events-week-selector{
+  border-bottom:0;
+}
+
+.events-date-filters .events-weekday-selector{
+  padding:0 20px 14px;
+}
+
+.events-calendar-filters{
+  background:var(--cream);
+}
+
+.events-calendar-filters .events-search-input{
+  background:#fff;
+}
+
+@media (max-width:640px){
+  .events-date-filters .events-weekday-selector{
+    padding:0 12px 12px;
+  }
+}
+
+/* Final event search surface */
+.events-calendar-filters{
+  background:#fff;
+}
+
+.events-calendar-filters .events-search-input{
+  background:var(--cream);
+}
