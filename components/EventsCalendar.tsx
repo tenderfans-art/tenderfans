@@ -532,7 +532,7 @@ export default function EventsCalendar({
           <input
             type="search"
             className="events-search-input"
-            placeholder="Search events or spots..."
+            placeholder="Search events or Spots — Trivia, Live Music, Ferg's, Cage Brewing..."
             value={eventSearch}
             onChange={(event) => setEventSearch(event.target.value)}
             aria-label="Search events or spots"

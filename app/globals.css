@@ -5434,3 +5434,29 @@
 .events-calendar-filters .events-search-input{
   background:var(--cream);
 }
+
+/* Final calendar filter backgrounds */
+.events-date-filters{
+  background:var(--cream);
+}
+
+.events-calendar-filters{
+  background:#fff;
+}
+
+.events-calendar-filters .events-search-input{
+  background:#fff;
+}
+
+/* Final calendar filter backgrounds */
+.events-date-filters{
+  background:var(--cream);
+}
+
+.events-calendar-filters{
+  background:#fff;
+}
+
+.events-calendar-filters .events-search-input{
+  background:#fff;
+}
