@@ -118,6 +118,8 @@ export default function EventsCalendar({
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedFlyer, setSelectedFlyer] = useState<CalendarEvent | null>(null);
+  const [eventSearch, setEventSearch] = useState("");
+  const [selectedWeekday, setSelectedWeekday] = useState<number | null>(null);
 
   useEffect(() => {
     const now = new Date();
@@ -380,10 +382,35 @@ export default function EventsCalendar({
       })
     : "";
 
+  const filteredEvents = useMemo(() => {
+    const search = eventSearch.trim().toLowerCase();
+
+    return visibleEvents.filter((event) => {
+      const eventDate = eventCalendarDate(event);
+
+      if (
+        selectedWeekday !== null &&
+        eventDate.getDay() !== selectedWeekday
+      ) {
+        return false;
+      }
+
+      if (
+        search &&
+        !event.title.toLowerCase().includes(search) &&
+        !event.venue_name.toLowerCase().includes(search)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [visibleEvents, eventSearch, selectedWeekday]);
+
   const eventsByDay = useMemo(() => {
     const groups = new Map<string, CalendarEvent[]>();
 
-    for (const event of visibleEvents) {
+    for (const event of filteredEvents) {
       const date = eventCalendarDate(event);
       const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
@@ -393,7 +420,7 @@ export default function EventsCalendar({
     }
 
     return Array.from(groups.values());
-  }, [visibleEvents]);
+  }, [filteredEvents]);
 
   return (
     <section className="events-calendar-card">
@@ -463,6 +490,54 @@ export default function EventsCalendar({
       </nav>
       )}
 
+      {!venueId && (
+        <div className="events-calendar-filters">
+          <input
+            type="search"
+            className="events-search-input"
+            placeholder="Search events or spots..."
+            value={eventSearch}
+            onChange={(event) => setEventSearch(event.target.value)}
+            aria-label="Search events or spots"
+          />
+
+          <nav
+            className="events-weekday-selector"
+            aria-label="Filter events by day of week"
+          >
+            {[
+              { label: "All", value: null },
+              { label: "Sun", value: 0 },
+              { label: "Mon", value: 1 },
+              { label: "Tue", value: 2 },
+              { label: "Wed", value: 3 },
+              { label: "Thu", value: 4 },
+              { label: "Fri", value: 5 },
+              { label: "Sat", value: 6 },
+            ].map((day) => {
+              const active = selectedWeekday === day.value;
+
+              return (
+                <button
+                  type="button"
+                  key={day.label}
+                  className={[
+                    "events-weekday-link",
+                    active ? "events-weekday-link-active" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={() => setSelectedWeekday(day.value)}
+                  aria-pressed={active}
+                >
+                  {day.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      )}
+
       <div className="events-week-list">
         {loading && (
           <div className="events-empty">
@@ -470,17 +545,21 @@ export default function EventsCalendar({
           </div>
         )}
 
-        {!loading && visibleEvents.length === 0 && (
+        {!loading && filteredEvents.length === 0 && (
           <div className="events-empty">
             <strong>
               {venueId
                 ? "No upcoming events posted."
-                : "No events posted for this week."}
+                : eventSearch || selectedWeekday !== null
+                  ? "No events match these filters."
+                  : "No events posted for this week."}
             </strong>
             <span>
               {venueId
                 ? "Check back soon."
-                : "Try another week or check back soon."}
+                : eventSearch || selectedWeekday !== null
+                  ? "Try another search or day."
+                  : "Try another week or check back soon."}
             </span>
           </div>
         )}

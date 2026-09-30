@@ -5311,3 +5311,89 @@
 .events-calendar-card:has(.events-week-link:nth-child(6)){
   width:min(800px,calc(100vw - 32px));
 }
+
+/* Event calendar search + weekday filters */
+.events-calendar-filters{
+  display:grid;
+  gap:12px;
+  padding:14px 20px 16px;
+  border-bottom:1px solid var(--line);
+  background:#fff;
+}
+
+.events-search-input{
+  width:100%;
+  height:44px;
+  padding:0 16px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--cream);
+  color:var(--ink);
+  font:inherit;
+  font-size:14px;
+  outline:none;
+}
+
+.events-search-input::placeholder{
+  color:var(--muted);
+}
+
+.events-search-input:focus{
+  border-color:var(--olive);
+  background:#fff;
+}
+
+.events-weekday-selector{
+  display:grid;
+  grid-template-columns:repeat(8,minmax(0,1fr));
+  gap:6px;
+}
+
+.events-weekday-link{
+  min-width:0;
+  padding:8px 4px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:#fff;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.events-weekday-link:hover{
+  border-color:var(--olive);
+  color:var(--ink);
+}
+
+.events-weekday-link-active{
+  border-color:var(--olive);
+  background:var(--olive);
+  color:#fff;
+}
+
+.events-weekday-link-active:hover{
+  color:#fff;
+}
+
+@media (max-width:640px){
+  .events-calendar-filters{
+    gap:10px;
+    padding:12px;
+  }
+
+  .events-search-input{
+    height:42px;
+    padding:0 14px;
+    font-size:13px;
+  }
+
+  .events-weekday-selector{
+    gap:4px;
+  }
+
+  .events-weekday-link{
+    padding:7px 2px;
+    font-size:9px;
+  }
+}
