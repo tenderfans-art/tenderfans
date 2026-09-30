@@ -8,6 +8,7 @@ import {
 import { parseIcsEvents } from "./ics";
 import { fetchEventbriteOrganizerEvents } from "./eventbrite-organizer";
 import { fetchGoDaddyMenuRecurringEvents } from "./godaddy-menu-recurring";
+import { fetchCpMultiViewCalendarEvents } from "./cp-multi-view-calendar";
 import { fetchNextRscEvents } from "./next-rsc-events";
 import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
@@ -184,6 +185,24 @@ export async function previewFirstPartySource(
         : 8;
 
     events = await fetchGoDaddyMenuRecurringEvents(
+      source.source_url,
+      {
+        timeZone,
+        weeksForward,
+      }
+    );
+  } else if (source.source_type === "cp_multi_view_calendar") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    const weeksForward =
+      typeof source.config?.weeks_forward === "number"
+        ? source.config.weeks_forward
+        : 8;
+
+    events = await fetchCpMultiViewCalendarEvents(
       source.source_url,
       {
         timeZone,
