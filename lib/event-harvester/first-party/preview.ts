@@ -6,6 +6,7 @@ import {
 } from "../identity";
 
 import { parseIcsEvents } from "./ics";
+import { fetchTribeRestEvents } from "./tribe-rest";
 
 export type FirstPartySource = {
   id: string;
@@ -91,34 +92,54 @@ export async function loadFirstPartySource(
 export async function previewFirstPartySource(
   source: FirstPartySource
 ): Promise<FirstPartyEventPreview[]> {
-  if (source.source_type !== "ics") {
-    throw new Error(
-      `Unsupported first-party source type: ${source.source_type}`
-    );
-  }
-
   if (!source.source_url) {
     throw new Error(
       "First-party source has no source URL."
     );
   }
 
-  const response = await fetch(source.source_url, {
-    headers: {
-      Accept: "text/calendar,text/plain;q=0.9,*/*;q=0.8",
-      "User-Agent": "TenderFans-Event-Harvester/1.0",
-    },
-    cache: "no-store",
-  });
+  let events;
 
-  if (!response.ok) {
+  if (source.source_type === "ics") {
+    const response = await fetch(source.source_url, {
+      headers: {
+        Accept: "text/calendar,text/plain;q=0.9,*/*;q=0.8",
+        "User-Agent": "TenderFans-Event-Harvester/1.0",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `First-party source returned HTTP ${response.status}.`
+      );
+    }
+
+    const rawIcs = await response.text();
+    events = parseIcsEvents(rawIcs);
+  } else if (source.source_type === "tribe_rest") {
+    const categorySlug =
+      typeof source.config?.category_slug === "string"
+        ? source.config.category_slug
+        : null;
+
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    events = await fetchTribeRestEvents(
+      source.source_url,
+      {
+        categorySlug,
+        timeZone,
+      }
+    );
+  } else {
     throw new Error(
-      `First-party source returned HTTP ${response.status}.`
+      `Unsupported first-party source type: ${source.source_type}`
     );
   }
-
-  const rawIcs = await response.text();
-  const events = parseIcsEvents(rawIcs);
 
   return events.map((event) => ({
     sourceId: source.id,
