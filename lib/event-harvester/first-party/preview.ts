@@ -6,6 +6,7 @@ import {
 } from "../identity";
 
 import { parseIcsEvents } from "./ics";
+import { fetchGoDaddyMenuRecurringEvents } from "./godaddy-menu-recurring";
 import { fetchNextRscEvents } from "./next-rsc-events";
 import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
@@ -145,6 +146,24 @@ export async function previewFirstPartySource(
   } else if (source.source_type === "squarespace_events") {
     events = await fetchSquarespaceEvents(
       source.source_url
+    );
+  } else if (source.source_type === "godaddy_menu_recurring") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    const weeksForward =
+      typeof source.config?.weeks_forward === "number"
+        ? source.config.weeks_forward
+        : 8;
+
+    events = await fetchGoDaddyMenuRecurringEvents(
+      source.source_url,
+      {
+        timeZone,
+        weeksForward,
+      }
     );
   } else {
     throw new Error(
