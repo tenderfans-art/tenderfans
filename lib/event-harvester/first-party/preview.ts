@@ -6,6 +6,7 @@ import {
 } from "../identity";
 
 import { parseIcsEvents } from "./ics";
+import { fetchNextRscEvents } from "./next-rsc-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
 
 export type FirstPartySource = {
@@ -135,6 +136,10 @@ export async function previewFirstPartySource(
         categorySlug,
         timeZone,
       }
+    );
+  } else if (source.source_type === "next_rsc_events") {
+    events = await fetchNextRscEvents(
+      source.source_url
     );
   } else {
     throw new Error(
