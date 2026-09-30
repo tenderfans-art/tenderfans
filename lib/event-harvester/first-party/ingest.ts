@@ -323,6 +323,7 @@ export async function ingestFirstPartySource(
    */
   const completeNormalRun =
     !bootstrap &&
+    allPreview.length > 0 &&
     options.title === undefined &&
     options.limit === undefined;
 
