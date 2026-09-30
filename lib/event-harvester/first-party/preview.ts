@@ -12,6 +12,7 @@ import { fetchCpMultiViewCalendarEvents } from "./cp-multi-view-calendar";
 import { fetchNextRscEvents } from "./next-rsc-events";
 import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
+import { fetchUvTixEvents } from "./uvtix-events";
 
 export type FirstPartySource = {
   id: string;
@@ -207,6 +208,18 @@ export async function previewFirstPartySource(
       {
         timeZone,
         weeksForward,
+      }
+    );
+  } else if (source.source_type === "uvtix_events") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    events = await fetchUvTixEvents(
+      source.source_url,
+      {
+        timeZone,
       }
     );
   } else {

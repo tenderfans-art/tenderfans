@@ -2,6 +2,7 @@ export type DetectedSourceType =
   | "eventbrite_organizer"
   | "godaddy_menu_recurring"
   | "cp_multi_view_calendar"
+  | "uvtix_events"
   | "squarespace_events"
   | "tribe_rest"
   | "next_rsc_events"
@@ -219,6 +220,26 @@ function inspectPage(
       evidence: [
         "CP Multi View Calendar plugin signature",
         "CP Multi View Calendar runtime configuration",
+      ],
+    });
+  }
+
+  if (
+    /uvtix\.com/i.test(html) &&
+    (
+      /urvenue\.com/i.test(html) ||
+      /application\/ld\+json/i.test(html)
+    ) &&
+    /"@type"\s*:\s*"Event"/i.test(html)
+  ) {
+    pushDetection(detections, {
+      sourceType: "uvtix_events",
+      url: pageUrl,
+      confidence: "high",
+      supported: true,
+      evidence: [
+        "UVTix / UrVenue platform signature",
+        "Schema.org Event inventory",
       ],
     });
   }
