@@ -4,12 +4,24 @@ import type {
   FirstPartyHarvestEvent,
 } from "./types";
 
-function decodeHtmlAttribute(
+function decodeHtmlText(
   value: string
 ): string {
   return value
     .replaceAll("&amp;", "&")
-    .replaceAll("&#38;", "&");
+    .replaceAll("&#38;", "&")
+    .replaceAll("&#x26;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&#x27;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">");
+}
+
+function decodeHtmlAttribute(
+  value: string
+): string {
+  return decodeHtmlText(value);
 }
 
 function discoverIcalUrls(
@@ -102,15 +114,34 @@ export async function fetchSquarespaceEvents(
 
     for (const event of parsed) {
       /*
+       * Squarespace calendar pages can retain historical events.
+       * Keep an event through its scheduled end; when no end exists,
+       * its start is the lifecycle boundary.
+       */
+      const lifecycleBoundary =
+        Date.parse(event.endsAt ?? event.startsAt);
+
+      if (
+        Number.isNaN(lifecycleBoundary) ||
+        lifecycleBoundary < Date.now()
+      ) {
+        continue;
+      }
+
+      /*
        * Squarespace's per-event ICS currently omits URL metadata.
        * Preserve the actual Squarespace event page discovered from
        * the calendar instead.
        */
+      const title = decodeHtmlText(event.title);
+
       const enriched: FirstPartyHarvestEvent = {
         ...event,
+        title,
         sourceUrl: event.sourceUrl ?? pageUrl,
         rawPayload: {
           ...event.rawPayload,
+          summary: title,
           sourceUrl:
             event.sourceUrl ?? pageUrl,
           icalUrl,
