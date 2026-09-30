@@ -250,7 +250,17 @@ export async function fetchNextRscEvents(
   }
 
   return [...byId.values()]
-    .filter((event) => event.isDraft !== true)
+    /*
+     * This RSC event schema exposes its own lifecycle state.
+     * Harvest only the source's current upcoming inventory rather
+     * than bootstrapping historical/past events embedded in Flight
+     * data. Draft records remain excluded independently.
+     */
+    .filter(
+      (event) =>
+        event.isDraft !== true &&
+        cleanText(event.status)?.toLowerCase() === "upcoming"
+    )
     .map((event) => mapRscEvent(event, sourceUrl))
     .filter(
       (event): event is FirstPartyHarvestEvent =>
