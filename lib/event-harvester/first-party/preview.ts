@@ -7,6 +7,7 @@ import {
 
 import { parseIcsEvents } from "./ics";
 import { fetchNextRscEvents } from "./next-rsc-events";
+import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
 
 export type FirstPartySource = {
@@ -139,6 +140,10 @@ export async function previewFirstPartySource(
     );
   } else if (source.source_type === "next_rsc_events") {
     events = await fetchNextRscEvents(
+      source.source_url
+    );
+  } else if (source.source_type === "squarespace_events") {
+    events = await fetchSquarespaceEvents(
       source.source_url
     );
   } else {
