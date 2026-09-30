@@ -6,6 +6,7 @@ import {
 } from "../identity";
 
 import { parseIcsEvents } from "./ics";
+import { fetchEventbriteOrganizerEvents } from "./eventbrite-organizer";
 import { fetchGoDaddyMenuRecurringEvents } from "./godaddy-menu-recurring";
 import { fetchNextRscEvents } from "./next-rsc-events";
 import { fetchSquarespaceEvents } from "./squarespace-events";
@@ -146,6 +147,30 @@ export async function previewFirstPartySource(
   } else if (source.source_type === "squarespace_events") {
     events = await fetchSquarespaceEvents(
       source.source_url
+    );
+  } else if (source.source_type === "eventbrite_organizer") {
+    const organizerId =
+      typeof source.config?.organizer_id === "string"
+        ? source.config.organizer_id
+        : null;
+
+    const venueId =
+      typeof source.config?.venue_id === "string"
+        ? source.config.venue_id
+        : null;
+
+    const sessionHorizonDays =
+      typeof source.config?.session_horizon_days === "number"
+        ? source.config.session_horizon_days
+        : undefined;
+
+    events = await fetchEventbriteOrganizerEvents(
+      source.source_url,
+      {
+        organizerId,
+        venueId,
+        sessionHorizonDays,
+      }
     );
   } else if (source.source_type === "godaddy_menu_recurring") {
     const timeZone =
