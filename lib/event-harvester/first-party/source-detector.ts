@@ -3,6 +3,7 @@ export type DetectedSourceType =
   | "godaddy_menu_recurring"
   | "cp_multi_view_calendar"
   | "uvtix_events"
+  | "shopify_events"
   | "calendar_image"
   | "spothopper_events"
   | "shared_event_calendar"
@@ -62,8 +63,7 @@ export type SiteDetectionResult = {
   error: string | null;
 };
 
-const USER_AGENT =
-  "TenderFans Event Harvester/1.0";
+const USER_AGENT = "TenderFans Event Harvester/1.0";
 
 const EVENT_HINT =
   /\b(events?|calendar|live[-\s]?music|music|entertainment|shows?|what'?s[-\s]?on|things[-\s]?to[-\s]?do)\b/i;
@@ -78,17 +78,12 @@ function decodeHtml(value: string): string {
 }
 
 function stripTags(value: string): string {
-  return decodeHtml(
-    value.replace(/<[^>]*>/g, " ")
-  )
+  return decodeHtml(value.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function normalizeUrl(
-  raw: string,
-  base: string
-): string | null {
+function normalizeUrl(raw: string, base: string): string | null {
   try {
     const decoded = decodeHtml(raw.trim());
 
@@ -117,9 +112,7 @@ function normalizeUrl(
 
 function hostname(value: string): string {
   try {
-    return new URL(value).hostname
-      .toLowerCase()
-      .replace(/^www\./, "");
+    return new URL(value).hostname.toLowerCase().replace(/^www\./, "");
   } catch {
     return "";
   }
@@ -129,24 +122,17 @@ function sameSite(a: string, b: string): boolean {
   const ah = hostname(a);
   const bh = hostname(b);
 
-  return (
-    ah === bh ||
-    ah.endsWith(`.${bh}`) ||
-    bh.endsWith(`.${ah}`)
-  );
+  return ah === bh || ah.endsWith(`.${bh}`) || bh.endsWith(`.${ah}`);
 }
 
 function discoverLinks(
   html: string,
-  pageUrl: string
+  pageUrl: string,
 ): Array<{
   url: string;
   text: string;
 }> {
-  const links = new Map<
-    string,
-    { url: string; text: string }
-  >();
+  const links = new Map<string, { url: string; text: string }>();
 
   const anchorPattern =
     /<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/gi;
@@ -163,15 +149,9 @@ function discoverLinks(
     const text = stripTags(match[3]);
 
     const knownEventProvider =
-      /(?:eventbrite\.com|uvtix\.com|urvenue\.com)/i.test(
-        url
-      );
+      /(?:eventbrite\.com|uvtix\.com|urvenue\.com)/i.test(url);
 
-    if (
-      EVENT_HINT.test(text) ||
-      EVENT_HINT.test(url) ||
-      knownEventProvider
-    ) {
+    if (EVENT_HINT.test(text) || EVENT_HINT.test(url) || knownEventProvider) {
       links.set(url, { url, text });
     }
   }
@@ -179,15 +159,10 @@ function discoverLinks(
   return [...links.values()];
 }
 
-function extractSitemapLocations(
-  xml: string,
-  baseUrl: string
-): string[] {
+function extractSitemapLocations(xml: string, baseUrl: string): string[] {
   const urls = new Set<string>();
 
-  for (const match of xml.matchAll(
-    /<loc\b[^>]*>([\s\S]*?)<\/loc>/gi
-  )) {
+  for (const match of xml.matchAll(/<loc\b[^>]*>([\s\S]*?)<\/loc>/gi)) {
     const raw = stripTags(match[1]);
     const url = normalizeUrl(raw, baseUrl);
 
@@ -199,16 +174,11 @@ function extractSitemapLocations(
   return [...urls];
 }
 
-function extractRobotsSitemaps(
-  robots: string,
-  baseUrl: string
-): string[] {
+function extractRobotsSitemaps(robots: string, baseUrl: string): string[] {
   const urls = new Set<string>();
 
   for (const line of robots.split(/\r?\n/)) {
-    const match = line.match(
-      /^\s*sitemap\s*:\s*(.+?)\s*$/i
-    );
+    const match = line.match(/^\s*sitemap\s*:\s*(.+?)\s*$/i);
 
     if (!match) {
       continue;
@@ -226,15 +196,13 @@ function extractRobotsSitemaps(
 
 function withinHomepagePathScope(
   candidateUrl: string,
-  homepageUrl: string
+  homepageUrl: string,
 ): boolean {
   try {
     const homepage = new URL(homepageUrl);
     const candidate = new URL(candidateUrl);
 
-    const homeSegments = homepage.pathname
-      .split("/")
-      .filter(Boolean);
+    const homeSegments = homepage.pathname.split("/").filter(Boolean);
 
     /*
      * A root-hosted website owns the host and therefore has
@@ -244,30 +212,24 @@ function withinHomepagePathScope(
       return true;
     }
 
-    const candidateSegments = candidate.pathname
-      .split("/")
-      .filter(Boolean);
+    const candidateSegments = candidate.pathname.split("/").filter(Boolean);
 
     return (
       candidateSegments.length > 0 &&
-      candidateSegments[0].toLowerCase() ===
-        homeSegments[0].toLowerCase()
+      candidateSegments[0].toLowerCase() === homeSegments[0].toLowerCase()
     );
   } catch {
     return false;
   }
 }
 
-async function discoverSecondaryEventLinks(
-  homepageUrl: string
-): Promise<Array<{
-  url: string;
-  text: string;
-}>> {
-  const discovered = new Map<
-    string,
-    { url: string; text: string }
-  >();
+async function discoverSecondaryEventLinks(homepageUrl: string): Promise<
+  Array<{
+    url: string;
+    text: string;
+  }>
+> {
+  const discovered = new Map<string, { url: string; text: string }>();
 
   const sitemapUrls = new Set<string>();
 
@@ -277,18 +239,12 @@ async function discoverSecondaryEventLinks(
    * try the conventional sitemap.xml location.
    */
   try {
-    const robotsUrl = new URL(
-      "/robots.txt",
-      homepageUrl
-    ).toString();
+    const robotsUrl = new URL("/robots.txt", homepageUrl).toString();
 
     const robots = await fetchHtml(robotsUrl);
 
     if (robots.ok) {
-      for (const url of extractRobotsSitemaps(
-        robots.html,
-        robots.url
-      )) {
+      for (const url of extractRobotsSitemaps(robots.html, robots.url)) {
         sitemapUrls.add(url);
       }
     }
@@ -297,9 +253,7 @@ async function discoverSecondaryEventLinks(
   }
 
   try {
-    sitemapUrls.add(
-      new URL("/sitemap.xml", homepageUrl).toString()
-    );
+    sitemapUrls.add(new URL("/sitemap.xml", homepageUrl).toString());
   } catch {
     // Invalid homepage URL is already handled upstream.
   }
@@ -319,10 +273,7 @@ async function discoverSecondaryEventLinks(
   ) {
     const sitemapUrl = sitemapQueue.shift()!;
 
-    if (
-      visitedSitemaps.has(sitemapUrl) ||
-      !sameSite(sitemapUrl, homepageUrl)
-    ) {
+    if (visitedSitemaps.has(sitemapUrl) || !sameSite(sitemapUrl, homepageUrl)) {
       continue;
     }
 
@@ -335,19 +286,14 @@ async function discoverSecondaryEventLinks(
         continue;
       }
 
-      for (const url of extractSitemapLocations(
-        sitemap.html,
-        sitemap.url
-      )) {
+      for (const url of extractSitemapLocations(sitemap.html, sitemap.url)) {
         if (!sameSite(url, homepageUrl)) {
           continue;
         }
 
         if (
           /\.xml(?:$|\?)/i.test(url) &&
-          visitedSitemaps.size +
-            sitemapQueue.length <
-            8
+          visitedSitemaps.size + sitemapQueue.length < 8
         ) {
           sitemapQueue.push(url);
           continue;
@@ -355,10 +301,7 @@ async function discoverSecondaryEventLinks(
 
         if (
           EVENT_HINT.test(url) &&
-          withinHomepagePathScope(
-            url,
-            homepageUrl
-          ) &&
+          withinHomepagePathScope(url, homepageUrl) &&
           discovered.size < 8
         ) {
           discovered.set(url, {
@@ -377,11 +320,10 @@ async function discoverSecondaryEventLinks(
 
 function pushDetection(
   detections: SourceDetection[],
-  detection: SourceDetection
+  detection: SourceDetection,
 ) {
   const existing = detections.find(
-    (item) =>
-      item.sourceType === detection.sourceType
+    (item) => item.sourceType === detection.sourceType,
   );
 
   if (!existing) {
@@ -396,8 +338,7 @@ function pushDetection(
   } as const;
 
   if (
-    confidenceRank[detection.confidence] >
-    confidenceRank[existing.confidence]
+    confidenceRank[detection.confidence] > confidenceRank[existing.confidence]
   ) {
     existing.confidence = detection.confidence;
   }
@@ -418,12 +359,12 @@ function pushDetection(
 function inspectPage(
   html: string,
   pageUrl: string,
-  detections: SourceDetection[]
+  detections: SourceDetection[],
 ) {
   const lower = html.toLowerCase();
 
   const eventbriteOrganizerMatch = html.match(
-    /https?:\\?\/\\?\/(?:www\\?\.)?eventbrite\\?\.com\\?\/o\\?\/[^"'<>\\\\\s]+/i
+    /https?:\\?\/\\?\/(?:www\\?\.)?eventbrite\\?\.com\\?\/o\\?\/[^"'<>\\\\\s]+/i,
   );
 
   if (eventbriteOrganizerMatch) {
@@ -432,35 +373,29 @@ function inspectPage(
       url: decodeHtml(
         eventbriteOrganizerMatch[0]
           .replace(/\\\\\//g, "/")
-          .replace(/\\u0026/gi, "&")
+          .replace(/\\u0026/gi, "&"),
       ),
       confidence: "high",
       adapterAvailable: true,
       supported: true,
-      evidence: [
-        "Direct Eventbrite organizer URL found in page HTML",
-      ],
+      evidence: ["Direct Eventbrite organizer URL found in page HTML"],
     });
   }
 
   const eventbriteEventMatch = html.match(
-    /https?:\\?\/\\?\/(?:www\\?\.)?eventbrite\\?\.com\\?\/e\\?\/[^"'<>\\\s]+/i
+    /https?:\\?\/\\?\/(?:www\\?\.)?eventbrite\\?\.com\\?\/e\\?\/[^"'<>\\\s]+/i,
   );
 
   if (eventbriteEventMatch) {
     pushDetection(detections, {
       sourceType: "eventbrite_organizer",
       url: decodeHtml(
-        eventbriteEventMatch[0]
-          .replace(/\\\//g, "/")
-          .replace(/\\u0026/gi, "&")
+        eventbriteEventMatch[0].replace(/\\\//g, "/").replace(/\\u0026/gi, "&"),
       ),
       confidence: "medium",
       adapterAvailable: true,
       supported: true,
-      evidence: [
-        "Direct Eventbrite event URL found in page HTML",
-      ],
+      evidence: ["Direct Eventbrite event URL found in page HTML"],
     });
   }
 
@@ -474,15 +409,11 @@ function inspectPage(
     !eventbriteOrganizerMatch &&
     !eventbriteEventMatch &&
     /\beventbrite\b/i.test(html) &&
-    (
-      /directed to your Eventbrite page/i.test(html) ||
-      /Eventbrite calendars?/i.test(html)
-    ) &&
-    (
-      /purchase tickets?/i.test(html) ||
+    (/directed to your Eventbrite page/i.test(html) ||
+      /Eventbrite calendars?/i.test(html)) &&
+    (/purchase tickets?/i.test(html) ||
       /sync with external calendars?/i.test(html) ||
-      /display multiple events?/i.test(html)
-    )
+      /display multiple events?/i.test(html))
   ) {
     pushDetection(detections, {
       sourceType: "eventbrite_organizer",
@@ -495,6 +426,50 @@ function inspectPage(
         "Multiple Eventbrite integration signals found",
       ],
     });
+  }
+
+  /*
+   * Shopify event collections expose a stable public JSON
+   * product feed. Require both Shopify storefront evidence
+   * and an event-oriented collection path so an ordinary
+   * Shopify store is not classified as an event source.
+   */
+  if (
+    (/cdn\.shopify\.com/i.test(html) ||
+      /Shopify\.(?:theme|routes|shop)/i.test(html) ||
+      /shopify-section/i.test(html)) &&
+    /\/collections\/[^"'<>?\s]*(?:event|calendar)[^"'<>?\s]*/i.test(pageUrl)
+  ) {
+    try {
+      const collectionUrl = new URL(pageUrl);
+      const match = collectionUrl.pathname.match(
+        /^(\/collections\/[^/]+)\/?$/i,
+      );
+
+      if (match) {
+        const feedUrl = new URL(
+          `${match[1]}/products.json`,
+          collectionUrl.origin,
+        );
+
+        feedUrl.searchParams.set("limit", "250");
+
+        pushDetection(detections, {
+          sourceType: "shopify_events",
+          url: feedUrl.toString(),
+          confidence: "high",
+          adapterAvailable: true,
+          supported: true,
+          evidence: [
+            "Shopify storefront signature",
+            "Event-oriented Shopify collection",
+            "Shopify collection product feed",
+          ],
+        });
+      }
+    } catch {
+      // Preserve other detector evidence if URL parsing fails.
+    }
   }
 
   if (
@@ -534,10 +509,7 @@ function inspectPage(
 
   if (
     /uvtix\.com/i.test(html) &&
-    (
-      /urvenue\.com/i.test(html) ||
-      /application\/ld\+json/i.test(html)
-    ) &&
+    (/urvenue\.com/i.test(html) || /application\/ld\+json/i.test(html)) &&
     /"@type"\s*:\s*"Event"/i.test(html)
   ) {
     pushDetection(detections, {
@@ -553,10 +525,7 @@ function inspectPage(
     });
   }
 
-  if (
-    /\?format=ical\b/i.test(html) ||
-    /text\/calendar/i.test(html)
-  ) {
+  if (/\?format=ical\b/i.test(html) || /text\/calendar/i.test(html)) {
     pushDetection(detections, {
       sourceType: "squarespace_events",
       url: pageUrl,
@@ -575,10 +544,7 @@ function inspectPage(
     let tribeUrl = pageUrl;
 
     try {
-      tribeUrl = new URL(
-        "/wp-json/tribe/events/v1/events",
-        pageUrl
-      ).toString();
+      tribeUrl = new URL("/wp-json/tribe/events/v1/events", pageUrl).toString();
     } catch {
       // Keep page URL as evidence if URL construction fails.
     }
@@ -595,11 +561,9 @@ function inspectPage(
 
   if (
     /self\.__next_f\.push/i.test(html) &&
-    (
-      /"startDate"/i.test(html) ||
+    (/"startDate"/i.test(html) ||
       /"startTime"/i.test(html) ||
-      /"isDraft"/i.test(html)
-    )
+      /"isDraft"/i.test(html))
   ) {
     pushDetection(detections, {
       sourceType: "next_rsc_events",
@@ -607,40 +571,28 @@ function inspectPage(
       confidence: "medium",
       adapterAvailable: true,
       supported: true,
-      evidence: [
-        "Next.js RSC payload with event-like fields",
-      ],
+      evidence: ["Next.js RSC payload with event-like fields"],
     });
   }
 
-  if (
-    /wp-admin\/admin-ajax\.php/i.test(html) &&
-    /get_events/i.test(html)
-  ) {
+  if (/wp-admin\/admin-ajax\.php/i.test(html) && /get_events/i.test(html)) {
     pushDetection(detections, {
       sourceType: "wordpress_ajax_events",
       url: pageUrl,
       confidence: "high",
       adapterAvailable: false,
       supported: false,
-      evidence: [
-        "WordPress AJAX event endpoint signature",
-      ],
+      evidence: ["WordPress AJAX event endpoint signature"],
     });
   }
 
   if (
-    (
-      /(?:calendar|events?)\.time\.ly/i.test(html) ||
+    (/(?:calendar|events?)\.time\.ly/i.test(html) ||
       /timely-event/i.test(html) ||
       /timely-calendar/i.test(html) ||
       /data-timely/i.test(html) ||
-      /timely\/calendar/i.test(html)
-    ) &&
-    (
-      /calendar/i.test(lower) ||
-      /events/i.test(lower)
-    )
+      /timely\/calendar/i.test(html)) &&
+    (/calendar/i.test(lower) || /events/i.test(lower))
   ) {
     pushDetection(detections, {
       sourceType: "timely",
@@ -663,17 +615,15 @@ function inspectPage(
       confidence: "high",
       adapterAvailable: false,
       supported: false,
-      evidence: [
-        "SpotHopper / SpotApps platform signature",
-      ],
+      evidence: ["SpotHopper / SpotApps platform signature"],
     });
   }
 
   const calendarImageMatches = [
     ...html.matchAll(
-      /(?:src|data-src)=["']([^"']*(?:wp-content\/uploads|\/uploads\/)[^"']*(?:calendar|entertainment|live[-_ ]?music|events?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?[0-9]{2,4}|(?:^|[-_/])(?:0?[1-9]|1[0-2])[-_](?:20[0-9]{2}))[^"']*\.(?:jpe?g|png|webp)(?:\?[^"']*)?)["']/gi
+      /(?:src|data-src)=["']([^"']*(?:wp-content\/uploads|\/uploads\/)[^"']*(?:calendar|entertainment|live[-_ ]?music|events?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?[0-9]{2,4}|(?:^|[-_/])(?:0?[1-9]|1[0-2])[-_](?:20[0-9]{2}))[^"']*\.(?:jpe?g|png|webp)(?:\?[^"']*)?)["']/gi,
     ),
-  ]
+  ];
 
   if (calendarImageMatches.length > 0) {
     pushDetection(detections, {
@@ -682,30 +632,25 @@ function inspectPage(
       confidence: "medium",
       adapterAvailable: false,
       supported: false,
-      evidence: [
-        "Event/calendar-like uploaded image found",
-      ],
+      evidence: ["Event/calendar-like uploaded image found"],
     });
   }
 
   if (
     /eventlist-event/i.test(html) &&
     /(?:hotel|rooftop|restaurant|bar)/i.test(html) &&
-    (
-      /\/events\/[^"'<>\s]+/i.test(html) ||
-      /\?format=ical\b/i.test(html)
-    )
+    (/\/events\/[^"'<>\s]+/i.test(html) || /\?format=ical\b/i.test(html))
   ) {
     const eventTitles = [
       ...html.matchAll(
-        /eventlist-title[^>]*>[\s\S]{0,250}?>([^<]{2,160})<\/a>/gi
+        /eventlist-title[^>]*>[\s\S]{0,250}?>([^<]{2,160})<\/a>/gi,
       ),
     ]
       .map((match) => stripTags(match[1]))
       .filter(Boolean);
 
     const namedVenueTitles = eventTitles.filter((title) =>
-      /\b(?:at|@)\s+[A-Z][\w'’& -]{2,}/.test(title)
+      /\b(?:at|@)\s+[A-Z][\w'’& -]{2,}/.test(title),
     );
 
     if (namedVenueTitles.length > 0) {
@@ -714,7 +659,7 @@ function inspectPage(
         url: pageUrl,
         confidence: "medium",
         adapterAvailable: false,
-      supported: false,
+        supported: false,
         evidence: [
           "Event collection contains explicitly named venue events",
           "Shared-calendar venue attribution may be required",
@@ -727,13 +672,10 @@ function inspectPage(
 async function inspectProviderHandoffs(
   html: string,
   pageUrl: string,
-  detections: SourceDetection[]
+  detections: SourceDetection[],
 ): Promise<number> {
-  const providerLinks = discoverLinks(
-    html,
-    pageUrl
-  ).filter((link) =>
-    /(?:uvtix\.com|urvenue\.com)/i.test(link.url)
+  const providerLinks = discoverLinks(html, pageUrl).filter((link) =>
+    /(?:uvtix\.com|urvenue\.com)/i.test(link.url),
   );
 
   const seen = new Set<string>();
@@ -754,11 +696,7 @@ async function inspectProviderHandoffs(
         continue;
       }
 
-      inspectPage(
-        providerPage.html,
-        providerPage.url,
-        detections
-      );
+      inspectPage(providerPage.html, providerPage.url, detections);
     } catch {
       // Provider handoff discovery is best-effort.
     }
@@ -775,8 +713,7 @@ async function fetchHtml(url: string): Promise<{
 }> {
   const response = await fetch(url, {
     headers: {
-      Accept:
-        "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+      Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
       "User-Agent": USER_AGENT,
     },
     redirect: "follow",
@@ -792,7 +729,7 @@ async function fetchHtml(url: string): Promise<{
 }
 
 export async function detectFirstPartySources(
-  websiteUrl: string
+  websiteUrl: string,
 ): Promise<SiteDetectionResult> {
   const detections: SourceDetection[] = [];
   let homepage;
@@ -807,10 +744,7 @@ export async function detectFirstPartySources(
       pagesInspected: 0,
       discoveredEventPages: [],
       detections: [],
-      error:
-        error instanceof Error
-          ? error.message
-          : String(error),
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 
@@ -834,11 +768,7 @@ export async function detectFirstPartySources(
   const requestedHost = hostname(websiteUrl);
   const fetchedHost = hostname(homepage.url);
 
-  if (
-    requestedHost &&
-    fetchedHost &&
-    !sameSite(websiteUrl, homepage.url)
-  ) {
+  if (requestedHost && fetchedHost && !sameSite(websiteUrl, homepage.url)) {
     return {
       websiteUrl,
       fetchedUrl: homepage.url,
@@ -846,23 +776,15 @@ export async function detectFirstPartySources(
       pagesInspected: 1,
       discoveredEventPages: [],
       detections: [],
-      error:
-        `Website redirected from ${requestedHost} to unrelated host ${fetchedHost}`,
+      error: `Website redirected from ${requestedHost} to unrelated host ${fetchedHost}`,
     };
   }
 
-  inspectPage(
-    homepage.html,
-    homepage.url,
-    detections
-  );
+  inspectPage(homepage.html, homepage.url, detections);
 
   const homeHost = hostname(homepage.url);
 
-  if (
-    homeHost === "facebook.com" ||
-    homeHost.endsWith(".facebook.com")
-  ) {
+  if (homeHost === "facebook.com" || homeHost.endsWith(".facebook.com")) {
     pushDetection(detections, {
       sourceType: "facebook",
       url: homepage.url,
@@ -873,10 +795,7 @@ export async function detectFirstPartySources(
     });
   }
 
-  if (
-    homeHost === "linktr.ee" ||
-    homeHost.endsWith(".linktr.ee")
-  ) {
+  if (homeHost === "linktr.ee" || homeHost.endsWith(".linktr.ee")) {
     pushDetection(detections, {
       sourceType: "linktree",
       url: homepage.url,
@@ -887,13 +806,11 @@ export async function detectFirstPartySources(
     });
   }
 
-  const primaryLinks = discoverLinks(
-    homepage.html,
-    homepage.url
-  ).filter((link) =>
-    sameSite(link.url, homepage.url) ||
-    /eventbrite\.com/i.test(link.url) ||
-    /uvtix\.com/i.test(link.url)
+  const primaryLinks = discoverLinks(homepage.html, homepage.url).filter(
+    (link) =>
+      sameSite(link.url, homepage.url) ||
+      /eventbrite\.com/i.test(link.url) ||
+      /uvtix\.com/i.test(link.url),
   );
 
   /*
@@ -902,29 +819,20 @@ export async function detectFirstPartySources(
    * from server-rendered navigation but present in their
    * sitemap/site metadata.
    */
-  const secondaryLinks =
-    await discoverSecondaryEventLinks(homepage.url);
+  const secondaryLinks = await discoverSecondaryEventLinks(homepage.url);
 
-  const candidateLinkMap = new Map<
-    string,
-    { url: string; text: string }
-  >();
+  const candidateLinkMap = new Map<string, { url: string; text: string }>();
 
-  for (const link of [
-    ...primaryLinks,
-    ...secondaryLinks,
-  ]) {
+  for (const link of [...primaryLinks, ...secondaryLinks]) {
     if (!candidateLinkMap.has(link.url)) {
       candidateLinkMap.set(link.url, link);
     }
   }
 
-  const candidateLinks = [
-    ...candidateLinkMap.values(),
-  ].slice(0, 12);
+  const candidateLinks = [...candidateLinkMap.values()].slice(0, 12);
 
-  const discoveredEventPages: DiscoveredEventPage[] =
-    candidateLinks.map((link) => ({
+  const discoveredEventPages: DiscoveredEventPage[] = candidateLinks.map(
+    (link) => ({
       url: link.url,
       linkText: link.text,
       sameSite: sameSite(link.url, homepage.url),
@@ -932,13 +840,14 @@ export async function detectFirstPartySources(
       httpStatus: null,
       finalUrl: null,
       htmlBytes: null,
-    }));
+    }),
+  );
 
   let pagesInspected = 1;
 
   for (const link of candidateLinks) {
     const discovered = discoveredEventPages.find(
-      (page) => page.url === link.url
+      (page) => page.url === link.url,
     );
     if (link.url === homepage.url) {
       continue;
@@ -950,10 +859,8 @@ export async function detectFirstPartySources(
         url: link.url,
         confidence: "high",
         adapterAvailable: true,
-      supported: true,
-        evidence: [
-          "Direct Eventbrite organizer link discovered",
-        ],
+        supported: true,
+        evidence: ["Direct Eventbrite organizer link discovered"],
       });
       continue;
     }
@@ -964,10 +871,8 @@ export async function detectFirstPartySources(
         url: link.url,
         confidence: "medium",
         adapterAvailable: true,
-      supported: true,
-        evidence: [
-          "Direct Eventbrite event link discovered",
-        ],
+        supported: true,
+        evidence: ["Direct Eventbrite event link discovered"],
       });
       continue;
     }
@@ -985,11 +890,7 @@ export async function detectFirstPartySources(
         }
 
         if (page.ok) {
-          inspectPage(
-            page.html,
-            page.url,
-            detections
-          );
+          inspectPage(page.html, page.url, detections);
         }
       } catch {
         // External UVTix discovery failure does not fail the site scan.
@@ -1016,18 +917,13 @@ export async function detectFirstPartySources(
         continue;
       }
 
-      inspectPage(
+      inspectPage(page.html, page.url, detections);
+
+      pagesInspected += await inspectProviderHandoffs(
         page.html,
         page.url,
-        detections
+        detections,
       );
-
-      pagesInspected +=
-        await inspectProviderHandoffs(
-          page.html,
-          page.url,
-          detections
-        );
     } catch {
       // Individual discovery-page failures do not fail the site scan.
     }
@@ -1036,10 +932,7 @@ export async function detectFirstPartySources(
   return {
     websiteUrl,
     fetchedUrl: homepage.url,
-    status:
-      detections.length > 0
-        ? "detected"
-        : "no_event_source",
+    status: detections.length > 0 ? "detected" : "no_event_source",
     pagesInspected,
     discoveredEventPages,
     detections,

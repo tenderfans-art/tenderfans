@@ -6,6 +6,20 @@ import {
   type SiteDetectionResult,
 } from "@/lib/event-harvester/first-party/source-detector";
 
+import {
+  ratifyDetectedSource,
+  type SourceRatification,
+} from "@/lib/event-harvester/first-party/ratify";
+
+import {
+  validateFirstPartySource,
+  type FirstPartySourceValidation,
+} from "@/lib/event-harvester/first-party/validate";
+
+import type {
+  FirstPartySource,
+} from "@/lib/event-harvester/first-party/preview";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -23,11 +37,13 @@ export async function GET() {
 
     const { data: venues, error } = await supabase
       .from("venues")
-      .select("id,name,website_url")
+      .select(
+        "id,name,website_url,street_address,city,state_region,postal_code,country_code,latitude,longitude"
+      )
       .eq("status", "active")
       .not("website_url", "is", null)
       .order("created_at", { ascending: false })
-      .limit(30);
+      .range(30, 59);
 
     if (error) {
       throw new Error(
@@ -35,10 +51,17 @@ export async function GET() {
       );
     }
 
+    type RatificationProbe = {
+      detectedUrl: string;
+      ratification: SourceRatification;
+      validation: FirstPartySourceValidation | null;
+    };
+
     const results: Array<
       SiteDetectionResult & {
         venueId: string;
         name: string;
+        ratificationProbes: RatificationProbe[];
       }
     > = [];
 
@@ -57,10 +80,91 @@ export async function GET() {
           venue.website_url
         );
 
+      const ratificationProbes: RatificationProbe[] = [];
+
+      /*
+       * Exercise every detected source for which TenderFans has
+       * an implemented adapter.
+       *
+       * Provider-specific attribution remains inside the
+       * ratifier. Eventbrite receives its stronger physical-venue
+       * check there; ordinary first-party event surfaces can
+       * proceed directly to adapter validation.
+       */
+      for (const candidate of detection.detections) {
+        if (!candidate.adapterAvailable) {
+          continue;
+        }
+
+        const ratification =
+          await ratifyDetectedSource(
+            candidate,
+            {
+              name: venue.name,
+              streetAddress:
+                venue.street_address,
+              city: venue.city,
+              region: venue.state_region,
+              postalCode:
+                venue.postal_code,
+              country:
+                venue.country_code,
+              latitude: venue.latitude,
+              longitude: venue.longitude,
+            }
+          );
+
+        let validation:
+          | FirstPartySourceValidation
+          | null = null;
+
+        if (
+          ratification.status ===
+          "ratified"
+        ) {
+          /*
+           * Validation is deliberately read-only. Build the
+           * transient source shape expected by the existing
+           * preview adapter without registering anything in
+           * event_harvest_sources.
+           */
+          const source: FirstPartySource = {
+            id: `probe:${venue.id}`,
+            provider: "first_party",
+            source_type:
+              ratification.source.sourceType,
+            name:
+              `${venue.name} compatibility probe`,
+            source_url:
+              ratification.source.sourceUrl,
+            external_source_id:
+              ratification.source.externalSourceId,
+            venue_id: venue.id,
+            is_enabled: true,
+            trust_level: "trusted",
+            config:
+              ratification.source.config,
+            bootstrapped_at: null,
+          };
+
+          validation =
+            await validateFirstPartySource(
+              source
+            );
+        }
+
+        ratificationProbes.push({
+          detectedUrl: candidate.url,
+          ratification,
+          validation,
+        });
+      }
+
       results.push({
         venueId: venue.id,
         name: venue.name,
         ...detection,
+        ratificationProbes,
       });
     }
 
@@ -111,6 +215,32 @@ export async function GET() {
         (r) =>
           r.detections.some(
             (d) => d.sourceType === "shared_event_calendar"
+          )
+      ).length,
+      ratified: rows.filter(
+        (r) =>
+          r.ratificationProbes.some(
+            (probe) =>
+              probe.ratification.status ===
+              "ratified"
+          )
+      ).length,
+      validated: rows.filter(
+        (r) =>
+          r.ratificationProbes.some(
+            (probe) =>
+              probe.validation?.status ===
+              "validated"
+          )
+      ).length,
+      validatedWithInventory: rows.filter(
+        (r) =>
+          r.ratificationProbes.some(
+            (probe) =>
+              probe.validation?.status ===
+                "validated" &&
+              probe.validation.inventory ===
+                "available"
           )
       ).length,
     });
