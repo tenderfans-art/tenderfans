@@ -11,6 +11,7 @@ import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
 import { fetchUvTixEvents } from "./uvtix-events";
 import { fetchShopifyEvents } from "./shopify-events";
+import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
 import { fetchSpotHopperEvents } from "./spothopper-events";
 
 export type FirstPartySource = {
@@ -222,6 +223,16 @@ export async function previewFirstPartySource(
       timeZone,
       weeksForward,
     });
+  } else if (source.source_type === "wordpress_event_feed") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    events = await fetchWordPressEventFeedEvents(
+      source.source_url,
+      { timeZone },
+    );
   } else {
     throw new Error(
       `Unsupported first-party source type: ${source.source_type}`,

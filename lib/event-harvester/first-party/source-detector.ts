@@ -12,6 +12,7 @@ export type DetectedSourceType =
   | "next_rsc_events"
   | "ics"
   | "wordpress_ajax_events"
+  | "wordpress_event_feed"
   | "timely"
   | "facebook"
   | "linktree"
@@ -602,6 +603,35 @@ function inspectPage(
       supported: false,
       evidence: ["Concrete Timely calendar signature"],
     });
+  }
+
+  const wordpressEventFeedMatch = html.match(
+    /<link\b[^>]*rel=["']alternate["'][^>]*type=["']application\/rss\+xml["'][^>]*title=["'][^"']*\bEvents Feed\b[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>/i,
+  ) ?? html.match(
+    /<link\b[^>]*href=["']([^"']+\/events\/feed\/?)["'][^>]*type=["']application\/rss\+xml["'][^>]*>/i,
+  );
+
+  if (
+    wordpressEventFeedMatch?.[1] &&
+    /\bjs-event-entry\b|\bc-events__body\b/i.test(html)
+  ) {
+    const feedUrl = normalizeUrl(
+      wordpressEventFeedMatch[1],
+      pageUrl,
+    );
+
+    if (feedUrl) {
+      pushDetection(detections, {
+        sourceType: "wordpress_event_feed",
+        url: pageUrl,
+        confidence: "high",
+        adapterAvailable: true,
+        supported: true,
+        evidence: [
+          "WordPress Events RSS feed with structured event entries",
+        ],
+      });
+    }
   }
 
   if (
