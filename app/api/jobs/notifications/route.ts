@@ -966,6 +966,95 @@ async function processFollowBatch(
 
     subscriptions =
       expandedSubscriptions;
+
+    /*
+     * A direct Spot follow and a Tender follow at that Spot are
+     * alternate paths to the same event notification, not reasons
+     * to deliver the same notification twice.
+     *
+     * Prefer the direct Spot subscription for any destination/channel
+     * it already covers. Preserve Tender-derived delivery for channels
+     * or destinations not covered by a direct Spot follow so Tender-only
+     * followers still receive the contextual notification.
+     */
+    const directSpotEmailDestinations =
+      new Set(
+        subscriptions
+          .filter(
+            (subscription) =>
+              !subscription.followed_tender_id &&
+              subscription.wants_email &&
+              subscription.email_verified &&
+              subscription.email
+          )
+          .map(
+            (subscription) =>
+              subscription.email!
+                .trim()
+                .toLowerCase()
+          )
+      );
+
+    const directSpotSmsDestinations =
+      new Set(
+        subscriptions
+          .filter(
+            (subscription) =>
+              !subscription.followed_tender_id &&
+              subscription.wants_sms &&
+              subscription.phone_verified &&
+              subscription.phone_e164
+          )
+          .map(
+            (subscription) =>
+              subscription.phone_e164!
+                .trim()
+          )
+      );
+
+    subscriptions =
+      subscriptions
+        .map((subscription) => {
+          if (
+            !subscription.followed_tender_id
+          ) {
+            return subscription;
+          }
+
+          const emailCovered =
+            Boolean(
+              subscription.email &&
+              directSpotEmailDestinations.has(
+                subscription.email
+                  .trim()
+                  .toLowerCase()
+              )
+            );
+
+          const smsCovered =
+            Boolean(
+              subscription.phone_e164 &&
+              directSpotSmsDestinations.has(
+                subscription.phone_e164
+                  .trim()
+              )
+            );
+
+          return {
+            ...subscription,
+            wants_email:
+              subscription.wants_email &&
+              !emailCovered,
+            wants_sms:
+              subscription.wants_sms &&
+              !smsCovered,
+          };
+        })
+        .filter(
+          (subscription) =>
+            subscription.wants_email ||
+            subscription.wants_sms
+        );
   }
 
   let message =
