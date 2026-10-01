@@ -11,6 +11,7 @@ import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
 import { fetchUvTixEvents } from "./uvtix-events";
 import { fetchShopifyEvents } from "./shopify-events";
+import { fetchSpotHopperEvents } from "./spothopper-events";
 
 export type FirstPartySource = {
   id: string;
@@ -205,6 +206,21 @@ export async function previewFirstPartySource(
 
     events = await fetchUvTixEvents(source.source_url, {
       timeZone,
+    });
+  } else if (source.source_type === "spothopper_events") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    const weeksForward =
+      typeof source.config?.weeks_forward === "number"
+        ? source.config.weeks_forward
+        : 8;
+
+    events = await fetchSpotHopperEvents(source.source_url, {
+      timeZone,
+      weeksForward,
     });
   } else {
     throw new Error(
