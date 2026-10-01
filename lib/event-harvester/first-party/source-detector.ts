@@ -20,6 +20,19 @@ export type SourceDetection = {
   sourceType: DetectedSourceType;
   url: string;
   confidence: "high" | "medium" | "low";
+  /**
+   * True when TenderFans has an implemented adapter capable of
+   * attempting this source type. This does NOT prove that the
+   * particular detected source has been validated for the Spot,
+   * nor that it currently contains publishable inventory.
+   */
+  adapterAvailable: boolean;
+
+  /**
+   * Legacy compatibility field. For now this mirrors
+   * adapterAvailable so existing scanner/reporting code keeps
+   * working while source validation is introduced separately.
+   */
   supported: boolean;
   evidence: string[];
 };
@@ -389,8 +402,11 @@ function pushDetection(
     existing.confidence = detection.confidence;
   }
 
-  existing.supported =
-    existing.supported || detection.supported;
+  existing.adapterAvailable =
+    existing.adapterAvailable || detection.adapterAvailable;
+
+  // Legacy compatibility: supported currently mirrors adapterAvailable.
+  existing.supported = existing.adapterAvailable;
 
   for (const evidence of detection.evidence) {
     if (!existing.evidence.includes(evidence)) {
@@ -419,6 +435,7 @@ function inspectPage(
           .replace(/\\u0026/gi, "&")
       ),
       confidence: "high",
+      adapterAvailable: true,
       supported: true,
       evidence: [
         "Direct Eventbrite organizer URL found in page HTML",
@@ -439,6 +456,7 @@ function inspectPage(
           .replace(/\\u0026/gi, "&")
       ),
       confidence: "medium",
+      adapterAvailable: true,
       supported: true,
       evidence: [
         "Direct Eventbrite event URL found in page HTML",
@@ -470,6 +488,7 @@ function inspectPage(
       sourceType: "eventbrite_organizer",
       url: pageUrl,
       confidence: "medium",
+      adapterAvailable: true,
       supported: true,
       evidence: [
         "Embedded Eventbrite event/ticket integration",
@@ -486,6 +505,7 @@ function inspectPage(
       sourceType: "godaddy_menu_recurring",
       url: pageUrl,
       confidence: "high",
+      adapterAvailable: true,
       supported: true,
       evidence: [
         "GoDaddy Website Builder signature",
@@ -503,6 +523,7 @@ function inspectPage(
       sourceType: "cp_multi_view_calendar",
       url: pageUrl,
       confidence: "high",
+      adapterAvailable: true,
       supported: true,
       evidence: [
         "CP Multi View Calendar plugin signature",
@@ -523,6 +544,7 @@ function inspectPage(
       sourceType: "uvtix_events",
       url: pageUrl,
       confidence: "high",
+      adapterAvailable: true,
       supported: true,
       evidence: [
         "UVTix / UrVenue platform signature",
@@ -539,6 +561,7 @@ function inspectPage(
       sourceType: "squarespace_events",
       url: pageUrl,
       confidence: "high",
+      adapterAvailable: true,
       supported: true,
       evidence: ["Per-event iCal links found"],
     });
@@ -564,6 +587,7 @@ function inspectPage(
       sourceType: "tribe_rest",
       url: tribeUrl,
       confidence: "high",
+      adapterAvailable: true,
       supported: true,
       evidence: ["The Events Calendar / Tribe signature"],
     });
@@ -581,6 +605,7 @@ function inspectPage(
       sourceType: "next_rsc_events",
       url: pageUrl,
       confidence: "medium",
+      adapterAvailable: true,
       supported: true,
       evidence: [
         "Next.js RSC payload with event-like fields",
@@ -596,6 +621,7 @@ function inspectPage(
       sourceType: "wordpress_ajax_events",
       url: pageUrl,
       confidence: "high",
+      adapterAvailable: false,
       supported: false,
       evidence: [
         "WordPress AJAX event endpoint signature",
@@ -620,6 +646,7 @@ function inspectPage(
       sourceType: "timely",
       url: pageUrl,
       confidence: "high",
+      adapterAvailable: false,
       supported: false,
       evidence: ["Concrete Timely calendar signature"],
     });
@@ -634,6 +661,7 @@ function inspectPage(
       sourceType: "spothopper_events",
       url: pageUrl,
       confidence: "high",
+      adapterAvailable: false,
       supported: false,
       evidence: [
         "SpotHopper / SpotApps platform signature",
@@ -652,6 +680,7 @@ function inspectPage(
       sourceType: "calendar_image",
       url: pageUrl,
       confidence: "medium",
+      adapterAvailable: false,
       supported: false,
       evidence: [
         "Event/calendar-like uploaded image found",
@@ -684,7 +713,8 @@ function inspectPage(
         sourceType: "shared_event_calendar",
         url: pageUrl,
         confidence: "medium",
-        supported: false,
+        adapterAvailable: false,
+      supported: false,
         evidence: [
           "Event collection contains explicitly named venue events",
           "Shared-calendar venue attribution may be required",
@@ -837,6 +867,7 @@ export async function detectFirstPartySources(
       sourceType: "facebook",
       url: homepage.url,
       confidence: "high",
+      adapterAvailable: false,
       supported: false,
       evidence: ["Spot website points to Facebook"],
     });
@@ -850,6 +881,7 @@ export async function detectFirstPartySources(
       sourceType: "linktree",
       url: homepage.url,
       confidence: "high",
+      adapterAvailable: false,
       supported: false,
       evidence: ["Spot website points to Linktree"],
     });
@@ -917,7 +949,8 @@ export async function detectFirstPartySources(
         sourceType: "eventbrite_organizer",
         url: link.url,
         confidence: "high",
-        supported: true,
+        adapterAvailable: true,
+      supported: true,
         evidence: [
           "Direct Eventbrite organizer link discovered",
         ],
@@ -930,7 +963,8 @@ export async function detectFirstPartySources(
         sourceType: "eventbrite_organizer",
         url: link.url,
         confidence: "medium",
-        supported: true,
+        adapterAvailable: true,
+      supported: true,
         evidence: [
           "Direct Eventbrite event link discovered",
         ],
