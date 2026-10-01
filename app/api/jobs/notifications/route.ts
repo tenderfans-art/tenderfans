@@ -14,6 +14,7 @@ const QUIET_EVENT_TYPES = new Set([
   "spot.menu_updated",
   "spot.special_updated",
   "spot.photo_updated",
+  "spot.event_published",
   "tender.profile_updated",
   "tender.photo_updated",
 ]);
@@ -967,11 +968,92 @@ async function processFollowBatch(
       expandedSubscriptions;
   }
 
-  const message =
+  let message =
     await buildFollowMessage(
       admin,
       leader
     );
+
+  /*
+   * Event publications use the same five-minute quiet window as
+   * other batchable follow activity. When several events from the
+   * same Spot arrive together, describe the whole batch rather than
+   * only the leader event.
+   */
+  if (
+    leader.event_type === "spot.event_published" &&
+    events.length > 1
+  ) {
+    const venue =
+      leader.venue_id
+        ? await loadVenue(
+            admin,
+            leader.venue_id
+          )
+        : null;
+
+    const eventIds = [
+      ...new Set(
+        events
+          .map(
+            (event) =>
+              metadataUuid(
+                event.metadata,
+                "event_id"
+              ) || event.source_id
+          )
+          .filter(
+            (id): id is string =>
+              Boolean(id)
+          )
+      ),
+    ];
+
+    let eventTitles: string[] = [];
+
+    if (eventIds.length > 0) {
+      const { data, error } = await admin
+        .from("events")
+        .select("id, title")
+        .in("id", eventIds);
+
+      if (error) {
+        throw error;
+      }
+
+      const titleById = new Map(
+        (data ?? []).map(
+          (event) => [
+            event.id,
+            event.title,
+          ]
+        )
+      );
+
+      eventTitles = eventIds
+        .map((id) => titleById.get(id))
+        .filter(
+          (title): title is string =>
+            Boolean(title)
+        );
+    }
+
+    const venueName =
+      venue?.name ?? "A TenderFans Spot";
+
+    const titleList =
+      eventTitles.length > 0
+        ? `: ${eventTitles.join(", ")}`
+        : "";
+
+    message = {
+      subject:
+        `${venueName} posted ${events.length} new events`,
+      text:
+        `${venueName} posted ${events.length} new events on TenderFans${titleList}.`,
+      url: "/events",
+    };
+  }
 
   /*
    * Spot and Tender follows are independent subscriptions.
