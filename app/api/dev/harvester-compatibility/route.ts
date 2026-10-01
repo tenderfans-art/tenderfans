@@ -22,7 +22,22 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+
+  const start = Math.max(
+    0,
+    Number.parseInt(searchParams.get("start") ?? "0", 10) || 0
+  );
+
+  const requestedEnd =
+    Number.parseInt(searchParams.get("end") ?? String(start + 29), 10) ||
+    start + 29;
+
+  const end = Math.max(
+    start,
+    Math.min(requestedEnd, start + 59)
+  );
   if (process.env.NODE_ENV === "production") {
     return new NextResponse("Not found", {
       status: 404,
@@ -43,7 +58,7 @@ export async function GET() {
       .eq("status", "active")
       .not("website_url", "is", null)
       .order("created_at", { ascending: false })
-      .range(30, 59);
+      .range(start, end);
 
     if (error) {
       throw new Error(
