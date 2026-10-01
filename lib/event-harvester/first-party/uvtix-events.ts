@@ -192,6 +192,99 @@ function timeString(
     : value;
 }
 
+function titleTimeRange(
+  title: string
+): {
+  startTime: string;
+  endTime: string | null;
+} | null {
+  const token =
+    String.raw`(?:noon|midnight|\d{1,2}(?::\d{2})?\s*(?:a|p|am|pm))`;
+
+  const match = title.match(
+    new RegExp(
+      String.raw`\b(${token})\s*(?:-|–|—|to|til|till)\s*(${token})\b`,
+      "i"
+    )
+  );
+
+  if (!match) return null;
+
+  const normalize = (
+    value: string
+  ): string | null => {
+    const normalized = value
+      .trim()
+      .toLowerCase();
+
+    if (normalized === "noon") {
+      return "12:00:00";
+    }
+
+    if (normalized === "midnight") {
+      return "00:00:00";
+    }
+
+    const timeMatch = normalized.match(
+      /^(\d{1,2})(?::(\d{2}))?\s*(a|p|am|pm)$/
+    );
+
+    if (!timeMatch) return null;
+
+    let hour = Number(timeMatch[1]);
+    const minute = Number(
+      timeMatch[2] ?? "0"
+    );
+    const meridiem = timeMatch[3][0];
+
+    if (
+      hour < 1 ||
+      hour > 12 ||
+      minute < 0 ||
+      minute > 59
+    ) {
+      return null;
+    }
+
+    if (hour === 12) {
+      hour = 0;
+    }
+
+    if (meridiem === "p") {
+      hour += 12;
+    }
+
+    return [
+      String(hour).padStart(2, "0"),
+      String(minute).padStart(2, "0"),
+      "00",
+    ].join(":");
+  };
+
+  const startTime = normalize(match[1]);
+  const endTime = normalize(match[2]);
+
+  if (!startTime || !endTime) {
+    return null;
+  }
+
+  return {
+    startTime,
+    endTime,
+  };
+}
+
+function isUvTixReservationInventory(
+  event: JsonLdEvent
+): boolean {
+  const title =
+    typeof event.name === "string"
+      ? event.name.trim()
+      : "";
+
+  return /^cabana\s+rental\b/i.test(title);
+}
+
 function dateString(value: unknown): string | null {
   return typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -376,7 +469,8 @@ export async function fetchUvTixEvents(
   for (const listing of listingEvents) {
     if (
       !listing.name ||
-      !dateString(listing.startDate)
+      !dateString(listing.startDate) ||
+      isUvTixReservationInventory(listing)
     ) {
       continue;
     }
@@ -388,6 +482,82 @@ export async function fetchUvTixEvents(
 
     if (!detailUrl) continue;
 
+    /*
+     * UVTix calendar listings commonly expose the event date in
+     * JSON-LD and the time range in the event title. Prefer that
+     * first-party listing data so a calendar with hundreds of
+     * events does not require hundreds of detail-page requests.
+     *
+     * If a future UVTix source does not expose a parseable title
+     * time, retain the detail-page path as a compatibility fallback.
+     */
+    const listingTitle =
+      decodeHtml(listing.name);
+
+    const listingRange =
+      titleTimeRange(listingTitle);
+
+    if (listingRange) {
+      const startDate =
+        dateString(listing.startDate);
+
+      if (!startDate) continue;
+
+      const startsAt = localDateTimeToIso(
+        startDate,
+        listingRange.startTime,
+        timeZone
+      );
+
+      let endsAt: string | null = null;
+
+      if (listingRange.endTime) {
+        const endDate =
+          listingRange.endTime <=
+          listingRange.startTime
+            ? addDays(startDate, 1)
+            : startDate;
+
+        endsAt = localDateTimeToIso(
+          endDate,
+          listingRange.endTime,
+          timeZone
+        );
+      }
+
+      results.push({
+        externalEventId: eventIdentity(
+          listing,
+          detailUrl
+        ),
+        title: listingTitle,
+        description: stripHtml(
+          listing.description
+        ),
+        startsAt,
+        endsAt,
+        allDay: false,
+        sourceUrl: detailUrl,
+        flyerUrl: imageUrl(
+          listing.image,
+          calendar.url
+        ),
+        location: formatLocation(
+          listing.location
+        ),
+        rawPayload: {
+          provider: "uvtix",
+          listing,
+          detail: null,
+          internal: null,
+          timeZone,
+          timingSource: "listing_title",
+        },
+      });
+
+      continue;
+    }
+
     const detail = await fetchHtml(detailUrl);
     const detailEvents =
       extractJsonLdEvents(detail.html);
@@ -396,6 +566,14 @@ export async function fetchUvTixEvents(
       detailEvents.find(
         (item) => item["@type"] === "Event"
       ) ?? listing;
+
+    if (
+      isUvTixReservationInventory(
+        detailEvent
+      )
+    ) {
+      continue;
+    }
 
     const internal =
       extractInternalEventRecord(detail.html);
@@ -439,35 +617,27 @@ export async function fetchUvTixEvents(
       );
     }
 
-    const title =
-      detailEvent.name ??
-      listing.name;
-
-    const description =
-      stripHtml(
-        typeof internal.descr === "string"
-          ? internal.descr
-          : detailEvent.description
-      );
-
-    const flyerUrl =
-      imageUrl(
-        detailEvent.image ?? listing.image,
-        detail.url
-      );
-
     results.push({
       externalEventId: eventIdentity(
         detailEvent,
         detail.url
       ),
-      title,
-      description,
+      title:
+        detailEvent.name ??
+        listing.name,
+      description: stripHtml(
+        typeof internal.descr === "string"
+          ? internal.descr
+          : detailEvent.description
+      ),
       startsAt,
       endsAt,
       allDay: false,
       sourceUrl: detail.url,
-      flyerUrl,
+      flyerUrl: imageUrl(
+        detailEvent.image ?? listing.image,
+        detail.url
+      ),
       location: formatLocation(
         detailEvent.location ??
           listing.location
@@ -478,6 +648,7 @@ export async function fetchUvTixEvents(
         detail: detailEvent,
         internal,
         timeZone,
+        timingSource: "detail",
       },
     });
   }
