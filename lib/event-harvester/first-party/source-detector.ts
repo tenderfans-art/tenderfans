@@ -929,6 +929,28 @@ export async function detectFirstPartySources(
     }
   }
 
+  /*
+   * Facebook is a non-ratified fallback signal only.
+   *
+   * If no stronger event source was discovered but the Spot's
+   * website links to Facebook, preserve that fact for later
+   * Facebook-adapter review. Do not attempt to associate the
+   * Facebook page with a specific venue or treat it as supported.
+   */
+  if (
+    detections.length === 0 &&
+    /https?:\/\/(?:www\.)?facebook\.com\//i.test(homepage.html)
+  ) {
+    pushDetection(detections, {
+      sourceType: "facebook",
+      url: homepage.url,
+      confidence: "medium",
+      adapterAvailable: false,
+      supported: false,
+      evidence: ["Facebook is the only potential event source discovered"],
+    });
+  }
+
   return {
     websiteUrl,
     fetchedUrl: homepage.url,
