@@ -394,8 +394,15 @@ function expandMaster(
       ? decodeHtml(master[9])
       : null;
 
+  const hasUnspecifiedTime =
+    baseStart.hour === 0 &&
+    baseStart.minute === 0 &&
+    baseEnd?.hour === 0 &&
+    baseEnd.minute === 0;
+
   const allDay =
-    String(rawAllDay) === "1";
+    String(rawAllDay) === "1" ||
+    hasUnspecifiedTime;
 
   const rule = parseWeeklyRule(
     String(rawRule ?? "")
@@ -485,16 +492,6 @@ function expandMaster(
     });
 
     return event ? [event] : [];
-  }
-
-  /*
-   * We can deterministically expand bounded rules.
-   * Unbounded historical masters are deliberately
-   * not projected indefinitely without a freshness
-   * policy supported by the source.
-   */
-  if (!rule.count && !rule.until) {
-    return [];
   }
 
   const events: FirstPartyHarvestEvent[] = [];
