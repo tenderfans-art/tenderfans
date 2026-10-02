@@ -191,43 +191,65 @@ export async function GET(
         const candidate
         of detection.detections
       ) {
-        if (
-          candidate.sourceType ===
-          "calendar_image"
-        ) {
-          const {
-            error: calendarFindingError,
-          } = await supabase.rpc(
-            "upsert_event_harvest_detector_finding",
-            {
-              p_venue_id: venue.id,
-              p_category:
-                "calendar_image",
-              p_finding_key:
-                `calendar_image:${candidate.url}`,
-              p_detector_status:
-                detection.status,
-              p_source_type:
-                candidate.sourceType,
-              p_website_url:
-                detection.websiteUrl,
-              p_source_url:
-                candidate.url,
-              p_fetched_url:
-                detection.fetchedUrl,
-              p_confidence:
-                candidate.confidence,
-              p_evidence:
-                candidate.evidence,
-              p_error:
-                detection.error,
-            }
-          );
+        if (candidate.sourceType === "calendar_image") {
+          /*
+           * Calendar-image findings are an actionable adapter queue,
+           * not detector history. If this Spot already has an enabled
+           * structured first-party source, the image adapter is no
+           * longer needed.
+           */
+          const { data: structuredSources, error: structuredSourceError } =
+            await supabase
+              .from("event_harvest_sources")
+              .select("id")
+              .eq("venue_id", venue.id)
+              .eq("provider", "first_party")
+              .eq("is_enabled", true)
+              .limit(1);
 
-          if (calendarFindingError) {
+          if (structuredSourceError) {
             throw new Error(
-              `Could not persist calendar-image finding: ${calendarFindingError.message}`
+              `Could not check registered first-party sources: ${structuredSourceError.message}`,
             );
+          }
+
+          if ((structuredSources?.length ?? 0) > 0) {
+            const { error: calendarResolutionError } = await supabase.rpc(
+              "resolve_event_harvest_detector_findings",
+              {
+                p_venue_id: venue.id,
+                p_category: "calendar_image",
+              },
+            );
+
+            if (calendarResolutionError) {
+              throw new Error(
+                `Could not resolve calendar-image findings: ${calendarResolutionError.message}`,
+              );
+            }
+          } else {
+            const { error: calendarFindingError } = await supabase.rpc(
+              "upsert_event_harvest_detector_finding",
+              {
+                p_venue_id: venue.id,
+                p_category: "calendar_image",
+                p_finding_key: `calendar_image:${candidate.url}`,
+                p_detector_status: detection.status,
+                p_source_type: candidate.sourceType,
+                p_website_url: detection.websiteUrl,
+                p_source_url: candidate.url,
+                p_fetched_url: detection.fetchedUrl,
+                p_confidence: candidate.confidence,
+                p_evidence: candidate.evidence,
+                p_error: detection.error,
+              },
+            );
+
+            if (calendarFindingError) {
+              throw new Error(
+                `Could not persist calendar-image finding: ${calendarFindingError.message}`,
+              );
+            }
           }
         }
         if (
@@ -359,6 +381,28 @@ export async function GET(
           }
 
           registered += 1;
+
+          /*
+           * A successfully registered structured first-party source
+           * makes any calendar-image adapter finding non-actionable.
+           * Resolve it immediately so candidate ordering within this
+           * detector run cannot leave a stale queue item behind.
+           */
+          const {
+            error: calendarResolutionError,
+          } = await supabase.rpc(
+            "resolve_event_harvest_detector_findings",
+            {
+              p_venue_id: venue.id,
+              p_category: "calendar_image",
+            }
+          );
+
+          if (calendarResolutionError) {
+            throw new Error(
+              `Could not resolve calendar-image findings after source registration: ${calendarResolutionError.message}`
+            );
+          }
         } catch (error) {
           failed += 1;
           failures.push({
