@@ -69,9 +69,7 @@ export default function CalendarImagesPage() {
 
           <div className="eyebrow">EVENT HARVESTER</div>
 
-          <h1 style={{ marginBottom: "8px" }}>
-            Calendar Image Adapter
-          </h1>
+          <h1 style={{ marginBottom: "8px" }}>Calendar Image Adapter</h1>
 
           <p
             className="lead-copy"
@@ -80,62 +78,71 @@ export default function CalendarImagesPage() {
               marginBottom: "28px",
             }}
           >
-            Calendar-image sources detected automatically and awaiting
-            adapter support.
+            Calendar-image sources detected automatically and awaiting adapter
+            support.
           </p>
 
           {loading ? (
             <p>Loading findings...</p>
           ) : error ? (
-            <div
-              style={{
-                padding: "14px 16px",
-                border: "1px solid rgba(20, 35, 45, 0.12)",
-                borderRadius: "12px",
-              }}
-            >
-              Unable to load calendar-image findings: {error}
-            </div>
+            <p>Unable to load calendar-image findings: {error}</p>
           ) : rows.length === 0 ? (
             <p>No active calendar-image findings.</p>
           ) : (
-            <div style={{ display: "grid", gap: "12px" }}>
+            <div style={{ display: "grid", gap: "5px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(260px,2fr) 110px 140px 190px",
+                  gap: "10px",
+                  padding: "0 10px",
+                  fontSize: ".66rem",
+                  fontWeight: 800,
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                  opacity: 0.55,
+                }}
+              >
+                <span>Spot</span>
+                <span>Confidence</span>
+                <span>Source</span>
+                <span>Last Seen</span>
+              </div>
               {rows.map((row) => (
                 <div
                   key={row.id}
                   style={{
-                    padding: "16px 18px",
-                    border: "1px solid rgba(20, 35, 45, 0.12)",
-                    borderRadius: "12px",
-                    background: "rgba(255,255,255,0.9)",
+                    display: "grid",
+                    gridTemplateColumns: "minmax(260px,2fr) 110px 140px 190px",
+                    gap: "10px",
+                    alignItems: "center",
+                    padding: "7px 10px",
+                    border: "1px solid rgba(20,35,45,.12)",
+                    borderRadius: "9px",
+                    background: "rgba(255,255,255,.9)",
+                    fontSize: ".84rem",
                   }}
                 >
-                  <strong>{row.venue_name}</strong>
-
-                  <div style={{ marginTop: "6px" }}>
-                    Confidence: {row.confidence ?? "unknown"}
-                  </div>
-
-                  <div style={{ marginTop: "6px" }}>
-                    <a
-                      href={row.source_url ?? row.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open detected calendar
-                    </a>
-                  </div>
-
-                  <div
+                  <strong
                     style={{
-                      marginTop: "6px",
-                      fontSize: "0.85rem",
-                      opacity: 0.65,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    Last seen:{" "}
+                    {row.venue_name}
+                  </strong>
+                  <span>{row.confidence ?? "unknown"}</span>
+                  <a
+                    href={row.source_url ?? row.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open Calendar
+                  </a>
+                  <span style={{ opacity: 0.65 }}>
                     {new Date(row.last_seen_at).toLocaleString()}
-                  </div>
+                  </span>
                 </div>
               ))}
             </div>

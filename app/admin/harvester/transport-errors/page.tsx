@@ -70,9 +70,7 @@ export default function TransportErrorsPage() {
 
           <div className="eyebrow">EVENT HARVESTER</div>
 
-          <h1 style={{ marginBottom: "8px" }}>
-            Transport Errors
-          </h1>
+          <h1 style={{ marginBottom: "8px" }}>Transport Errors</h1>
 
           <p
             className="lead-copy"
@@ -81,68 +79,84 @@ export default function TransportErrorsPage() {
               marginBottom: "28px",
             }}
           >
-            Spots whose websites could not be reached reliably by the
-            scheduled detector.
+            Spots whose websites could not be reached reliably by the scheduled
+            detector.
           </p>
 
           {loading ? (
             <p>Loading findings...</p>
           ) : error ? (
-            <div
-              style={{
-                padding: "14px 16px",
-                border: "1px solid rgba(20, 35, 45, 0.12)",
-                borderRadius: "12px",
-              }}
-            >
-              Unable to load transport findings: {error}
-            </div>
+            <p>Unable to load transport findings: {error}</p>
           ) : rows.length === 0 ? (
             <p>No active transport errors.</p>
           ) : (
-            <div style={{ display: "grid", gap: "12px" }}>
+            <div style={{ display: "grid", gap: "5px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "minmax(250px,2fr) 130px minmax(180px,1fr) 120px 190px",
+                  gap: "10px",
+                  padding: "0 10px",
+                  fontSize: ".66rem",
+                  fontWeight: 800,
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                  opacity: 0.55,
+                }}
+              >
+                <span>Spot</span>
+                <span>Status</span>
+                <span>Error</span>
+                <span>Source</span>
+                <span>Last Seen</span>
+              </div>
               {rows.map((row) => (
                 <div
                   key={row.id}
                   style={{
-                    padding: "16px 18px",
-                    border: "1px solid rgba(20, 35, 45, 0.12)",
-                    borderRadius: "12px",
-                    background: "rgba(255,255,255,0.9)",
+                    display: "grid",
+                    gridTemplateColumns:
+                      "minmax(250px,2fr) 130px minmax(180px,1fr) 120px 190px",
+                    gap: "10px",
+                    alignItems: "center",
+                    padding: "7px 10px",
+                    border: "1px solid rgba(20,35,45,.12)",
+                    borderRadius: "9px",
+                    background: "rgba(255,255,255,.9)",
+                    fontSize: ".84rem",
                   }}
                 >
-                  <strong>{row.venue_name}</strong>
-
-                  <div style={{ marginTop: "6px" }}>
-                    {row.detector_status}
-                  </div>
-
-                  <div style={{ marginTop: "6px" }}>
-                    <a
-                      href={row.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open Spot website
-                    </a>
-                  </div>
-
-                  {row.error ? (
-                    <div style={{ marginTop: "6px" }}>
-                      {row.error}
-                    </div>
-                  ) : null}
-
-                  <div
+                  <strong
                     style={{
-                      marginTop: "6px",
-                      fontSize: "0.85rem",
-                      opacity: 0.65,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    Last seen:{" "}
+                    {row.venue_name}
+                  </strong>
+                  <span>{row.detector_status}</span>
+                  <span
+                    title={row.error ?? ""}
+                    style={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {row.error ?? "—"}
+                  </span>
+                  <a
+                    href={row.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open Website
+                  </a>
+                  <span style={{ opacity: 0.65 }}>
                     {new Date(row.last_seen_at).toLocaleString()}
-                  </div>
+                  </span>
                 </div>
               ))}
             </div>
