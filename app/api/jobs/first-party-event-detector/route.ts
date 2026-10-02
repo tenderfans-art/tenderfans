@@ -387,6 +387,27 @@ export async function GET(
               );
             }
           } else {
+            /*
+             * Facebook findings represent the Spot's current actionable
+             * source, not detection history. Resolve any older URL-based
+             * finding before persisting the current candidate so redirects
+             * or URL normalization cannot leave duplicate active rows.
+             */
+            const { error: staleFacebookResolutionError } =
+              await supabase.rpc(
+                "resolve_event_harvest_detector_findings",
+                {
+                  p_venue_id: venue.id,
+                  p_category: "facebook",
+                },
+              );
+
+            if (staleFacebookResolutionError) {
+              throw new Error(
+                `Could not resolve stale Facebook findings: ${staleFacebookResolutionError.message}`,
+              );
+            }
+
             const { error: facebookFindingError } = await supabase.rpc(
               "upsert_event_harvest_detector_finding",
               {
