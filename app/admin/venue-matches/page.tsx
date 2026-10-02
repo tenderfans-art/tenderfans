@@ -308,7 +308,7 @@ export default function AdminVenueMatchesPage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "minmax(220px, 1.5fr) minmax(150px, 1fr) minmax(140px, .9fr) 55px 150px 185px 145px",
+                    "minmax(280px, 2fr) minmax(150px, 1fr) 150px 185px 145px",
                   gap: "8px",
                   alignItems: "end",
                   padding: "0 10px",
@@ -320,9 +320,7 @@ export default function AdminVenueMatchesPage() {
                 }}
               >
                 <span>Event / Source</span>
-                <span>Publisher Venue</span>
                 <span>Suggested Match</span>
-                <span>Conf.</span>
                 <span>Spot Search</span>
                 <span>Select Spot</span>
                 <span>Action</span>
@@ -336,24 +334,20 @@ export default function AdminVenueMatchesPage() {
                   <div
                     key={`unresolved-${item.id}`}
                     style={{
-                      display: "flex",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "minmax(280px, 2fr) minmax(150px, 1fr) 150px 185px 145px",
                       alignItems: "center",
                       gap: "8px",
                       padding: "8px 10px",
                       border: "1px solid rgba(20, 35, 45, 0.12)",
                       borderRadius: "10px",
                       background: "rgba(255,255,255,0.9)",
-                      flexWrap: "wrap",
                     }}
                   >
                     <div
                       style={{
-                        flex: "1 1 420px",
                         minWidth: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        flexWrap: "wrap",
                         fontSize: "0.88rem",
                       }}
                     >
@@ -364,10 +358,10 @@ export default function AdminVenueMatchesPage() {
                           rel="noopener noreferrer"
                           title={`${item.event_title} — Open source`}
                           style={{
+                            display: "block",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
-                            maxWidth: "260px",
                             fontWeight: 700,
                             color: "inherit",
                             textDecoration: "underline",
@@ -379,48 +373,32 @@ export default function AdminVenueMatchesPage() {
                         </a>
                       ) : (
                         <strong
+                          title={item.event_title}
                           style={{
+                            display: "block",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
-                            maxWidth: "260px",
                           }}
-                          title={item.event_title}
                         >
                           {item.event_title}
                         </strong>
                       )}
+                    </div>
 
-                      <span style={{ opacity: 0.35 }}>·</span>
-
-                      <span
-                        style={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          maxWidth: "220px",
-                        }}
-                        title={[
-                          item.publisher_venue_name,
-                          formatAddress(
-                            item.publisher_address,
-                            item.publisher_city,
-                            item.publisher_state_region,
-                            item.publisher_postal_code,
-                          ),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      >
-                        {item.publisher_venue_name}
-                        {item.publisher_city ? ` · ${item.publisher_city}` : ""}
-                      </span>
-
-                      <span style={{ opacity: 0.4 }}>→</span>
-
+                    <div
+                      style={{
+                        minWidth: 0,
+                        fontSize: "0.88rem",
+                      }}
+                    >
                       {item.suggested_venue_name ? (
                         <strong
+                          title={item.suggested_venue_name}
                           style={{
+                            display: "block",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -428,19 +406,6 @@ export default function AdminVenueMatchesPage() {
                         </strong>
                       ) : (
                         <span style={{ opacity: 0.55 }}>No suggestion</span>
-                      )}
-
-                      {item.confidence_score !== null && (
-                        <span
-                          style={{
-                            fontSize: "0.76rem",
-                            fontWeight: 800,
-                            opacity: 0.65,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {Math.round(Number(item.confidence_score) * 100)}%
-                        </span>
                       )}
                     </div>
 
