@@ -499,6 +499,9 @@ async function expandEventbriteSeries(
   >();
 
   const now = new Date();
+  let successfulRequests = 0;
+  let failedRequests = 0;
+  let firstFailure: Error | null = null;
 
   for (let day = 0; day <= horizonDays; day++) {
     const date = localDateKey(
@@ -506,12 +509,29 @@ async function expandEventbriteSeries(
       timeZone
     );
 
-    const found =
-      await fetchEventbriteSessionsForDate(
-        parentEventId,
-        date,
-        timeZone
-      );
+    let found: EventbriteSession[];
+
+    try {
+      found =
+        await fetchEventbriteSessionsForDate(
+          parentEventId,
+          date,
+          timeZone
+        );
+
+      successfulRequests += 1;
+    } catch (error) {
+      failedRequests += 1;
+
+      if (!firstFailure) {
+        firstFailure =
+          error instanceof Error
+            ? error
+            : new Error(String(error));
+      }
+
+      continue;
+    }
 
     for (const session of found) {
       if (session.isPublished) {
@@ -521,6 +541,25 @@ async function expandEventbriteSeries(
         );
       }
     }
+  }
+
+  /*
+   * A transient failure for one session date must not discard an
+   * otherwise healthy Eventbrite series. Only fail the expansion
+   * when the session endpoint could not be queried successfully at
+   * all across the requested horizon.
+   */
+  if (
+    successfulRequests === 0 &&
+    failedRequests > 0
+  ) {
+    throw (
+      firstFailure ??
+      new Error(
+        `Eventbrite session source failed for every requested date ` +
+        `for event ${parentEventId}.`
+      )
+    );
   }
 
   return [...sessions.values()].sort(
