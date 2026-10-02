@@ -11,15 +11,15 @@ const tools = [
   {
     title: "Calendar Image Adapter",
     description: "Manage event sources that require calendar-image extraction.",
-    href: null,
-    status: "NEEDS ADAPTER",
+    href: "/admin/harvester/calendar-images",
+    status: "OPEN",
   },
   {
     title: "Transport Errors",
     description:
       "Review event sources blocked by transport or website-access failures.",
-    href: null,
-    status: "NEEDS FIX",
+    href: "/admin/harvester/transport-errors",
+    status: "OPEN",
   },
 ];
 

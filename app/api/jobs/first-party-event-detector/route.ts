@@ -124,6 +124,63 @@ export async function GET(
           venue.website_url
         );
 
+      /*
+       * Transport findings are transient. Resolve the previous
+       * transport state for this Spot first; if the current scan is
+       * still blocked/failed, the upsert below immediately reactivates
+       * the current finding and refreshes last_seen_at.
+       */
+      const {
+        error: transportResolutionError,
+      } = await supabase.rpc(
+        "resolve_event_harvest_detector_findings",
+        {
+          p_venue_id: venue.id,
+          p_category: "transport",
+        }
+      );
+
+      if (transportResolutionError) {
+        throw new Error(
+          `Could not resolve previous transport findings: ${transportResolutionError.message}`
+        );
+      }
+
+      if (
+        detection.status ===
+          "transport_blocked" ||
+        detection.status ===
+          "transport_failed"
+      ) {
+        const {
+          error: transportFindingError,
+        } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "transport",
+            p_finding_key: "transport",
+            p_detector_status:
+              detection.status,
+            p_source_type: null,
+            p_website_url:
+              detection.websiteUrl,
+            p_source_url: null,
+            p_fetched_url:
+              detection.fetchedUrl,
+            p_confidence: null,
+            p_evidence: [],
+            p_error: detection.error,
+          }
+        );
+
+        if (transportFindingError) {
+          throw new Error(
+            `Could not persist transport finding: ${transportFindingError.message}`
+          );
+        }
+      }
+
       if (
         detection.status === "detected"
       ) {
@@ -134,6 +191,45 @@ export async function GET(
         const candidate
         of detection.detections
       ) {
+        if (
+          candidate.sourceType ===
+          "calendar_image"
+        ) {
+          const {
+            error: calendarFindingError,
+          } = await supabase.rpc(
+            "upsert_event_harvest_detector_finding",
+            {
+              p_venue_id: venue.id,
+              p_category:
+                "calendar_image",
+              p_finding_key:
+                `calendar_image:${candidate.url}`,
+              p_detector_status:
+                detection.status,
+              p_source_type:
+                candidate.sourceType,
+              p_website_url:
+                detection.websiteUrl,
+              p_source_url:
+                candidate.url,
+              p_fetched_url:
+                detection.fetchedUrl,
+              p_confidence:
+                candidate.confidence,
+              p_evidence:
+                candidate.evidence,
+              p_error:
+                detection.error,
+            }
+          );
+
+          if (calendarFindingError) {
+            throw new Error(
+              `Could not persist calendar-image finding: ${calendarFindingError.message}`
+            );
+          }
+        }
         if (
           !candidate.adapterAvailable
         ) {
