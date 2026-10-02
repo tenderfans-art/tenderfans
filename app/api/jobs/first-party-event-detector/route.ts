@@ -252,6 +252,67 @@ export async function GET(
             }
           }
         }
+        if (candidate.sourceType === "facebook") {
+          /*
+           * Facebook findings are an actionable future-adapter queue.
+           * If this Spot already has an enabled structured first-party
+           * source, Facebook is no longer needed as its event source.
+           */
+          const { data: structuredSources, error: structuredSourceError } =
+            await supabase
+              .from("event_harvest_sources")
+              .select("id")
+              .eq("venue_id", venue.id)
+              .eq("provider", "first_party")
+              .eq("is_enabled", true)
+              .limit(1);
+
+          if (structuredSourceError) {
+            throw new Error(
+              `Could not check registered first-party sources for Facebook finding: ${structuredSourceError.message}`,
+            );
+          }
+
+          if ((structuredSources?.length ?? 0) > 0) {
+            const { error: facebookResolutionError } = await supabase.rpc(
+              "resolve_event_harvest_detector_findings",
+              {
+                p_venue_id: venue.id,
+                p_category: "facebook",
+              },
+            );
+
+            if (facebookResolutionError) {
+              throw new Error(
+                `Could not resolve Facebook findings: ${facebookResolutionError.message}`,
+              );
+            }
+          } else {
+            const { error: facebookFindingError } = await supabase.rpc(
+              "upsert_event_harvest_detector_finding",
+              {
+                p_venue_id: venue.id,
+                p_category: "facebook",
+                p_finding_key: `facebook:${candidate.url}`,
+                p_detector_status: detection.status,
+                p_source_type: candidate.sourceType,
+                p_website_url: detection.websiteUrl,
+                p_source_url: candidate.url,
+                p_fetched_url: detection.fetchedUrl,
+                p_confidence: candidate.confidence,
+                p_evidence: candidate.evidence,
+                p_error: detection.error,
+              },
+            );
+
+            if (facebookFindingError) {
+              throw new Error(
+                `Could not persist Facebook finding: ${facebookFindingError.message}`,
+              );
+            }
+          }
+        }
+
         if (
           !candidate.adapterAvailable
         ) {

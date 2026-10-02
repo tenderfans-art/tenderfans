@@ -643,8 +643,8 @@ function inspectPage(
       sourceType: "spothopper_events",
       url: pageUrl,
       confidence: "high",
-      adapterAvailable: false,
-      supported: false,
+      adapterAvailable: true,
+      supported: true,
       evidence: ["SpotHopper / SpotApps platform signature"],
     });
   }

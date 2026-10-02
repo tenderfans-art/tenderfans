@@ -15,6 +15,13 @@ const tools = [
     status: "OPEN",
   },
   {
+    title: "Facebook Adapter",
+    description:
+      "Review Spots where Facebook is the only potential event source currently detected.",
+    href: "/admin/harvester/facebook",
+    status: "OPEN",
+  },
+  {
     title: "Transport Errors",
     description:
       "Review event sources blocked by transport or website-access failures.",
