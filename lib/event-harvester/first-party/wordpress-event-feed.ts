@@ -426,9 +426,13 @@ function extractTitle(
   return textContent(h1[1]);
 }
 
-function extractLocation(
+function extractLocationEvidence(
   html: string,
-): string | null {
+): {
+  location: string | null;
+  venueName: string | null;
+  venueAddress: string | null;
+} {
   const address = extractClassHtml(
     html,
     "c-events-details__address",
@@ -436,7 +440,11 @@ function extractLocation(
   );
 
   if (!address) {
-    return null;
+    return {
+      location: null,
+      venueName: null,
+      venueAddress: null,
+    };
   }
 
   const paragraphs = [
@@ -449,10 +457,17 @@ function extractLocation(
     )
     .filter(Boolean);
 
-  const text =
-    paragraphs.join(", ").trim();
+  const location =
+    paragraphs.join(", ").trim() || null;
 
-  return text || null;
+  return {
+    location,
+    venueName: paragraphs[0] ?? null,
+    venueAddress:
+      paragraphs.length > 1
+        ? paragraphs.slice(1).join(", ")
+        : null,
+  };
 }
 
 function extractDescription(
@@ -583,6 +598,9 @@ async function parseEventPage(
     );
   }
 
+  const locationEvidence =
+    extractLocationEvidence(html);
+
   return {
     externalEventId:
       eventIdFromUrl(eventUrl),
@@ -596,7 +614,9 @@ async function parseEventPage(
     sourceUrl: eventUrl,
     flyerUrl:
       extractFlyerUrl(html, eventUrl),
-    location: extractLocation(html),
+    location: locationEvidence.location,
+    venueName: locationEvidence.venueName,
+    venueAddress: locationEvidence.venueAddress,
     rawPayload: {
       platform: "wordpress_event_feed",
       eventUrl,

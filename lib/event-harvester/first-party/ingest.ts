@@ -6,6 +6,9 @@ import {
   type FirstPartyEventPreview,
 } from "./preview";
 
+import { eventFingerprint } from "../identity";
+import { resolveFirstPartyAttribution } from "./attribution";
+
 export type FirstPartyIngestResult = {
   sourceId: string;
   sourceName: string;
@@ -15,13 +18,14 @@ export type FirstPartyIngestResult = {
   linkedExisting: number;
   graduated: number;
   synced: number;
+  needsReview: number;
   events: Array<{
     externalEventId: string;
     title: string;
     startsAt: string;
     candidateId: string | null;
     canonicalEventId: string | null;
-    action: "preview" | "linked_existing" | "graduated";
+    action: "preview" | "linked_existing" | "graduated" | "needs_review";
   }>;
 };
 
@@ -32,49 +36,105 @@ function rpcValue<T>(data: unknown): T {
 async function ingestEvent(
   supabase: SupabaseClient,
   event: FirstPartyEventPreview,
-  bootstrap: boolean
+  bootstrap: boolean,
 ): Promise<{
-  candidateId: string;
-  canonicalEventId: string;
-  action: "linked_existing" | "graduated";
+  candidateId: string | null;
+  canonicalEventId: string | null;
+  action: "linked_existing" | "graduated" | "needs_review";
 }> {
+  const attribution = await resolveFirstPartyAttribution(supabase, event);
+
+  if (attribution.status === "unresolved") {
+    const evidence = attribution.publisherEvidence;
+
+    const unresolvedPayload = {
+      ...event.rawPayload,
+      isAllDay: event.allDay,
+      publisherVenueName: attribution.rawVenueName,
+      publisherVenueAddress: attribution.rawAddress,
+      attributionMethod: "needs_review",
+    };
+
+    const { error: unresolvedError } = await supabase.rpc(
+      "upsert_event_harvest_unresolved_venue",
+      {
+        p_source_id: event.sourceId,
+        p_external_event_id: event.externalEventId,
+        p_source_url: event.sourceUrl,
+        p_raw_title: event.title,
+        p_raw_starts_at: event.startsAt,
+        p_raw_ends_at: event.endsAt,
+        p_publisher_venue_name: attribution.rawVenueName,
+        p_publisher_address: evidence.streetAddress,
+        p_publisher_city: evidence.city,
+        p_publisher_state_region: evidence.stateRegion,
+        p_publisher_postal_code: evidence.postalCode,
+        p_suggested_venue_id: attribution.suggestedVenueId,
+        p_confidence_score: attribution.confidenceScore,
+        p_evidence: attribution.evidence,
+        p_raw_payload: unresolvedPayload,
+      },
+    );
+
+    if (unresolvedError) {
+      throw new Error(
+        `Unresolved venue preservation failed for "${event.title}": ${unresolvedError.message}`,
+      );
+    }
+
+    return {
+      candidateId: null,
+      canonicalEventId: null,
+      action: "needs_review",
+    };
+  }
+
+  const resolvedFingerprint = eventFingerprint({
+    venueId: attribution.venueId,
+    title: event.title,
+    startsAt: event.startsAt,
+  });
+
   const harvestPayload = {
     ...event.rawPayload,
     isAllDay: event.allDay,
+    publisherVenueName: attribution.rawVenueName,
+    publisherVenueAddress: attribution.rawAddress,
+    attributionMethod: attribution.method,
   };
 
-  const { data: candidateData, error: candidateError } =
-    await supabase.rpc("upsert_event_harvest_candidate", {
+  const { data: candidateData, error: candidateError } = await supabase.rpc(
+    "upsert_event_harvest_candidate",
+    {
       p_source_id: event.sourceId,
       p_external_event_id: event.externalEventId,
       p_source_url: event.sourceUrl,
       p_raw_title: event.title,
-      p_raw_venue_name: null,
-      p_raw_address: null,
+      p_raw_venue_name: attribution.rawVenueName,
+      p_raw_address: attribution.rawAddress,
       p_raw_description: event.description,
       p_raw_starts_at: event.startsAt,
       p_raw_ends_at: event.endsAt,
       p_normalized_title: event.normalizedTitle,
       p_starts_at: event.startsAt,
       p_ends_at: event.endsAt,
-      p_venue_id: event.venueId,
-      p_confidence_score: 1,
-      p_event_fingerprint: event.eventFingerprint,
+      p_venue_id: attribution.venueId,
+      p_confidence_score: attribution.confidenceScore,
+      p_event_fingerprint: resolvedFingerprint,
       p_raw_payload: harvestPayload,
-    });
+    },
+  );
 
   if (candidateError) {
     throw new Error(
-      `Candidate upsert failed for "${event.title}": ${candidateError.message}`
+      `Candidate upsert failed for "${event.title}": ${candidateError.message}`,
     );
   }
 
   const candidateId = rpcValue<string>(candidateData);
 
   if (!candidateId) {
-    throw new Error(
-      `Candidate upsert returned no ID for "${event.title}".`
-    );
+    throw new Error(`Candidate upsert returned no ID for "${event.title}".`);
   }
 
   /*
@@ -84,17 +144,16 @@ async function ingestEvent(
    * Spot/title/start occurrence, attach this first-party provenance
    * to that canonical event instead of creating a duplicate.
    */
-  const { data: linkedData, error: linkedError } =
-    await supabase.rpc(
-      "link_harvest_candidate_to_existing_event",
-      {
-        p_candidate_id: candidateId,
-      }
-    );
+  const { data: linkedData, error: linkedError } = await supabase.rpc(
+    "link_harvest_candidate_to_existing_event",
+    {
+      p_candidate_id: candidateId,
+    },
+  );
 
   if (linkedError) {
     throw new Error(
-      `Cross-source link failed for "${event.title}": ${linkedError.message}`
+      `Cross-source link failed for "${event.title}": ${linkedError.message}`,
     );
   }
 
@@ -117,12 +176,14 @@ async function ingestEvent(
           p_reviewed_by: null,
         };
 
-    const { data: graduatedData, error: graduatedError } =
-      await supabase.rpc(graduationRpc, graduationArgs);
+    const { data: graduatedData, error: graduatedError } = await supabase.rpc(
+      graduationRpc,
+      graduationArgs,
+    );
 
     if (graduatedError) {
       throw new Error(
-        `Candidate graduation failed for "${event.title}": ${graduatedError.message}`
+        `Candidate graduation failed for "${event.title}": ${graduatedError.message}`,
       );
     }
 
@@ -131,7 +192,7 @@ async function ingestEvent(
 
     if (!canonicalEventId) {
       throw new Error(
-        `Candidate graduation returned no event ID for "${event.title}".`
+        `Candidate graduation returned no event ID for "${event.title}".`,
       );
     }
   }
@@ -143,8 +204,9 @@ async function ingestEvent(
    * first-party provenance refreshes, but Ticketmaster's canonical
    * title/time/artwork/lifecycle remains authoritative.
    */
-  const { data: syncedData, error: syncedError } =
-    await supabase.rpc("sync_first_party_event", {
+  const { data: syncedData, error: syncedError } = await supabase.rpc(
+    "sync_first_party_event",
+    {
       p_candidate_id: candidateId,
       p_source_url: event.sourceUrl,
       p_raw_title: event.title,
@@ -154,23 +216,22 @@ async function ingestEvent(
       p_normalized_title: event.normalizedTitle,
       p_starts_at: event.startsAt,
       p_ends_at: event.endsAt,
-      p_event_fingerprint: event.eventFingerprint,
+      p_event_fingerprint: resolvedFingerprint,
       p_flyer_url: event.flyerUrl,
       p_raw_payload: harvestPayload,
-    });
+    },
+  );
 
   if (syncedError) {
     throw new Error(
-      `First-party sync failed for "${event.title}": ${syncedError.message}`
+      `First-party sync failed for "${event.title}": ${syncedError.message}`,
     );
   }
 
   const syncedEventId = rpcValue<string>(syncedData);
 
   if (syncedEventId !== canonicalEventId) {
-    throw new Error(
-      `Canonical event mismatch for "${event.title}".`
-    );
+    throw new Error(`Canonical event mismatch for "${event.title}".`);
   }
 
   return {
@@ -187,14 +248,11 @@ export async function ingestFirstPartySource(
     dryRun?: boolean;
     limit?: number;
     title?: string;
-  } = {}
+  } = {},
 ): Promise<FirstPartyIngestResult> {
   const dryRun = options.dryRun ?? true;
 
-  const source = await loadFirstPartySource(
-    supabase,
-    sourceId
-  );
+  const source = await loadFirstPartySource(supabase, sourceId);
 
   /*
    * Source bootstrap state lives in the database.
@@ -217,18 +275,14 @@ export async function ingestFirstPartySource(
   const selectedPreview = options.title
     ? allPreview.filter(
         (event) =>
-          event.title.toLowerCase() ===
-          options.title!.trim().toLowerCase()
+          event.title.toLowerCase() === options.title!.trim().toLowerCase(),
       )
     : allPreview;
 
   const preview =
     options.limit === undefined
       ? selectedPreview
-      : selectedPreview.slice(
-          0,
-          Math.max(0, options.limit)
-        );
+      : selectedPreview.slice(0, Math.max(0, options.limit));
 
   if (dryRun) {
     return {
@@ -240,6 +294,7 @@ export async function ingestFirstPartySource(
       linkedExisting: 0,
       graduated: 0,
       synced: 0,
+      needsReview: 0,
       events: preview.map((event) => ({
         externalEventId: event.externalEventId,
         title: event.title,
@@ -260,23 +315,25 @@ export async function ingestFirstPartySource(
     linkedExisting: 0,
     graduated: 0,
     synced: 0,
+    needsReview: 0,
     events: [],
   };
 
   for (const event of preview) {
-    const ingested = await ingestEvent(
-      supabase,
-      event,
-      bootstrap
-    );
+    const ingested = await ingestEvent(supabase, event, bootstrap);
 
     result.processed += 1;
-    result.synced += 1;
 
-    if (ingested.action === "linked_existing") {
-      result.linkedExisting += 1;
+    if (ingested.action === "needs_review") {
+      result.needsReview += 1;
     } else {
-      result.graduated += 1;
+      result.synced += 1;
+
+      if (ingested.action === "linked_existing") {
+        result.linkedExisting += 1;
+      } else {
+        result.graduated += 1;
+      }
     }
 
     result.events.push({
@@ -302,19 +359,20 @@ export async function ingestFirstPartySource(
     allPreview.length > 0 &&
     options.title === undefined &&
     options.limit === undefined &&
-    preview.length === allPreview.length;
+    preview.length === allPreview.length &&
+    result.needsReview === 0;
 
   if (completeInitialRun) {
     const { error: bootstrapError } = await supabase.rpc(
       "mark_first_party_source_bootstrapped",
       {
         p_source_id: source.id,
-      }
+      },
     );
 
     if (bootstrapError) {
       throw new Error(
-        `Could not mark first-party source bootstrapped: ${bootstrapError.message}`
+        `Could not mark first-party source bootstrapped: ${bootstrapError.message}`,
       );
     }
   }
@@ -330,7 +388,8 @@ export async function ingestFirstPartySource(
     !bootstrap &&
     allPreview.length > 0 &&
     options.title === undefined &&
-    options.limit === undefined;
+    options.limit === undefined &&
+    result.needsReview === 0;
 
   if (completeNormalRun) {
     const { error: reconcileError } = await supabase.rpc(
@@ -338,12 +397,12 @@ export async function ingestFirstPartySource(
       {
         p_source_id: source.id,
         p_scan_started_at: scanStartedAt,
-      }
+      },
     );
 
     if (reconcileError) {
       throw new Error(
-        `Could not reconcile first-party source absences: ${reconcileError.message}`
+        `Could not reconcile first-party source absences: ${reconcileError.message}`,
       );
     }
   }

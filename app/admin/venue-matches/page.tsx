@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -25,62 +25,113 @@ type VenueMatch = {
   last_seen_at: string;
 };
 
+type UnresolvedVenue = {
+  id: string;
+  source_id: string;
+  source_name: string;
+  external_event_id: string;
+  event_title: string;
+  starts_at: string | null;
+  publisher_venue_name: string;
+  publisher_address: string | null;
+  publisher_city: string | null;
+  publisher_state_region: string | null;
+  publisher_postal_code: string | null;
+  suggested_venue_id: string | null;
+  suggested_venue_name: string | null;
+  confidence_score: number | null;
+  evidence: Record<string, unknown> | null;
+  first_seen_at: string;
+  last_seen_at: string;
+};
+
+type Spot = {
+  id: string;
+  name: string;
+  slug: string;
+  city: string;
+  state_region: string;
+  status: string;
+  manager_name: string | null;
+  manager_role: string | null;
+  manager_email: string | null;
+};
+
 function formatAddress(
   address: string | null,
   city: string | null,
   state: string | null,
-  postalCode: string | null
+  postalCode: string | null,
 ) {
-  const locality = [city, state]
-    .filter(Boolean)
-    .join(", ");
+  const locality = [city, state].filter(Boolean).join(", ");
 
-  return [
-    address,
-    [locality, postalCode]
-      .filter(Boolean)
-      .join(" "),
-  ]
+  return [address, [locality, postalCode].filter(Boolean).join(" ")]
     .filter(Boolean)
     .join("\n");
 }
 
-function evidenceLabel(
-  evidence: Record<string, unknown> | null,
-  key: string
-) {
+function evidenceLabel(evidence: Record<string, unknown> | null, key: string) {
   return evidence?.[key] === true ? "Yes" : "No";
 }
 
 export default function AdminVenueMatchesPage() {
   const [matches, setMatches] = useState<VenueMatch[]>([]);
+  const [unresolved, setUnresolved] = useState<UnresolvedVenue[]>([]);
+  const [spots, setSpots] = useState<Spot[]>([]);
+  const [spotSearch, setSpotSearch] = useState<Record<string, string>>({});
+  const [selectedSpot, setSelectedSpot] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [reviewingId, setReviewingId] =
-    useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   async function loadMatches() {
     setLoading(true);
     setMessage("");
 
-    const { data, error } = await supabase.rpc(
-      "admin_pending_event_harvest_venue_matches"
-    );
+    const [matchResult, unresolvedResult, spotsResult] = await Promise.all([
+      supabase.rpc("admin_pending_event_harvest_venue_matches"),
+      supabase.rpc("admin_pending_event_harvest_unresolved_venues"),
+      supabase.rpc("admin_list_spots"),
+    ]);
 
-    if (error) {
+    const errors = [
+      matchResult.error,
+      unresolvedResult.error,
+      spotsResult.error,
+    ].filter(Boolean);
+
+    if (errors.length > 0) {
       setMatches([]);
-      setMessage(error.message);
-    } else {
-      setMatches((data as VenueMatch[]) || []);
+      setUnresolved([]);
+      setSpots([]);
+      setMessage(errors.map((error) => error!.message).join(" "));
+      setLoading(false);
+      return;
     }
 
+    const unresolvedRows = (unresolvedResult.data as UnresolvedVenue[]) || [];
+
+    setMatches((matchResult.data as VenueMatch[]) || []);
+    setUnresolved(unresolvedRows);
+    setSpots(
+      ((spotsResult.data as Spot[]) || []).filter(
+        (spot) => spot.status === "active",
+      ),
+    );
+
+    const defaults: Record<string, string> = {};
+
+    for (const item of unresolvedRows) {
+      if (item.suggested_venue_id) {
+        defaults[item.id] = item.suggested_venue_id;
+      }
+    }
+
+    setSelectedSpot(defaults);
     setLoading(false);
   }
 
-  async function reviewMatch(
-    id: string,
-    approve: boolean
-  ) {
+  async function reviewMatch(id: string, approve: boolean) {
     setReviewingId(id);
     setMessage("");
 
@@ -89,7 +140,39 @@ export default function AdminVenueMatchesPage() {
       {
         p_match_id: id,
         p_approve: approve,
-      }
+      },
+    );
+
+    if (error) {
+      setMessage(error.message);
+      setReviewingId(null);
+      return;
+    }
+
+    setMessage(approve ? "Venue match approved." : "Venue match rejected.");
+
+    setReviewingId(null);
+    await loadMatches();
+  }
+
+  async function reviewUnresolved(id: string, approve: boolean) {
+    const venueId = selectedSpot[id] || null;
+
+    if (approve && !venueId) {
+      setMessage("Select the correct TenderFans Spot before resolving.");
+      return;
+    }
+
+    setReviewingId(id);
+    setMessage("");
+
+    const { error } = await supabase.rpc(
+      "admin_review_event_harvest_unresolved_venue",
+      {
+        p_unresolved_id: id,
+        p_venue_id: approve ? venueId : null,
+        p_approve: approve,
+      },
     );
 
     if (error) {
@@ -99,14 +182,34 @@ export default function AdminVenueMatchesPage() {
     }
 
     setMessage(
-      approve
-        ? "Venue match approved."
-        : "Venue match rejected."
+      approve ? "Publisher venue resolved." : "Publisher venue rejected.",
     );
 
     setReviewingId(null);
     await loadMatches();
   }
+
+  const spotChoices = useMemo(() => {
+    const result: Record<string, Spot[]> = {};
+
+    for (const item of unresolved) {
+      const term = (spotSearch[item.id] || "").trim().toLowerCase();
+
+      const filtered = term
+        ? spots.filter((spot) =>
+            [spot.name, spot.city, spot.state_region]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase()
+              .includes(term),
+          )
+        : spots;
+
+      result[item.id] = filtered.slice(0, 5);
+    }
+
+    return result;
+  }, [spots, unresolved, spotSearch]);
 
   useEffect(() => {
     loadMatches();
@@ -133,13 +236,9 @@ export default function AdminVenueMatchesPage() {
             ← Admin Dashboard
           </Link>
 
-          <div className="eyebrow">
-            TENDERFANS ADMIN
-          </div>
+          <div className="eyebrow">TENDERFANS ADMIN</div>
 
-          <h1 style={{ marginBottom: "8px" }}>
-            Venue Matches
-          </h1>
+          <h1 style={{ marginBottom: "8px" }}>Venue Matches</h1>
 
           <p
             className="lead-copy"
@@ -148,8 +247,7 @@ export default function AdminVenueMatchesPage() {
               marginBottom: "28px",
             }}
           >
-            Review uncertain matches between
-            TenderFans Spots and external event
+            Review uncertain matches between TenderFans Spots and external event
             provider venues.
           </p>
 
@@ -158,8 +256,7 @@ export default function AdminVenueMatchesPage() {
               style={{
                 marginBottom: "22px",
                 padding: "14px 16px",
-                border:
-                  "1px solid rgba(20, 35, 45, 0.12)",
+                border: "1px solid rgba(20, 35, 45, 0.12)",
                 borderRadius: "12px",
               }}
             >
@@ -169,15 +266,13 @@ export default function AdminVenueMatchesPage() {
 
           {loading ? (
             <p>Loading venue matches...</p>
-          ) : matches.length === 0 ? (
+          ) : matches.length === 0 && unresolved.length === 0 ? (
             <div
               style={{
                 padding: "32px",
-                border:
-                  "1px solid rgba(20, 35, 45, 0.12)",
+                border: "1px solid rgba(20, 35, 45, 0.12)",
                 borderRadius: "18px",
-                background:
-                  "rgba(255,255,255,0.72)",
+                background: "rgba(255,255,255,0.72)",
               }}
             >
               <h2
@@ -197,9 +292,8 @@ export default function AdminVenueMatchesPage() {
                   lineHeight: 1.55,
                 }}
               >
-                Ambiguous provider matches will
-                appear here automatically when the
-                Event Harvester finds them.
+                Ambiguous provider matches will appear here automatically when
+                the Event Harvester finds them.
               </p>
             </div>
           ) : (
@@ -209,27 +303,196 @@ export default function AdminVenueMatchesPage() {
                 gap: "20px",
               }}
             >
+              {unresolved.map((item) => {
+                const busy = reviewingId === item.id;
+                const choices = spotChoices[item.id] || [];
+
+                return (
+                  <article
+                    key={`unresolved-${item.id}`}
+                    style={{
+                      padding: "22px",
+                      border: "1px solid rgba(20, 35, 45, 0.12)",
+                      borderRadius: "18px",
+                      background: "rgba(255,255,255,0.9)",
+                    }}
+                  >
+                    <div className="eyebrow" style={{ marginBottom: "6px" }}>
+                      EVENT VENUE REVIEW
+                    </div>
+
+                    <h2 style={{ margin: "0 0 6px", fontSize: "1.35rem" }}>
+                      {item.event_title}
+                    </h2>
+
+                    <div style={{ opacity: 0.65, marginBottom: "20px" }}>
+                      {item.source_name}
+                      {item.starts_at
+                        ? ` · ${new Date(item.starts_at).toLocaleString()}`
+                        : ""}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(260px, 1fr))",
+                        gap: "18px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "18px",
+                          borderRadius: "14px",
+                          background: "rgba(245,243,236,0.65)",
+                        }}
+                      >
+                        <strong>Publisher Venue</strong>
+
+                        <h3 style={{ margin: "10px 0 8px" }}>
+                          {item.publisher_venue_name}
+                        </h3>
+
+                        <div
+                          style={{
+                            whiteSpace: "pre-line",
+                            lineHeight: 1.55,
+                            opacity: 0.75,
+                          }}
+                        >
+                          {formatAddress(
+                            item.publisher_address,
+                            item.publisher_city,
+                            item.publisher_state_region,
+                            item.publisher_postal_code,
+                          ) || "No address available"}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          padding: "18px",
+                          borderRadius: "14px",
+                          background: "rgba(245,243,236,0.65)",
+                        }}
+                      >
+                        <strong>TenderFans Spot</strong>
+
+                        {item.suggested_venue_name && (
+                          <p style={{ margin: "10px 0 12px" }}>
+                            Suggested:{" "}
+                            <strong>{item.suggested_venue_name}</strong>
+                            {item.confidence_score !== null
+                              ? ` (${Math.round(
+                                  Number(item.confidence_score) * 100,
+                                )}%)`
+                              : ""}
+                          </p>
+                        )}
+
+                        <input
+                          type="search"
+                          value={spotSearch[item.id] || ""}
+                          onChange={(event) =>
+                            setSpotSearch((current) => ({
+                              ...current,
+                              [item.id]: event.target.value,
+                            }))
+                          }
+                          placeholder="Search TenderFans Spots..."
+                          aria-label="Search TenderFans Spots"
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            marginBottom: "10px",
+                          }}
+                        />
+
+                        <select
+                          value={selectedSpot[item.id] || ""}
+                          onChange={(event) =>
+                            setSelectedSpot((current) => ({
+                              ...current,
+                              [item.id]: event.target.value,
+                            }))
+                          }
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                          }}
+                        >
+                          <option value="">Select Spot...</option>
+
+                          {choices.map((spot) => (
+                            <option key={spot.id} value={spot.id}>
+                              {spot.name}
+                              {spot.city ? ` — ${spot.city}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginTop: "22px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => reviewUnresolved(item.id, true)}
+                        style={{
+                          padding: "11px 18px",
+                          border: 0,
+                          borderRadius: "10px",
+                          cursor: busy ? "default" : "pointer",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {busy ? "Working..." : "Resolve to Spot"}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => reviewUnresolved(item.id, false)}
+                        style={{
+                          padding: "11px 18px",
+                          border: "1px solid rgba(20, 35, 45, 0.2)",
+                          borderRadius: "10px",
+                          background: "transparent",
+                          cursor: busy ? "default" : "pointer",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+
               {matches.map((match) => {
-                const busy =
-                  reviewingId === match.id;
+                const busy = reviewingId === match.id;
 
                 return (
                   <article
                     key={match.id}
                     style={{
                       padding: "22px",
-                      border:
-                        "1px solid rgba(20, 35, 45, 0.12)",
+                      border: "1px solid rgba(20, 35, 45, 0.12)",
                       borderRadius: "18px",
-                      background:
-                        "rgba(255,255,255,0.9)",
+                      background: "rgba(255,255,255,0.9)",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
-                        justifyContent:
-                          "space-between",
+                        justifyContent: "space-between",
                         gap: "20px",
                         alignItems: "flex-start",
                         marginBottom: "20px",
@@ -251,9 +514,7 @@ export default function AdminVenueMatchesPage() {
                             fontSize: "1.35rem",
                           }}
                         >
-                          {
-                            match.tenderfans_venue_name
-                          }
+                          {match.tenderfans_venue_name}
                         </h2>
                       </div>
 
@@ -268,12 +529,7 @@ export default function AdminVenueMatchesPage() {
                             fontSize: "1.25rem",
                           }}
                         >
-                          {Math.round(
-                            Number(
-                              match.confidence_score
-                            ) * 100
-                          )}
-                          %
+                          {Math.round(Number(match.confidence_score) * 100)}%
                         </strong>
 
                         <div
@@ -299,23 +555,17 @@ export default function AdminVenueMatchesPage() {
                         style={{
                           padding: "18px",
                           borderRadius: "14px",
-                          background:
-                            "rgba(245,243,236,0.65)",
+                          background: "rgba(245,243,236,0.65)",
                         }}
                       >
-                        <strong>
-                          TenderFans Spot
-                        </strong>
+                        <strong>TenderFans Spot</strong>
 
                         <h3
                           style={{
-                            margin:
-                              "10px 0 8px",
+                            margin: "10px 0 8px",
                           }}
                         >
-                          {
-                            match.tenderfans_venue_name
-                          }
+                          {match.tenderfans_venue_name}
                         </h3>
 
                         <div
@@ -329,7 +579,7 @@ export default function AdminVenueMatchesPage() {
                             match.tenderfans_address,
                             match.tenderfans_city,
                             match.tenderfans_state_region,
-                            match.tenderfans_postal_code
+                            match.tenderfans_postal_code,
                           ) || "No address available"}
                         </div>
                       </div>
@@ -338,26 +588,21 @@ export default function AdminVenueMatchesPage() {
                         style={{
                           padding: "18px",
                           borderRadius: "14px",
-                          background:
-                            "rgba(245,243,236,0.65)",
+                          background: "rgba(245,243,236,0.65)",
                         }}
                       >
                         <strong>
-                          {match.provider ===
-                          "ticketmaster"
+                          {match.provider === "ticketmaster"
                             ? "Ticketmaster Venue"
                             : "Provider Venue"}
                         </strong>
 
                         <h3
                           style={{
-                            margin:
-                              "10px 0 8px",
+                            margin: "10px 0 8px",
                           }}
                         >
-                          {
-                            match.provider_venue_name
-                          }
+                          {match.provider_venue_name}
                         </h3>
 
                         <div
@@ -371,7 +616,7 @@ export default function AdminVenueMatchesPage() {
                             match.provider_address,
                             match.provider_city,
                             match.provider_state_region,
-                            match.provider_postal_code
+                            match.provider_postal_code,
                           ) || "No address available"}
                         </div>
 
@@ -382,8 +627,7 @@ export default function AdminVenueMatchesPage() {
                             opacity: 0.55,
                           }}
                         >
-                          ID:{" "}
-                          {match.provider_place_id}
+                          ID: {match.provider_place_id}
                         </div>
                       </div>
                     </div>
@@ -397,43 +641,22 @@ export default function AdminVenueMatchesPage() {
                       }}
                     >
                       {[
-                        [
-                          "Name",
-                          "nameExact",
-                        ],
-                        [
-                          "Address",
-                          "addressExact",
-                        ],
-                        [
-                          "City",
-                          "cityExact",
-                        ],
-                        [
-                          "State",
-                          "stateExact",
-                        ],
-                        [
-                          "ZIP",
-                          "postalExact",
-                        ],
+                        ["Name", "nameExact"],
+                        ["Address", "addressExact"],
+                        ["City", "cityExact"],
+                        ["State", "stateExact"],
+                        ["ZIP", "postalExact"],
                       ].map(([label, key]) => (
                         <span
                           key={key}
                           style={{
-                            padding:
-                              "7px 10px",
+                            padding: "7px 10px",
                             borderRadius: "999px",
-                            border:
-                              "1px solid rgba(20, 35, 45, 0.12)",
+                            border: "1px solid rgba(20, 35, 45, 0.12)",
                             fontSize: "0.78rem",
                           }}
                         >
-                          {label}:{" "}
-                          {evidenceLabel(
-                            match.evidence,
-                            key
-                          )}
+                          {label}: {evidenceLabel(match.evidence, key)}
                         </span>
                       ))}
                     </div>
@@ -449,48 +672,28 @@ export default function AdminVenueMatchesPage() {
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() =>
-                          reviewMatch(
-                            match.id,
-                            true
-                          )
-                        }
+                        onClick={() => reviewMatch(match.id, true)}
                         style={{
-                          padding:
-                            "11px 18px",
+                          padding: "11px 18px",
                           border: 0,
                           borderRadius: "10px",
-                          cursor: busy
-                            ? "default"
-                            : "pointer",
+                          cursor: busy ? "default" : "pointer",
                           fontWeight: 700,
                         }}
                       >
-                        {busy
-                          ? "Working..."
-                          : "Approve Match"}
+                        {busy ? "Working..." : "Approve Match"}
                       </button>
 
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() =>
-                          reviewMatch(
-                            match.id,
-                            false
-                          )
-                        }
+                        onClick={() => reviewMatch(match.id, false)}
                         style={{
-                          padding:
-                            "11px 18px",
-                          border:
-                            "1px solid rgba(20, 35, 45, 0.2)",
+                          padding: "11px 18px",
+                          border: "1px solid rgba(20, 35, 45, 0.2)",
                           borderRadius: "10px",
-                          background:
-                            "transparent",
-                          cursor: busy
-                            ? "default"
-                            : "pointer",
+                          background: "transparent",
+                          cursor: busy ? "default" : "pointer",
                           fontWeight: 700,
                         }}
                       >

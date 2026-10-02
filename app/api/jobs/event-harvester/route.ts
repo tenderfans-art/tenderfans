@@ -4,6 +4,9 @@ import {
   eventFingerprint,
   normalizeTitle,
 } from "@/lib/event-harvester/identity";
+import {
+  venueIdentityMatch,
+} from "@/lib/event-harvester/venue-identity";
 import { ingestFirstPartySource } from "@/lib/event-harvester/first-party/ingest";
 
 type TicketmasterVenueRef = {
@@ -112,88 +115,6 @@ type TicketmasterVenueResponse = {
   };
 };
 
-function normalizeMatchText(
-  value: string | null | undefined
-) {
-  return (value ?? "")
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ")
-    .split(" ")
-    .map((token) => {
-      const aliases: Record<string, string> = {
-        street: "st",
-        avenue: "ave",
-        boulevard: "blvd",
-        road: "rd",
-        drive: "dr",
-        lane: "ln",
-        court: "ct",
-        circle: "cir",
-        highway: "hwy",
-        parkway: "pkwy",
-        place: "pl",
-        terrace: "ter",
-        trail: "trl",
-        north: "n",
-        south: "s",
-        east: "e",
-        west: "w",
-        northeast: "ne",
-        northwest: "nw",
-        southeast: "se",
-        southwest: "sw",
-      };
-
-      return aliases[token] ?? token;
-    })
-    .join(" ");
-}
-
-function normalizePostalCode(
-  value: string | null | undefined
-) {
-  return (value ?? "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "");
-}
-
-function tokenSimilarity(
-  left: string | null | undefined,
-  right: string | null | undefined
-) {
-  const a = new Set(
-    normalizeMatchText(left)
-      .split(" ")
-      .filter(Boolean)
-  );
-
-  const b = new Set(
-    normalizeMatchText(right)
-      .split(" ")
-      .filter(Boolean)
-  );
-
-  if (a.size === 0 || b.size === 0) {
-    return 0;
-  }
-
-  let intersection = 0;
-
-  for (const token of a) {
-    if (b.has(token)) intersection += 1;
-  }
-
-  const union = new Set([...a, ...b]).size;
-
-  return union === 0
-    ? 0
-    : intersection / union;
-}
-
 function ticketmasterVenueMatch(input: {
   spot: {
     name: string;
@@ -206,89 +127,35 @@ function ticketmasterVenueMatch(input: {
   };
   candidate: TicketmasterVenue;
 }) {
-  const candidate = input.candidate;
-
-  const nameExact =
-    normalizeMatchText(input.spot.name) !== "" &&
-    normalizeMatchText(input.spot.name) ===
-      normalizeMatchText(candidate.name);
-
-  const nameSimilarity = tokenSimilarity(
-    input.spot.name,
-    candidate.name
-  );
-
-  const addressExact =
-    normalizeMatchText(input.spot.street_address) !== "" &&
-    normalizeMatchText(input.spot.street_address) ===
-      normalizeMatchText(candidate.address?.line1);
-
-  const cityExact =
-    normalizeMatchText(input.spot.city) !== "" &&
-    normalizeMatchText(input.spot.city) ===
-      normalizeMatchText(candidate.city?.name);
-
-  const stateExact =
-    normalizeMatchText(input.spot.state_region) !== "" &&
-    (
-      normalizeMatchText(input.spot.state_region) ===
-        normalizeMatchText(candidate.state?.stateCode) ||
-      normalizeMatchText(input.spot.state_region) ===
-        normalizeMatchText(candidate.state?.name)
-    );
-
-  const postalExact =
-    normalizePostalCode(input.spot.postal_code) !== "" &&
-    normalizePostalCode(input.spot.postal_code) ===
-      normalizePostalCode(candidate.postalCode);
-
-  /*
-   * Identity evidence is intentionally conservative.
-   *
-   * Name is the strongest signal, but location evidence must
-   * support it before we automatically attach an external ID.
-   */
-  let score = 0;
-
-  score += nameExact
-    ? 0.55
-    : Math.min(nameSimilarity, 1) * 0.45;
-
-  if (addressExact) score += 0.20;
-  if (postalExact) score += 0.10;
-  if (cityExact) score += 0.10;
-  if (stateExact) score += 0.05;
-
-  score = Math.min(1, Number(score.toFixed(4)));
-
-  const autoAttach =
-    score >= 0.9 &&
-    (addressExact || postalExact) &&
-    cityExact &&
-    stateExact;
-
-  const needsReview =
-    !autoAttach &&
-    score >= 0.65 &&
-    nameSimilarity >= 0.5 &&
-    cityExact &&
-    stateExact;
-
-  return {
-    score,
-    autoAttach,
-    needsReview,
-    evidence: {
-      nameExact,
-      nameSimilarity: Number(
-        nameSimilarity.toFixed(4)
-      ),
-      addressExact,
-      cityExact,
-      stateExact,
-      postalExact,
+  return venueIdentityMatch({
+    spot: {
+      name: input.spot.name,
+      streetAddress:
+        input.spot.street_address,
+      city: input.spot.city,
+      stateRegion:
+        input.spot.state_region,
+      postalCode:
+        input.spot.postal_code,
     },
-  };
+    candidate: {
+      name: input.candidate.name ?? "",
+      streetAddress:
+        input.candidate.address?.line1 ?? null,
+      city:
+        input.candidate.city?.name ?? null,
+      stateRegion:
+        input.candidate.state?.stateCode ??
+        input.candidate.state?.name ??
+        null,
+      alternateStateRegion:
+        input.candidate.state?.stateCode
+          ? input.candidate.state?.name ?? null
+          : null,
+      postalCode:
+        input.candidate.postalCode ?? null,
+    },
+  });
 }
 
 function getAdminClient() {

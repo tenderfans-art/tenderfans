@@ -41,6 +41,8 @@ export type FirstPartyEventPreview = {
   allDay: boolean;
   flyerUrl: string | null;
   location: string | null;
+  venueName: string | null;
+  venueAddress: string | null;
   eventFingerprint: string;
   rawPayload: Record<string, unknown>;
 };
@@ -252,6 +254,8 @@ export async function previewFirstPartySource(
     allDay: event.allDay,
     flyerUrl: event.flyerUrl,
     location: event.location,
+    venueName: event.venueName ?? null,
+    venueAddress: event.venueAddress ?? null,
     eventFingerprint: eventFingerprint({
       venueId: source.venue_id,
       title: event.title,

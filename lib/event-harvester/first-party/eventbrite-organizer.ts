@@ -193,6 +193,196 @@ function parseNextData(
   }
 }
 
+export type EventbriteEventIdentity = {
+  eventId: string;
+  title: string;
+  status: string | null;
+  isOnline: boolean;
+  organizer: {
+    id: string | null;
+    name: string | null;
+    url: string | null;
+  };
+  venue: {
+    id: string | null;
+    name: string | null;
+    streetAddress: string | null;
+    city: string | null;
+    region: string | null;
+    postalCode: string | null;
+    country: string | null;
+    latitude: number | null;
+    longitude: number | null;
+  } | null;
+};
+
+function numberValue(
+  value: unknown
+): number | null {
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  ) {
+    return value;
+  }
+
+  if (
+    typeof value === "string" &&
+    value.trim()
+  ) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed)
+      ? parsed
+      : null;
+  }
+
+  return null;
+}
+
+function eventbriteBasicInfo(
+  data: unknown
+): JsonObject | null {
+  if (!isObject(data)) return null;
+
+  const props = isObject(data.props)
+    ? data.props
+    : null;
+
+  const pageProps =
+    props && isObject(props.pageProps)
+      ? props.pageProps
+      : null;
+
+  const context =
+    pageProps && isObject(pageProps.context)
+      ? pageProps.context
+      : null;
+
+  return context &&
+    isObject(context.basicInfo)
+    ? context.basicInfo
+    : null;
+}
+
+function firstString(
+  value: unknown
+): string | null {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = stringValue(item);
+      if (found) return found;
+    }
+  }
+
+  return stringValue(value);
+}
+
+export async function fetchEventbriteEventIdentity(
+  sourceUrl: string
+): Promise<EventbriteEventIdentity> {
+  const response = await fetch(sourceUrl, {
+    headers: {
+      Accept:
+        "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+      "User-Agent":
+        "TenderFans-Event-Harvester/1.0",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Eventbrite event source returned HTTP ${response.status}.`
+    );
+  }
+
+  const html = await response.text();
+  const data = parseNextData(html);
+  const basicInfo = eventbriteBasicInfo(data);
+
+  if (!basicInfo) {
+    throw new Error(
+      "Eventbrite event page did not expose basicInfo."
+    );
+  }
+
+  const eventId = stringValue(basicInfo.id);
+  const title = stringValue(basicInfo.name);
+
+  if (!eventId || !title) {
+    throw new Error(
+      "Eventbrite event basicInfo did not contain event identity."
+    );
+  }
+
+  const organizer = isObject(
+    basicInfo.organizer
+  )
+    ? basicInfo.organizer
+    : null;
+
+  const venue = isObject(basicInfo.venue)
+    ? basicInfo.venue
+    : null;
+
+  const address =
+    venue && isObject(venue.address)
+      ? venue.address
+      : null;
+
+  return {
+    eventId,
+    title,
+    status: stringValue(basicInfo.status),
+    isOnline: basicInfo.isOnline === true,
+    organizer: {
+      id:
+        (organizer
+          ? stringValue(organizer.id)
+          : null) ??
+        stringValue(basicInfo.organizationId),
+      name: organizer
+        ? stringValue(organizer.name)
+        : null,
+      url: organizer
+        ? stringValue(organizer.url)
+        : null,
+    },
+    venue: venue
+      ? {
+          id: stringValue(venue.id),
+          name: stringValue(venue.name),
+          streetAddress: address
+            ? firstString(
+                address.localizedMultiLineAddressDisplay
+              )
+            : null,
+          city: address
+            ? stringValue(address.city)
+            : null,
+          region: address
+            ? stringValue(address.region)
+            : null,
+          postalCode: address
+            ? (
+                stringValue(address.postalCode) ??
+                stringValue(address.postal_code)
+              )
+            : null,
+          country: address
+            ? stringValue(address.country)
+            : null,
+          latitude: address
+            ? numberValue(address.latitude)
+            : null,
+          longitude: address
+            ? numberValue(address.longitude)
+            : null,
+        }
+      : null,
+  };
+}
+
 function localDateKey(
   date: Date,
   timeZone: string
@@ -338,6 +528,14 @@ async function expandEventbriteSeries(
       new Date(a.startDatetime).getTime() -
       new Date(b.startDatetime).getTime()
   );
+}
+
+function venueName(
+  venue: JsonObject | null
+): string | null {
+  return venue
+    ? stringValue(venue.name)
+    : null;
 }
 
 function venueLocation(
@@ -571,6 +769,10 @@ export async function fetchEventbriteOrganizerEvents(
           flyerUrl,
           location:
             venueLocation(primaryVenue),
+          venueName:
+            venueName(primaryVenue),
+          venueAddress:
+            venueLocation(primaryVenue),
           rawPayload: {
             ...commonRawPayload,
             eventbriteParentEventId:
@@ -596,6 +798,9 @@ export async function fetchEventbriteOrganizerEvents(
       sourceUrl: sourceEventUrl,
       flyerUrl,
       location: venueLocation(primaryVenue),
+      venueName: venueName(primaryVenue),
+      venueAddress:
+        venueLocation(primaryVenue),
       rawPayload: commonRawPayload,
     });
   }

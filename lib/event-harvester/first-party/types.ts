@@ -8,5 +8,7 @@ export type FirstPartyHarvestEvent = {
   sourceUrl: string | null;
   flyerUrl: string | null;
   location: string | null;
+  venueName?: string | null;
+  venueAddress?: string | null;
   rawPayload: Record<string, unknown>;
 };
