@@ -813,6 +813,415 @@ function expandCard(
   );
 }
 
+
+function parseLegacyClock(
+  value: string,
+): TimeParts | null {
+  const match = value
+    .trim()
+    .match(
+      /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const meridiem = match[3].toUpperCase();
+
+  if (meridiem === "PM" && hour !== 12) {
+    hour += 12;
+  }
+
+  if (meridiem === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  return { hour, minute };
+}
+
+function parseLegacyMachineDateTime(
+  value: string,
+): {
+  date: DateParts;
+  time: TimeParts;
+} | null {
+  const match = value
+    .trim()
+    .match(
+      /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):\d{2}$/,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    date: {
+      year: Number(match[1]),
+      month: Number(match[2]),
+      day: Number(match[3]),
+    },
+    time: {
+      hour: Number(match[4]),
+      minute: Number(match[5]),
+    },
+  };
+}
+
+function legacySections(
+  html: string,
+): string[] {
+  const sections = [
+    ...html.matchAll(
+      /<section\b[^>]*>[\s\S]*?<\/section>/gi,
+    ),
+  ].map((match) => match[0]);
+
+  return sections.filter(
+    (section) =>
+      /\bdata-event-id=(?:"[^"]+"|'[^']+')/i.test(
+        section,
+      ),
+  );
+}
+
+function resolveLegacyDate(
+  month: number,
+  day: number,
+  now: Date,
+  timeZone: string,
+): DateParts {
+  const local = partsInTimeZone(
+    now,
+    timeZone,
+  );
+
+  const current: DateParts = {
+    year: local.year,
+    month: local.month,
+    day: local.day,
+  };
+
+  let candidate: DateParts = {
+    year: local.year,
+    month,
+    day,
+  };
+
+  /*
+   * SpotHopper's legacy event pages omit the
+   * year. Treat dates substantially behind the
+   * current local date as belonging to the next
+   * calendar year.
+   */
+  if (
+    compareLocalDates(
+      candidate,
+      addLocalDays(current, -30),
+    ) < 0
+  ) {
+    candidate = {
+      ...candidate,
+      year: candidate.year + 1,
+    };
+  }
+
+  return candidate;
+}
+
+function parseLegacyEvents(
+  html: string,
+  options: {
+    sourceUrl: string;
+    timeZone: string;
+    weeksForward: number;
+    now: Date;
+  },
+): FirstPartyHarvestEvent[] {
+  const monthIndex: Record<string, number> = {
+    january: 1,
+    february: 2,
+    march: 3,
+    april: 4,
+    may: 5,
+    june: 6,
+    july: 7,
+    august: 8,
+    september: 9,
+    october: 10,
+    november: 11,
+    december: 12,
+  };
+
+  const horizon = new Date(
+    options.now.getTime() +
+      options.weeksForward *
+        7 *
+        24 *
+        60 *
+        60 *
+        1000,
+  );
+
+  const events: FirstPartyHarvestEvent[] = [];
+
+  for (const section of legacySections(html)) {
+    const hidden =
+      section.match(
+        /<div\b[^>]*\bdata-event-id=(?:"[^"]+"|'[^']+')[^>]*>/i,
+      )?.[0] ?? null;
+
+    if (!hidden) {
+      continue;
+    }
+
+    const eventId = attribute(
+      hidden,
+      "data-event-id",
+    );
+
+    const originEventId =
+      attribute(
+        hidden,
+        "data-origin-event-id",
+      )?.trim() ||
+      eventId;
+
+    const titleMatch = section.match(
+      /<h2\b[^>]*>([\s\S]*?)<\/h2>/i,
+    );
+
+    if (!eventId || !titleMatch) {
+      throw new Error(
+        "SpotHopper legacy event surface contained an unparseable event",
+      );
+    }
+
+    const title = decodeHtml(
+      titleMatch[1],
+    );
+
+    const infoMatch = section.match(
+      /<div\b[^>]*class=["'][^"']*\bevent-info-text\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    );
+
+    const description =
+      infoMatch
+        ? decodeHtml(
+            infoMatch[1],
+          ) || null
+        : null;
+
+    const machineStartMatch =
+      section.match(
+        /<var\b[^>]*class=["'][^"']*\batc_date_start\b[^"']*["'][^>]*>([\s\S]*?)<\/var>/i,
+      );
+
+    const machineEndMatch =
+      section.match(
+        /<var\b[^>]*class=["'][^"']*\batc_date_end\b[^"']*["'][^>]*>([\s\S]*?)<\/var>/i,
+      );
+
+    const machineZoneMatch =
+      section.match(
+        /<var\b[^>]*class=["'][^"']*\batc_timezone\b[^"']*["'][^>]*>([\s\S]*?)<\/var>/i,
+      );
+
+    const machineStart =
+      machineStartMatch
+        ? parseLegacyMachineDateTime(
+            decodeHtml(
+              machineStartMatch[1],
+            ),
+          )
+        : null;
+
+    const machineEnd =
+      machineEndMatch
+        ? parseLegacyMachineDateTime(
+            decodeHtml(
+              machineEndMatch[1],
+            ),
+          )
+        : null;
+
+    const eventTimeZone =
+      machineZoneMatch
+        ? decodeHtml(
+            machineZoneMatch[1],
+          ) || options.timeZone
+        : options.timeZone;
+
+    let startDate: DateParts;
+    let startTime: TimeParts;
+    let endDate: DateParts | null = null;
+    let endTime: TimeParts | null = null;
+
+    if (machineStart) {
+      startDate = machineStart.date;
+      startTime = machineStart.time;
+
+      if (machineEnd) {
+        endDate = machineEnd.date;
+        endTime = machineEnd.time;
+      }
+    } else {
+      const dayMatch = section.match(
+        /class=["'][^"']*\bevent-day\b[^"']*["'][^>]*>([\s\S]*?)<\//i,
+      ) ??
+        section.match(
+          /<h3\b[^>]*>([\s\S]*?)<\/h3>/i,
+        );
+
+      const timeMatch = section.match(
+        /class=["'][^"']*\bevent-time\b[^"']*["'][^>]*>([\s\S]*?)<\//i,
+      );
+
+      if (!dayMatch || !timeMatch) {
+        throw new Error(
+          "SpotHopper legacy event surface contained an unparseable date/time",
+        );
+      }
+
+      const dayText = decodeHtml(
+        dayMatch[1],
+      );
+
+      const dateMatch = dayText.match(
+        /(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?/i,
+      );
+
+      const timeText = decodeHtml(
+        timeMatch[1],
+      );
+
+      const times = [
+        ...timeText.matchAll(
+          /(\d{1,2}:\d{2}\s*(?:AM|PM))/gi,
+        ),
+      ];
+
+      if (
+        !dateMatch ||
+        times.length === 0
+      ) {
+        throw new Error(
+          "SpotHopper legacy event surface contained an unparseable date/time",
+        );
+      }
+
+      startDate = resolveLegacyDate(
+        monthIndex[
+          dateMatch[1].toLowerCase()
+        ],
+        Number(dateMatch[2]),
+        options.now,
+        eventTimeZone,
+      );
+
+      const parsedStart =
+        parseLegacyClock(
+          times[0][1],
+        );
+
+      if (!parsedStart) {
+        throw new Error(
+          "SpotHopper legacy event surface contained an unparseable start time",
+        );
+      }
+
+      startTime = parsedStart;
+
+      if (times[1]) {
+        endTime =
+          parseLegacyClock(
+            times[1][1],
+          );
+
+        if (endTime) {
+          const startMinutes =
+            startTime.hour * 60 +
+            startTime.minute;
+
+          const endMinutes =
+            endTime.hour * 60 +
+            endTime.minute;
+
+          endDate =
+            endMinutes < startMinutes
+              ? addLocalDays(
+                  startDate,
+                  1,
+                )
+              : startDate;
+        }
+      }
+    }
+
+    const startsAt =
+      zonedDateTimeToUtc(
+        startDate,
+        startTime,
+        eventTimeZone,
+      );
+
+    const endsAt =
+      endDate && endTime
+        ? zonedDateTimeToUtc(
+            endDate,
+            endTime,
+            eventTimeZone,
+          )
+        : null;
+
+    const lifecycleBoundary =
+      endsAt ?? startsAt;
+
+    if (
+      lifecycleBoundary.getTime() <
+        options.now.getTime() ||
+      startsAt.getTime() >
+        horizon.getTime()
+    ) {
+      continue;
+    }
+
+    const dateKey =
+      localDateKey(startDate);
+
+    events.push({
+      externalEventId:
+        `spothopper:${originEventId}:${dateKey}`,
+      title,
+      description,
+      startsAt: startsAt.toISOString(),
+      endsAt:
+        endsAt?.toISOString() ?? null,
+      allDay: false,
+      sourceUrl: options.sourceUrl,
+      flyerUrl: null,
+      location: null,
+      rawPayload: {
+        platform: "spothopper",
+        eventId,
+        originEventId,
+        legacySurface: true,
+        occurrenceDate: dateKey,
+        timeZone: eventTimeZone,
+      },
+    });
+  }
+
+  return events.sort(
+    (a, b) =>
+      Date.parse(a.startsAt) -
+      Date.parse(b.startsAt),
+  );
+}
+
 async function fetchHtml(
   url: string,
 ): Promise<string> {
@@ -861,6 +1270,11 @@ function hasEventSurface(
     /\bnoEventsMessage\b/i.test(
       html,
     ) ||
+    (
+      /\bevents-holder\b/i.test(html) &&
+      /\bevent-content\b/i.test(html) &&
+      /\bdata-event-id\b/i.test(html)
+    ) ||
     /we are updating our events/i.test(
       html,
     )
@@ -905,7 +1319,7 @@ function eventCandidates(
 
     if (
       href &&
-      /(?:^|\/)(?:-?events)(?:\/|$|\?|#)/i.test(
+      /(?:^|\/)[^/?#]*events(?:\/|$|\?|#)/i.test(
         href,
       )
     ) {
@@ -983,6 +1397,22 @@ export async function fetchSpotHopperEvents(
 
   const cards =
     extractCards(eventHtml);
+
+  if (
+    cards.length === 0 &&
+    /\bevents-holder\b/i.test(eventHtml) &&
+    /\bdata-event-id\b/i.test(eventHtml)
+  ) {
+    return parseLegacyEvents(
+      eventHtml,
+      {
+        sourceUrl: eventUrl,
+        timeZone,
+        weeksForward,
+        now: new Date(),
+      },
+    );
+  }
 
   if (cards.length === 0) {
     /*
