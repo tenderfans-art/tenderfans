@@ -5,6 +5,7 @@ export type DetectedSourceType =
   | "uvtix_events"
   | "shopify_events"
   | "calendar_image"
+  | "browser_required"
   | "spothopper_events"
   | "shared_event_calendar"
   | "squarespace_events"
@@ -364,6 +365,31 @@ function inspectPage(
 ) {
   const lower = html.toLowerCase();
 
+  /*
+   * EventsCalendar.co can be installed as a Wix runtime widget whose
+   * project configuration is supplied client-side. The server HTML
+   * exposes the widget registration but not a harvestable source.
+   * Browser execution is therefore required for source discovery.
+   */
+  const eventsCalendarRuntimeMatch =
+    /plugin\.eventscalendar\.co\/widget\.html/i.test(
+      html.replace(/\\\//g, "/"),
+    );
+
+  if (eventsCalendarRuntimeMatch) {
+    pushDetection(detections, {
+      sourceType: "browser_required",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: false,
+      supported: false,
+      evidence: [
+        "EventsCalendar.co runtime widget detected",
+        "Browser execution required to obtain runtime event-source configuration",
+      ],
+    });
+  }
+
   const eventbriteOrganizerMatch = html.match(
     /https?:\\?\/\\?\/(?:www\\?\.)?eventbrite\\?\.com\\?\/o\\?\/[^"'<>\\\\\s]+/i,
   );
@@ -409,6 +435,7 @@ function inspectPage(
   if (
     !eventbriteOrganizerMatch &&
     !eventbriteEventMatch &&
+    !eventsCalendarRuntimeMatch &&
     /\beventbrite\b/i.test(html) &&
     (/directed to your Eventbrite page/i.test(html) ||
       /Eventbrite calendars?/i.test(html)) &&

@@ -22,6 +22,13 @@ const tools = [
     status: "OPEN",
   },
   {
+    title: "Browser Required",
+    description:
+      "Review Spots whose event-source discovery requires browser execution.",
+    href: "/admin/harvester/browser-required",
+    status: "OPEN",
+  },
+  {
     title: "Transport Errors",
     description:
       "Review event sources blocked by transport or website-access failures.",

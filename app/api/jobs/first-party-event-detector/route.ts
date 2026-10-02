@@ -152,32 +152,56 @@ export async function GET(
         detection.status ===
           "transport_failed"
       ) {
+        /*
+         * A Spot that has already been verified as browser-required
+         * should remain in that actionable queue rather than being
+         * recreated as a generic Transport Error on every static scan.
+         */
         const {
-          error: transportFindingError,
-        } = await supabase.rpc(
-          "upsert_event_harvest_detector_finding",
-          {
-            p_venue_id: venue.id,
-            p_category: "transport",
-            p_finding_key: "transport",
-            p_detector_status:
-              detection.status,
-            p_source_type: null,
-            p_website_url:
-              detection.websiteUrl,
-            p_source_url: null,
-            p_fetched_url:
-              detection.fetchedUrl,
-            p_confidence: null,
-            p_evidence: [],
-            p_error: detection.error,
-          }
-        );
+          data: browserRequiredFindings,
+          error: browserRequiredLookupError,
+        } = await supabase
+          .from("event_harvest_detector_findings")
+          .select("id")
+          .eq("venue_id", venue.id)
+          .eq("category", "browser_required")
+          .eq("status", "active")
+          .limit(1);
 
-        if (transportFindingError) {
+        if (browserRequiredLookupError) {
           throw new Error(
-            `Could not persist transport finding: ${transportFindingError.message}`
+            `Could not check browser-required findings: ${browserRequiredLookupError.message}`
           );
+        }
+
+        if ((browserRequiredFindings?.length ?? 0) === 0) {
+          const {
+            error: transportFindingError,
+          } = await supabase.rpc(
+            "upsert_event_harvest_detector_finding",
+            {
+              p_venue_id: venue.id,
+              p_category: "transport",
+              p_finding_key: "transport",
+              p_detector_status:
+                detection.status,
+              p_source_type: null,
+              p_website_url:
+                detection.websiteUrl,
+              p_source_url: null,
+              p_fetched_url:
+                detection.fetchedUrl,
+              p_confidence: null,
+              p_evidence: [],
+              p_error: detection.error,
+            }
+          );
+
+          if (transportFindingError) {
+            throw new Error(
+              `Could not persist transport finding: ${transportFindingError.message}`
+            );
+          }
         }
       }
 
@@ -191,6 +215,81 @@ export async function GET(
         const candidate
         of detection.detections
       ) {
+        if (candidate.sourceType === "browser_required") {
+          /*
+           * Browser-required findings are actionable discovery work.
+           * They identify Spots where static HTTP discovery is
+           * insufficient but do not claim the eventual source adapter.
+           */
+          const { data: structuredSources, error: structuredSourceError } =
+            await supabase
+              .from("event_harvest_sources")
+              .select("id")
+              .eq("venue_id", venue.id)
+              .eq("provider", "first_party")
+              .eq("is_enabled", true)
+              .limit(1);
+
+          if (structuredSourceError) {
+            throw new Error(
+              `Could not check registered first-party sources for browser-required finding: ${structuredSourceError.message}`,
+            );
+          }
+
+          if ((structuredSources?.length ?? 0) > 0) {
+            const { error: browserResolutionError } = await supabase.rpc(
+              "resolve_event_harvest_detector_findings",
+              {
+                p_venue_id: venue.id,
+                p_category: "browser_required",
+              },
+            );
+
+            if (browserResolutionError) {
+              throw new Error(
+                `Could not resolve browser-required findings: ${browserResolutionError.message}`,
+              );
+            }
+          } else {
+            const { error: browserFindingError } = await supabase.rpc(
+              "upsert_event_harvest_detector_finding",
+              {
+                p_venue_id: venue.id,
+                p_category: "browser_required",
+                p_finding_key: "browser_required",
+                p_detector_status: detection.status,
+                p_source_type: candidate.sourceType,
+                p_website_url: detection.websiteUrl,
+                p_source_url: candidate.url,
+                p_fetched_url: detection.fetchedUrl,
+                p_confidence: candidate.confidence,
+                p_evidence: candidate.evidence,
+                p_error: detection.error,
+              },
+            );
+
+            if (browserFindingError) {
+              throw new Error(
+                `Could not persist browser-required finding: ${browserFindingError.message}`,
+              );
+            }
+
+            const { error: transportResolutionError } = await supabase.rpc(
+              "resolve_event_harvest_detector_findings",
+              {
+                p_venue_id: venue.id,
+                p_category: "transport",
+              },
+            );
+
+            if (transportResolutionError) {
+              throw new Error(
+                `Could not resolve superseded transport finding: ${transportResolutionError.message}`,
+              );
+            }
+          }
+        }
+
         if (candidate.sourceType === "calendar_image") {
           /*
            * Calendar-image findings are an actionable adapter queue,
