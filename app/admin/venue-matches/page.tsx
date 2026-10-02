@@ -308,7 +308,7 @@ export default function AdminVenueMatchesPage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "minmax(280px, 2fr) minmax(150px, 1fr) 150px 185px 145px",
+                    "minmax(280px, 2fr) minmax(150px, 1fr) 150px 185px 82px 82px",
                   gap: "8px",
                   alignItems: "end",
                   padding: "0 10px",
@@ -323,7 +323,14 @@ export default function AdminVenueMatchesPage() {
                 <span>Suggested Match</span>
                 <span>Spot Search</span>
                 <span>Select Spot</span>
-                <span>Action</span>
+                <span
+                  style={{
+                    gridColumn: "5 / 7",
+                    textAlign: "center",
+                  }}
+                >
+                  Action
+                </span>
               </div>
 
               {unresolved.map((item) => {
@@ -336,7 +343,7 @@ export default function AdminVenueMatchesPage() {
                     style={{
                       display: "grid",
                       gridTemplateColumns:
-                        "minmax(280px, 2fr) minmax(150px, 1fr) 150px 185px 145px",
+                        "minmax(280px, 2fr) minmax(150px, 1fr) 150px 185px 82px 82px",
                       alignItems: "center",
                       gap: "8px",
                       padding: "8px 10px",
