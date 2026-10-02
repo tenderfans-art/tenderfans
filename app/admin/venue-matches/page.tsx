@@ -227,14 +227,14 @@ export default function AdminVenueMatchesPage() {
           }}
         >
           <Link
-            href="/admin"
+            href="/admin/harvester"
             style={{
               display: "inline-block",
               marginBottom: "22px",
               color: "inherit",
             }}
           >
-            ← Admin Dashboard
+            ← Harvester Management
           </Link>
 
           <div className="eyebrow">TENDERFANS ADMIN</div>

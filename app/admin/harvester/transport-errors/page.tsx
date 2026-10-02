@@ -1,13 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import {
-  useEffect,
-  useState,
-} from "react";
-import {
-  createClient,
-} from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 type Finding = {
   id: string;
@@ -21,28 +16,17 @@ type Finding = {
   last_seen_at: string;
 };
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 export default function TransportErrorsPage() {
-  const [rows, setRows] =
-    useState<Finding[]>([]);
-  const [loading, setLoading] =
-    useState(true);
-  const [error, setError] =
-    useState<string | null>(null);
+  const [rows, setRows] = useState<Finding[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      const {
-        data,
-        error: rpcError,
-      } = await supabase.rpc(
-        "admin_event_harvest_transport_findings"
+      const { data, error: rpcError } = await supabase.rpc(
+        "admin_event_harvest_transport_findings",
       );
 
       if (!active) return;
@@ -50,9 +34,7 @@ export default function TransportErrorsPage() {
       if (rpcError) {
         setError(rpcError.message);
       } else {
-        setRows(
-          (data ?? []) as Finding[]
-        );
+        setRows((data ?? []) as Finding[]);
       }
 
       setLoading(false);
@@ -66,85 +48,106 @@ export default function TransportErrorsPage() {
   }, []);
 
   return (
-    <main className="admin-page">
-      <div className="admin-shell">
-        <Link
-          href="/admin/harvester"
-          className="admin-back-link"
+    <main className="flow-page">
+      <div className="shell">
+        <section
+          className="flow-card"
+          style={{
+            maxWidth: "1200px",
+            margin: "0 auto",
+          }}
         >
-          ← Harvester Management
-        </Link>
-
-        <div className="admin-page-heading">
-          <div>
-            <div className="eyebrow">
-              EVENT HARVESTER
-            </div>
-            <h1>
-              Transport Errors
-            </h1>
-            <p>
-              Spots whose websites could
-              not be reached reliably by
-              the scheduled detector.
-            </p>
-          </div>
-        </div>
-
-        {loading ? (
-          <p>Loading findings…</p>
-        ) : error ? (
-          <p>{error}</p>
-        ) : rows.length === 0 ? (
-          <p>
-            No active transport errors.
-          </p>
-        ) : (
-          <div
+          <Link
+            href="/admin/harvester"
             style={{
-              display: "grid",
-              gap: 12,
+              display: "inline-block",
+              marginBottom: "22px",
+              color: "inherit",
             }}
           >
-            {rows.map((row) => (
-              <div
-                key={row.id}
-                className="admin-tile"
-              >
-                <div>
-                  <strong>
-                    {row.venue_name}
-                  </strong>
-                </div>
+            ← Harvester Management
+          </Link>
 
-                <div>
-                  {row.detector_status}
-                </div>
+          <div className="eyebrow">EVENT HARVESTER</div>
 
-                <div>
-                  <a
-                    href={row.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+          <h1 style={{ marginBottom: "8px" }}>
+            Transport Errors
+          </h1>
+
+          <p
+            className="lead-copy"
+            style={{
+              marginTop: 0,
+              marginBottom: "28px",
+            }}
+          >
+            Spots whose websites could not be reached reliably by the
+            scheduled detector.
+          </p>
+
+          {loading ? (
+            <p>Loading findings...</p>
+          ) : error ? (
+            <div
+              style={{
+                padding: "14px 16px",
+                border: "1px solid rgba(20, 35, 45, 0.12)",
+                borderRadius: "12px",
+              }}
+            >
+              Unable to load transport findings: {error}
+            </div>
+          ) : rows.length === 0 ? (
+            <p>No active transport errors.</p>
+          ) : (
+            <div style={{ display: "grid", gap: "12px" }}>
+              {rows.map((row) => (
+                <div
+                  key={row.id}
+                  style={{
+                    padding: "16px 18px",
+                    border: "1px solid rgba(20, 35, 45, 0.12)",
+                    borderRadius: "12px",
+                    background: "rgba(255,255,255,0.9)",
+                  }}
+                >
+                  <strong>{row.venue_name}</strong>
+
+                  <div style={{ marginTop: "6px" }}>
+                    {row.detector_status}
+                  </div>
+
+                  <div style={{ marginTop: "6px" }}>
+                    <a
+                      href={row.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open Spot website
+                    </a>
+                  </div>
+
+                  {row.error ? (
+                    <div style={{ marginTop: "6px" }}>
+                      {row.error}
+                    </div>
+                  ) : null}
+
+                  <div
+                    style={{
+                      marginTop: "6px",
+                      fontSize: "0.85rem",
+                      opacity: 0.65,
+                    }}
                   >
-                    Open Spot website
-                  </a>
+                    Last seen:{" "}
+                    {new Date(row.last_seen_at).toLocaleString()}
+                  </div>
                 </div>
-
-                {row.error ? (
-                  <div>{row.error}</div>
-                ) : null}
-
-                <div>
-                  Last seen:{" "}
-                  {new Date(
-                    row.last_seen_at
-                  ).toLocaleString()}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
