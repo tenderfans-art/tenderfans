@@ -2,56 +2,28 @@ import Link from "next/link";
 
 const tools = [
   {
-    title: "Verification Requests",
-    description: "Review pending Tender and Spot ownership claims.",
-    href: "/admin/claims",
+    title: "Venue Matches",
+    description:
+      "Review unresolved event venues and provider venue matches that need administrator approval.",
+    href: "/admin/venue-matches",
     status: "OPEN",
   },
   {
-    title: "Manage Spots",
-    description: "Search, add and manage venue profiles.",
-    href: "/admin/spots",
-    status: "OPEN",
-  },
-  {
-    title: "Harvester Management",
-    description: "Manage Event Harvester reviews, adapters and source issues.",
-    href: "/admin/harvester",
-    status: "OPEN",
-  },
-  {
-    title: "Manage Tenders",
-    description: "Search, edit, hide or remove Tender profiles.",
-    href: "/admin/tenders",
-    status: "OPEN",
-  },
-  {
-    title: "Events",
-    description: "Add and manage events for the TenderFans calendar.",
-    href: "/admin/events",
-    status: "OPEN",
-  },
-  {
-    title: "Contests",
-    description: "Create, activate and manage TenderFans contests.",
-    href: "/admin/contests",
-    status: "OPEN",
-  },
-  {
-    title: "Site Banners",
-    description: "Quickly change hero and banner images across the site.",
+    title: "Calendar Image Adapter",
+    description: "Manage event sources that require calendar-image extraction.",
     href: null,
-    status: "COMING SOON",
+    status: "NEEDS ADAPTER",
   },
   {
-    title: "Site Settings",
-    description: "Platform controls and future administrative tools.",
+    title: "Transport Errors",
+    description:
+      "Review event sources blocked by transport or website-access failures.",
     href: null,
-    status: "COMING SOON",
+    status: "NEEDS FIX",
   },
 ];
 
-export default function AdminPage() {
+export default function AdminHarvesterPage() {
   return (
     <main className="flow-page">
       <div className="shell">
@@ -62,9 +34,20 @@ export default function AdminPage() {
             margin: "0 auto",
           }}
         >
+          <Link
+            href="/admin"
+            style={{
+              display: "inline-block",
+              marginBottom: "22px",
+              color: "inherit",
+            }}
+          >
+            ← Admin Dashboard
+          </Link>
+
           <div className="eyebrow">TENDERFANS ADMIN</div>
 
-          <h1 style={{ marginBottom: "8px" }}>Admin Dashboard</h1>
+          <h1 style={{ marginBottom: "8px" }}>Harvester Management</h1>
 
           <p
             className="lead-copy"
@@ -73,7 +56,7 @@ export default function AdminPage() {
               marginBottom: "32px",
             }}
           >
-            Manage the people, places and activity that power TenderFans.
+            Review Event Harvester exceptions, adapters and source issues.
           </p>
 
           <div

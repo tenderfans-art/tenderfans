@@ -311,53 +311,95 @@ export default function AdminVenueMatchesPage() {
                   <article
                     key={`unresolved-${item.id}`}
                     style={{
-                      padding: "22px",
+                      padding: "18px 20px",
                       border: "1px solid rgba(20, 35, 45, 0.12)",
-                      borderRadius: "18px",
+                      borderRadius: "16px",
                       background: "rgba(255,255,255,0.9)",
                     }}
                   >
-                    <div className="eyebrow" style={{ marginBottom: "6px" }}>
-                      EVENT VENUE REVIEW
-                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "18px",
+                        flexWrap: "wrap",
+                        marginBottom: "14px",
+                      }}
+                    >
+                      <div>
+                        <div
+                          className="eyebrow"
+                          style={{ marginBottom: "4px" }}
+                        >
+                          EVENT VENUE REVIEW
+                        </div>
 
-                    <h2 style={{ margin: "0 0 6px", fontSize: "1.35rem" }}>
-                      {item.event_title}
-                    </h2>
+                        <h2
+                          style={{
+                            margin: "0 0 3px",
+                            fontSize: "1.2rem",
+                          }}
+                        >
+                          {item.event_title}
+                        </h2>
 
-                    <div style={{ opacity: 0.65, marginBottom: "20px" }}>
-                      {item.source_name}
-                      {item.starts_at
-                        ? ` · ${new Date(item.starts_at).toLocaleString()}`
-                        : ""}
+                        <div
+                          style={{
+                            opacity: 0.65,
+                            fontSize: "0.9rem",
+                          }}
+                        >
+                          {item.source_name}
+                          {item.starts_at
+                            ? ` · ${new Date(item.starts_at).toLocaleString()}`
+                            : ""}
+                        </div>
+                      </div>
+
+                      {item.confidence_score !== null && (
+                        <strong
+                          style={{
+                            fontSize: "0.85rem",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {Math.round(Number(item.confidence_score) * 100)}%
+                          match
+                        </strong>
+                      )}
                     </div>
 
                     <div
                       style={{
                         display: "grid",
                         gridTemplateColumns:
-                          "repeat(auto-fit, minmax(260px, 1fr))",
-                        gap: "18px",
+                          "minmax(220px, .8fr) minmax(320px, 1.2fr)",
+                        gap: "16px",
+                        alignItems: "end",
                       }}
                     >
-                      <div
-                        style={{
-                          padding: "18px",
-                          borderRadius: "14px",
-                          background: "rgba(245,243,236,0.65)",
-                        }}
-                      >
-                        <strong>Publisher Venue</strong>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            letterSpacing: "0.06em",
+                            opacity: 0.58,
+                            marginBottom: "5px",
+                          }}
+                        >
+                          PUBLISHER VENUE
+                        </div>
 
-                        <h3 style={{ margin: "10px 0 8px" }}>
-                          {item.publisher_venue_name}
-                        </h3>
+                        <strong>{item.publisher_venue_name}</strong>
 
                         <div
                           style={{
+                            marginTop: "3px",
+                            opacity: 0.7,
+                            fontSize: "0.9rem",
                             whiteSpace: "pre-line",
-                            lineHeight: 1.55,
-                            opacity: 0.75,
                           }}
                         >
                           {formatAddress(
@@ -369,108 +411,113 @@ export default function AdminVenueMatchesPage() {
                         </div>
                       </div>
 
-                      <div
-                        style={{
-                          padding: "18px",
-                          borderRadius: "14px",
-                          background: "rgba(245,243,236,0.65)",
-                        }}
-                      >
-                        <strong>TenderFans Spot</strong>
-
-                        {item.suggested_venue_name && (
-                          <p style={{ margin: "10px 0 12px" }}>
-                            Suggested:{" "}
-                            <strong>{item.suggested_venue_name}</strong>
-                            {item.confidence_score !== null
-                              ? ` (${Math.round(
-                                  Number(item.confidence_score) * 100,
-                                )}%)`
-                              : ""}
-                          </p>
-                        )}
-
-                        <input
-                          type="search"
-                          value={spotSearch[item.id] || ""}
-                          onChange={(event) =>
-                            setSpotSearch((current) => ({
-                              ...current,
-                              [item.id]: event.target.value,
-                            }))
-                          }
-                          placeholder="Search TenderFans Spots..."
-                          aria-label="Search TenderFans Spots"
+                      <div>
+                        <div
                           style={{
-                            width: "100%",
-                            padding: "10px 12px",
-                            marginBottom: "10px",
-                          }}
-                        />
-
-                        <select
-                          value={selectedSpot[item.id] || ""}
-                          onChange={(event) =>
-                            setSelectedSpot((current) => ({
-                              ...current,
-                              [item.id]: event.target.value,
-                            }))
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "10px 12px",
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            letterSpacing: "0.06em",
+                            opacity: 0.58,
+                            marginBottom: "5px",
                           }}
                         >
-                          <option value="">Select Spot...</option>
+                          TENDERFANS SPOT
+                        </div>
 
-                          {choices.map((spot) => (
-                            <option key={spot.id} value={spot.id}>
-                              {spot.name}
-                              {spot.city ? ` — ${spot.city}` : ""}
-                            </option>
-                          ))}
-                        </select>
+                        {item.suggested_venue_name && (
+                          <div
+                            style={{
+                              marginBottom: "7px",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            Suggested:{" "}
+                            <strong>{item.suggested_venue_name}</strong>
+                          </div>
+                        )}
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns:
+                              "minmax(180px, 1fr) minmax(180px, 1fr) auto auto",
+                            gap: "8px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <input
+                            type="search"
+                            value={spotSearch[item.id] || ""}
+                            onChange={(event) =>
+                              setSpotSearch((current) => ({
+                                ...current,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            placeholder="Search Spots..."
+                            aria-label="Search TenderFans Spots"
+                            style={{
+                              width: "100%",
+                              padding: "9px 10px",
+                            }}
+                          />
+
+                          <select
+                            value={selectedSpot[item.id] || ""}
+                            onChange={(event) =>
+                              setSelectedSpot((current) => ({
+                                ...current,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                            style={{
+                              width: "100%",
+                              padding: "9px 10px",
+                            }}
+                          >
+                            <option value="">Select Spot...</option>
+
+                            {choices.map((spot) => (
+                              <option key={spot.id} value={spot.id}>
+                                {spot.name}
+                                {spot.city ? ` — ${spot.city}` : ""}
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => reviewUnresolved(item.id, true)}
+                            style={{
+                              padding: "10px 14px",
+                              border: 0,
+                              borderRadius: "10px",
+                              cursor: busy ? "default" : "pointer",
+                              fontWeight: 700,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {busy ? "Working..." : "Resolve"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => reviewUnresolved(item.id, false)}
+                            style={{
+                              padding: "9px 12px",
+                              border: "1px solid rgba(20, 35, 45, 0.2)",
+                              borderRadius: "10px",
+                              background: "transparent",
+                              cursor: busy ? "default" : "pointer",
+                              fontWeight: 700,
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </div>
                       </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        marginTop: "22px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => reviewUnresolved(item.id, true)}
-                        style={{
-                          padding: "11px 18px",
-                          border: 0,
-                          borderRadius: "10px",
-                          cursor: busy ? "default" : "pointer",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {busy ? "Working..." : "Resolve to Spot"}
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => reviewUnresolved(item.id, false)}
-                        style={{
-                          padding: "11px 18px",
-                          border: "1px solid rgba(20, 35, 45, 0.2)",
-                          borderRadius: "10px",
-                          background: "transparent",
-                          cursor: busy ? "default" : "pointer",
-                          fontWeight: 700,
-                        }}
-                      >
-                        Reject
-                      </button>
                     </div>
                   </article>
                 );
