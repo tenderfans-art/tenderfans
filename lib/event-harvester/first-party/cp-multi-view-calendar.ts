@@ -434,12 +434,22 @@ function expandMaster(
       options.timeZone
     );
 
-    const endsAt = occurrenceEnd(
+    const calculatedEndsAt = occurrenceEnd(
       occurrenceDate,
       baseStart,
       baseEnd,
       options.timeZone
     );
+
+    /*
+     * CP Multi View uses matching 00:00 start/end values for
+     * events whose actual time is unspecified. Preserve those
+     * events without inventing a duration or emitting an invalid
+     * zero-length interval.
+     */
+    const endsAt = hasUnspecifiedTime
+      ? null
+      : calculatedEndsAt;
 
     const lifecycleBoundary =
       endsAt ?? startsAt;
