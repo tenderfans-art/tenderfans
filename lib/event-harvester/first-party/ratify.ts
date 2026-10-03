@@ -271,6 +271,7 @@ const directlyRatifiableSourceTypes = new Set([
   "godaddy_menu_recurring",
   "cp_multi_view_calendar",
   "uvtix_events",
+  "schema_org_events",
   "shopify_events",
   "spothopper_events",
   "squarespace_events",

@@ -10,6 +10,7 @@ import { fetchNextRscEvents } from "./next-rsc-events";
 import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
 import { fetchUvTixEvents } from "./uvtix-events";
+import { fetchSchemaOrgEvents } from "./schema-org-events";
 import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
 import { fetchSpotHopperEvents } from "./spothopper-events";
@@ -210,6 +211,8 @@ export async function previewFirstPartySource(
     events = await fetchUvTixEvents(source.source_url, {
       timeZone,
     });
+  } else if (source.source_type === "schema_org_events") {
+    events = await fetchSchemaOrgEvents(source.source_url);
   } else if (source.source_type === "spothopper_events") {
     const timeZone =
       typeof source.config?.timezone === "string"

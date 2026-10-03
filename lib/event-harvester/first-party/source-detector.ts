@@ -3,6 +3,7 @@ export type DetectedSourceType =
   | "godaddy_menu_recurring"
   | "cp_multi_view_calendar"
   | "uvtix_events"
+  | "schema_org_events"
   | "shopify_events"
   | "calendar_image"
   | "browser_required"
@@ -663,6 +664,35 @@ function inspectPage(
       evidence: [
         "UVTix / UrVenue platform signature",
         "Schema.org Event inventory",
+      ],
+    });
+  }
+
+  /*
+   * Generic first-party Schema.org Event inventory.
+   *
+   * Provider-specific adapters remain authoritative when their
+   * stronger signatures are present. This generic source catches
+   * first-party event pages that publish structured Event JSON-LD
+   * without belonging to one of those provider families.
+   */
+  const hasSchemaOrgEventInventory =
+    /<script\b[^>]*type\s*=\s*["']application\/ld\+json(?:\s*;\s*charset=[^"']+)?["'][^>]*>[\s\S]*?"@type"\s*:\s*(?:"Event"|\[[^\]]*"Event"[^\]]*\])/i.test(
+      html,
+    );
+
+  if (
+    hasSchemaOrgEventInventory &&
+    !/uvtix\.com/i.test(html)
+  ) {
+    pushDetection(detections, {
+      sourceType: "schema_org_events",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Schema.org Event JSON-LD inventory found on first-party event surface",
       ],
     });
   }

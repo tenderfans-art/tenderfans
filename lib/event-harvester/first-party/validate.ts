@@ -41,6 +41,45 @@ export async function validateFirstPartySource(
       await previewFirstPartySource(source);
 
     if (events.length > 0) {
+      /*
+       * Schema.org Event markup is sometimes left behind after a
+       * site's visible calendar has moved on. Do not validate a
+       * Schema.org source merely because stale Event objects parse.
+       *
+       * Keep this safeguard adapter-specific so existing first-party
+       * adapters retain their established validation semantics.
+       */
+      if (source.source_type === "schema_org_events") {
+        const now = Date.now();
+
+        const hasCurrentOrFutureEvent = events.some((event) => {
+          const effectiveEnd =
+            event.endsAt ?? event.startsAt;
+
+          const timestamp = Date.parse(effectiveEnd);
+
+          return (
+            !Number.isNaN(timestamp) &&
+            timestamp >= now
+          );
+        });
+
+        if (!hasCurrentOrFutureEvent) {
+          return {
+            status: "validation_failed",
+            inventory: "unsafe",
+            eventCount: events.length,
+            events,
+            evidence: [
+              "Implemented adapter successfully exercised source",
+              "Schema.org source returned only expired event inventory",
+            ],
+            error:
+              "Schema.org Event inventory contains no current or future events.",
+          };
+        }
+      }
+
       return {
         status: "validated",
         inventory: "available",
