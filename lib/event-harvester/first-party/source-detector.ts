@@ -4,6 +4,7 @@ export type DetectedSourceType =
   | "cp_multi_view_calendar"
   | "uvtix_events"
   | "schema_org_events"
+  | "pwpc_events_calendar"
   | "shopify_events"
   | "calendar_image"
   | "browser_required"
@@ -676,6 +677,25 @@ function inspectPage(
    * first-party event pages that publish structured Event JSON-LD
    * without belonging to one of those provider families.
    */
+  const hasPwpcEventsCalendar =
+    /\/assets\/pwpc\/pwpc-[^"'<>]+\.(?:css|js)/i.test(html) &&
+    /id=["']events-container["']/i.test(html) &&
+    /class=["'][^"']*\bevent-card\b/i.test(html) &&
+    /action=["']\/events\/?["']/i.test(html);
+
+  if (hasPwpcEventsCalendar) {
+    pushDetection(detections, {
+      sourceType: "pwpc_events_calendar",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "PWPC server-rendered events calendar found on first-party event surface",
+      ],
+    });
+  }
+
   const hasSchemaOrgEventInventory =
     /<script\b[^>]*type\s*=\s*["']application\/ld\+json(?:\s*;\s*charset=[^"']+)?["'][^>]*>[\s\S]*?"@type"\s*:\s*(?:"Event"|\[[^\]]*"Event"[^\]]*\])/i.test(
       html,
@@ -683,6 +703,7 @@ function inspectPage(
 
   if (
     hasSchemaOrgEventInventory &&
+    !hasPwpcEventsCalendar &&
     !/uvtix\.com/i.test(html)
   ) {
     pushDetection(detections, {
@@ -1131,6 +1152,25 @@ export async function detectFirstPartySources(
       );
     } catch {
       // Individual discovery-page failures do not fail the site scan.
+    }
+  }
+
+  /*
+   * A detected PWPC server-rendered calendar is the stronger live
+   * inventory for this first-party site. Some sites also expose stale
+   * Schema.org Event JSON-LD on a separate event/promotions page.
+   * Do not retain that weaker generic candidate when the live calendar
+   * adapter is available for the same Spot.
+   */
+  if (
+    detections.some(
+      (detection) => detection.sourceType === "pwpc_events_calendar",
+    )
+  ) {
+    for (let index = detections.length - 1; index >= 0; index -= 1) {
+      if (detections[index].sourceType === "schema_org_events") {
+        detections.splice(index, 1);
+      }
     }
   }
 

@@ -272,6 +272,7 @@ const directlyRatifiableSourceTypes = new Set([
   "cp_multi_view_calendar",
   "uvtix_events",
   "schema_org_events",
+  "pwpc_events_calendar",
   "shopify_events",
   "spothopper_events",
   "squarespace_events",

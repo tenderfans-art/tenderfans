@@ -11,6 +11,7 @@ import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
 import { fetchUvTixEvents } from "./uvtix-events";
 import { fetchSchemaOrgEvents } from "./schema-org-events";
+import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
 import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
 import { fetchSpotHopperEvents } from "./spothopper-events";
@@ -213,6 +214,16 @@ export async function previewFirstPartySource(
     });
   } else if (source.source_type === "schema_org_events") {
     events = await fetchSchemaOrgEvents(source.source_url);
+  } else if (source.source_type === "pwpc_events_calendar") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    events = await fetchPwpcEventsCalendarEvents(
+      source.source_url,
+      { timeZone },
+    );
   } else if (source.source_type === "spothopper_events") {
     const timeZone =
       typeof source.config?.timezone === "string"
