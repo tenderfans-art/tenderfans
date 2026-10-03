@@ -161,6 +161,95 @@ function discoverLinks(
   return [...links.values()];
 }
 
+function normalizeFacebookPageUrl(
+  candidateUrl: string,
+): string | null {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(candidateUrl);
+  } catch {
+    return null;
+  }
+
+  let host = parsed.hostname.toLowerCase();
+
+  if (host !== "facebook.com" && !host.endsWith(".facebook.com")) {
+    return null;
+  }
+
+  // Facebook outbound-link redirectors identify the destination,
+  // not the Spot's Facebook Page.
+  if (host === "l.facebook.com" || host === "lm.facebook.com") {
+    return null;
+  }
+
+  // Some Facebook links force authentication before redirecting to
+  // the actual Page. Recover that Page identity from `next`.
+  if (parsed.pathname.toLowerCase().startsWith("/login")) {
+    const next = parsed.searchParams.get("next");
+
+    if (!next) {
+      return null;
+    }
+
+    try {
+      parsed = new URL(next);
+    } catch {
+      return null;
+    }
+
+    host = parsed.hostname.toLowerCase();
+
+    if (host !== "facebook.com" && !host.endsWith(".facebook.com")) {
+      return null;
+    }
+
+    if (host === "l.facebook.com" || host === "lm.facebook.com") {
+      return null;
+    }
+  }
+
+  const path = parsed.pathname.toLowerCase();
+
+  // Facebook utilities are not venue/Page identities.
+  if (
+    path === "/" ||
+    path === "" ||
+    path.startsWith("/sharer") ||
+    path.startsWith("/share") ||
+    path.startsWith("/dialog/") ||
+    path.startsWith("/plugins/") ||
+    path.startsWith("/login") ||
+    path.startsWith("/help")
+  ) {
+    return null;
+  }
+
+  // Canonicalize Facebook host/protocol while retaining Page identity.
+  parsed.protocol = "https:";
+  parsed.hostname = "www.facebook.com";
+  parsed.port = "";
+  parsed.hash = "";
+
+  // profile.php uses `id` as part of the Page identity. Everything
+  // else we've observed here is tracking/referral metadata.
+  if (path === "/profile.php") {
+    const id = parsed.searchParams.get("id");
+
+    if (!id) {
+      return null;
+    }
+
+    parsed.search = "";
+    parsed.searchParams.set("id", id);
+  } else {
+    parsed.search = "";
+  }
+
+  return parsed.toString();
+}
+
 function discoverFacebookUrl(
   html: string,
   pageUrl: string,
@@ -177,46 +266,15 @@ function discoverFacebookUrl(
       continue;
     }
 
-    let parsed: URL;
+    const facebookUrl = normalizeFacebookPageUrl(url);
 
-    try {
-      parsed = new URL(url);
-    } catch {
-      continue;
+    if (facebookUrl) {
+      return facebookUrl;
     }
-
-    const host = parsed.hostname.toLowerCase();
-
-    if (host !== "facebook.com" && !host.endsWith(".facebook.com")) {
-      continue;
-    }
-
-    // Facebook outbound-link redirectors identify the destination,
-    // not the Spot's Facebook Page.
-    if (host === "l.facebook.com" || host === "lm.facebook.com") {
-      continue;
-    }
-
-    const path = parsed.pathname.toLowerCase();
-
-    // Facebook utilities are not venue/Page identities.
-    if (
-      path.startsWith("/sharer") ||
-      path.startsWith("/share") ||
-      path.startsWith("/dialog/") ||
-      path.startsWith("/plugins/") ||
-      path.startsWith("/login") ||
-      path.startsWith("/help")
-    ) {
-      continue;
-    }
-
-    return url;
   }
 
   return null;
 }
-
 function extractSitemapLocations(xml: string, baseUrl: string): string[] {
   const urls = new Set<string>();
 
@@ -898,14 +956,18 @@ export async function detectFirstPartySources(
   const homeHost = hostname(homepage.url);
 
   if (homeHost === "facebook.com" || homeHost.endsWith(".facebook.com")) {
-    pushDetection(detections, {
-      sourceType: "facebook",
-      url: homepage.url,
-      confidence: "high",
-      adapterAvailable: false,
-      supported: false,
-      evidence: ["Spot website points to Facebook"],
-    });
+    const facebookUrl = normalizeFacebookPageUrl(homepage.url);
+
+    if (facebookUrl) {
+      pushDetection(detections, {
+        sourceType: "facebook",
+        url: facebookUrl,
+        confidence: "high",
+        adapterAvailable: false,
+        supported: false,
+        evidence: ["Spot website points to Facebook"],
+      });
+    }
   }
 
   if (homeHost === "linktr.ee" || homeHost.endsWith(".linktr.ee")) {
