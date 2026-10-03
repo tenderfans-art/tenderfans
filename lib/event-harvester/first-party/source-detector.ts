@@ -161,6 +161,62 @@ function discoverLinks(
   return [...links.values()];
 }
 
+function discoverFacebookUrl(
+  html: string,
+  pageUrl: string,
+): string | null {
+  const anchorPattern =
+    /<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1[^>]*>/gi;
+
+  let match: RegExpExecArray | null;
+
+  while ((match = anchorPattern.exec(html))) {
+    const url = normalizeUrl(match[2], pageUrl);
+
+    if (!url) {
+      continue;
+    }
+
+    let parsed: URL;
+
+    try {
+      parsed = new URL(url);
+    } catch {
+      continue;
+    }
+
+    const host = parsed.hostname.toLowerCase();
+
+    if (host !== "facebook.com" && !host.endsWith(".facebook.com")) {
+      continue;
+    }
+
+    // Facebook outbound-link redirectors identify the destination,
+    // not the Spot's Facebook Page.
+    if (host === "l.facebook.com" || host === "lm.facebook.com") {
+      continue;
+    }
+
+    const path = parsed.pathname.toLowerCase();
+
+    // Facebook utilities are not venue/Page identities.
+    if (
+      path.startsWith("/sharer") ||
+      path.startsWith("/share") ||
+      path.startsWith("/dialog/") ||
+      path.startsWith("/plugins/") ||
+      path.startsWith("/login") ||
+      path.startsWith("/help")
+    ) {
+      continue;
+    }
+
+    return url;
+  }
+
+  return null;
+}
+
 function extractSitemapLocations(xml: string, baseUrl: string): string[] {
   const urls = new Set<string>();
 
@@ -994,13 +1050,15 @@ export async function detectFirstPartySources(
    * Facebook-adapter review. Do not attempt to associate the
    * Facebook page with a specific venue or treat it as supported.
    */
-  if (
-    detections.length === 0 &&
-    /https?:\/\/(?:www\.)?facebook\.com\//i.test(homepage.html)
-  ) {
+  const facebookUrl =
+    detections.length === 0
+      ? discoverFacebookUrl(homepage.html, homepage.url)
+      : null;
+
+  if (facebookUrl) {
     pushDetection(detections, {
       sourceType: "facebook",
-      url: homepage.url,
+      url: facebookUrl,
       confidence: "medium",
       adapterAvailable: false,
       supported: false,
