@@ -289,6 +289,40 @@ export async function ratifyDetectedSource(
   detection: SourceDetection,
   venue: SourceVenueIdentity,
 ): Promise<SourceRatification> {
+  if (
+    detection.sourceType === "facebook" &&
+    detection.adapterAvailable
+  ) {
+    /*
+     * Preserve "facebook" as the detector/finding type while storing
+     * the implemented production adapter as "facebook_events".
+     *
+     * Facebook Pages may publish events for multiple physical venues,
+     * so event-level venue attribution remains downstream rather than
+     * forcing every harvested event onto the source Spot.
+     */
+    return {
+      status: "ratified",
+      source: {
+        sourceType: "facebook_events",
+        sourceUrl: detection.url,
+        externalSourceId: [
+          "first_party",
+          "facebook_events",
+          detection.url,
+        ].join(":"),
+        config: {},
+      },
+      evidence: [
+        ...detection.evidence,
+        "Facebook Page was discovered from the Spot surface",
+        "TenderFans has an implemented Facebook Events adapter",
+        "Event venue attribution will be resolved per harvested event",
+      ],
+      error: null,
+    };
+  }
+
   if (detection.sourceType === "eventbrite_organizer") {
     /*
      * Eventbrite is the exception because an Eventbrite

@@ -15,6 +15,7 @@ import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
 import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
 import { fetchSpotHopperEvents } from "./spothopper-events";
+import { fetchFacebookEvents } from "./facebook-events";
 
 export type FirstPartySource = {
   id: string;
@@ -23,7 +24,7 @@ export type FirstPartySource = {
   name: string;
   source_url: string | null;
   external_source_id: string | null;
-  venue_id: string;
+  venue_id: string | null;
   is_enabled: boolean;
   trust_level: string;
   config: Record<string, unknown>;
@@ -32,7 +33,8 @@ export type FirstPartySource = {
 
 export type FirstPartyEventPreview = {
   sourceId: string;
-  venueId: string;
+  sourceType: string;
+  venueId: string | null;
   externalEventId: string;
   sourceUrl: string | null;
   title: string;
@@ -45,7 +47,7 @@ export type FirstPartyEventPreview = {
   location: string | null;
   venueName: string | null;
   venueAddress: string | null;
-  eventFingerprint: string;
+  eventFingerprint: string | null;
   rawPayload: Record<string, unknown>;
 };
 
@@ -83,7 +85,7 @@ export async function loadFirstPartySource(
     throw new Error("Enabled first-party event source was not found.");
   }
 
-  if (!data.venue_id) {
+  if (!data.venue_id && data.source_type !== "facebook_events") {
     throw new Error("First-party source is not attached to a TenderFans Spot.");
   }
 
@@ -239,6 +241,8 @@ export async function previewFirstPartySource(
       timeZone,
       weeksForward,
     });
+  } else if (source.source_type === "facebook_events") {
+    events = await fetchFacebookEvents(source.source_url);
   } else if (source.source_type === "wordpress_event_feed") {
     const timeZone =
       typeof source.config?.timezone === "string"
@@ -257,6 +261,7 @@ export async function previewFirstPartySource(
 
   return events.map((event) => ({
     sourceId: source.id,
+    sourceType: source.source_type,
     venueId: source.venue_id,
     externalEventId: event.externalEventId,
     sourceUrl: event.sourceUrl ?? source.source_url,
@@ -270,11 +275,13 @@ export async function previewFirstPartySource(
     location: event.location,
     venueName: event.venueName ?? null,
     venueAddress: event.venueAddress ?? null,
-    eventFingerprint: eventFingerprint({
-      venueId: source.venue_id,
-      title: event.title,
-      startsAt: event.startsAt,
-    }),
+    eventFingerprint: source.venue_id
+      ? eventFingerprint({
+          venueId: source.venue_id,
+          title: event.title,
+          startsAt: event.startsAt,
+        })
+      : null,
     rawPayload: event.rawPayload,
   }));
 }

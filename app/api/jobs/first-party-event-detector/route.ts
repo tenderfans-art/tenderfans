@@ -526,30 +526,44 @@ export async function GET(
 
           validated += 1;
 
+          const registration =
+            ratification.source.sourceType === "facebook_events"
+              ? await supabase.rpc(
+                  "upsert_global_first_party_event_source",
+                  {
+                    p_source_type:
+                      ratification.source.sourceType,
+                    p_name:
+                      `${venue.name} Facebook events`,
+                    p_source_url:
+                      ratification.source.sourceUrl,
+                    p_external_source_id:
+                      ratification.source.externalSourceId,
+                    p_config:
+                      ratification.source.config,
+                  },
+                )
+              : await supabase.rpc(
+                  "upsert_first_party_event_source",
+                  {
+                    p_venue_id: venue.id,
+                    p_source_type:
+                      ratification.source.sourceType,
+                    p_name:
+                      `${venue.name} official events`,
+                    p_source_url:
+                      ratification.source.sourceUrl,
+                    p_external_source_id:
+                      ratification.source.externalSourceId,
+                    p_config:
+                      ratification.source.config,
+                  },
+                );
+
           const {
             data: sourceId,
             error: registrationError,
-          } = await supabase.rpc(
-            "upsert_first_party_event_source",
-            {
-              p_venue_id:
-                venue.id,
-              p_source_type:
-                ratification.source
-                  .sourceType,
-              p_name:
-                `${venue.name} official events`,
-              p_source_url:
-                ratification.source
-                  .sourceUrl,
-              p_external_source_id:
-                ratification.source
-                  .externalSourceId,
-              p_config:
-                ratification.source
-                  .config,
-            }
-          );
+          } = registration;
 
           if (
             registrationError ||
@@ -583,6 +597,29 @@ export async function GET(
             throw new Error(
               `Could not resolve calendar-image findings after source registration: ${calendarResolutionError.message}`
             );
+          }
+
+          /*
+           * A successfully registered Facebook adapter is no longer
+           * actionable discovery work. Resolve the Facebook finding
+           * after registration succeeds.
+           */
+          if (candidate.sourceType === "facebook") {
+            const {
+              error: facebookResolutionError,
+            } = await supabase.rpc(
+              "resolve_event_harvest_detector_findings",
+              {
+                p_venue_id: venue.id,
+                p_category: "facebook",
+              }
+            );
+
+            if (facebookResolutionError) {
+              throw new Error(
+                `Could not resolve Facebook findings after source registration: ${facebookResolutionError.message}`
+              );
+            }
           }
         } catch (error) {
           failed += 1;

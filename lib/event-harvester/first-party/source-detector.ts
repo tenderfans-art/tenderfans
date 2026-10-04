@@ -1014,8 +1014,8 @@ export async function detectFirstPartySources(
         sourceType: "facebook",
         url: facebookUrl,
         confidence: "high",
-        adapterAvailable: false,
-        supported: false,
+        adapterAvailable: true,
+        supported: true,
         evidence: ["Spot website points to Facebook"],
       });
     }
@@ -1192,8 +1192,8 @@ export async function detectFirstPartySources(
       sourceType: "facebook",
       url: facebookUrl,
       confidence: "medium",
-      adapterAvailable: false,
-      supported: false,
+      adapterAvailable: true,
+      supported: true,
       evidence: ["Facebook is the only potential event source discovered"],
     });
   }
