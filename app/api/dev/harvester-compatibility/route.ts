@@ -25,6 +25,12 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
+  const venueId =
+    searchParams.get("venueId")?.trim() || null;
+
+  const detectOnly =
+    searchParams.get("detectOnly") === "1";
+
   const start = Math.max(
     0,
     Number.parseInt(searchParams.get("start") ?? "0", 10) || 0
@@ -50,15 +56,23 @@ export async function GET(request: Request) {
       process.env.SUPABASE_SECRET_KEY!
     );
 
-    const { data: venues, error } = await supabase
+    let venueQuery = supabase
       .from("venues")
       .select(
         "id,name,website_url,street_address,city,state_region,postal_code,country_code,latitude,longitude"
       )
       .eq("status", "active")
-      .not("website_url", "is", null)
-      .order("created_at", { ascending: false })
-      .range(start, end);
+      .not("website_url", "is", null);
+
+    if (venueId) {
+      venueQuery = venueQuery.eq("id", venueId);
+    } else {
+      venueQuery = venueQuery
+        .order("created_at", { ascending: false })
+        .range(start, end);
+    }
+
+    const { data: venues, error } = await venueQuery;
 
     if (error) {
       throw new Error(
@@ -107,7 +121,7 @@ export async function GET(request: Request) {
        * proceed directly to adapter validation.
        */
       for (const candidate of detection.detections) {
-        if (!candidate.adapterAvailable) {
+        if (detectOnly || !candidate.adapterAvailable) {
           continue;
         }
 
