@@ -582,9 +582,9 @@ function inspectPage(
   }
 
   /*
-   * Dusk is BeatGig's public venue-calendar embed. The venue slug is
-   * supplied by the first-party site through data-venue-slug and is
-   * the durable public identifier used by BeatGig's calendar API.
+   * Dusk is BeatGig's public venue-calendar embed. BeatGig currently
+   * exposes the venue slug through data-beatgig-venue-slug; retain the
+   * older data-venue-slug form for compatibility with existing embeds.
    */
   const hasDuskVenueCalendar =
     /https?:\\?\/\\?\/(?:www\\?\.)?dusk\\?\.fm\\?\/iframe\\?\/venue-calendar/i.test(
@@ -596,7 +596,13 @@ function inspectPage(
 
   const beatGigVenueSlugMatch =
     html.match(
+      /\bdata-beatgig-venue-slug\s*=\s*(["'])([^"']+)\1/i,
+    ) ??
+    html.match(
       /\bdata-venue-slug\s*=\s*(["'])([^"']+)\1/i,
+    ) ??
+    html.match(
+      /["']data-beatgig-venue-slug["']\s*:\s*["']([^"']+)["']/i,
     ) ??
     html.match(
       /["']data-venue-slug["']\s*:\s*["']([^"']+)["']/i,
