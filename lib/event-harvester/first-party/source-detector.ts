@@ -512,6 +512,29 @@ function inspectObservedBrowserUrl(
     });
   }
 
+  /*
+   * Some first-party event surfaces only expose their Google Calendar
+   * embed after browser execution. Preserve the embed URL here, just as
+   * inspectPage() does for a statically visible embed; the existing
+   * Google Calendar adapter owns conversion to the public ICS endpoint.
+   */
+  if (
+    url.hostname.toLowerCase() === "calendar.google.com" &&
+    /^\/calendar\/embed\/?$/i.test(url.pathname) &&
+    url.searchParams.get("src")
+  ) {
+    pushDetection(detections, {
+      sourceType: "google_calendar",
+      url: url.toString(),
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Google Calendar embed observed during browser execution",
+      ],
+    });
+  }
+
   if (
     url.hostname.toLowerCase() ===
       "data.accentapi.com" &&
@@ -1351,9 +1374,9 @@ export async function detectFirstPartySources(
    * already-discovered same-site event surfaces in the browser and feed
    * the resulting evidence back through the same detector.
    *
-   * Stop as soon as the browser exposes a harvestable EventsCalendar
-   * source. This keeps the first browser integration intentionally
-   * bounded while preserving the existing HTTP discovery path.
+   * Stop as soon as the browser exposes a harvestable provider source.
+   * This keeps browser resolution bounded while preserving the existing
+   * HTTP discovery path and shared provider adapters.
    */
   const needsBrowserResolution = detections.some(
     (detection) => detection.sourceType === "browser_required",
@@ -1399,7 +1422,9 @@ export async function detectFirstPartySources(
               detection.sourceType ===
                 "eventscalendar_events" ||
               detection.sourceType ===
-                "sociablekit_facebook_events",
+                "sociablekit_facebook_events" ||
+              detection.sourceType ===
+                "google_calendar",
           )
         ) {
           break;
@@ -1424,7 +1449,9 @@ export async function detectFirstPartySources(
           detection.sourceType ===
             "eventscalendar_events" ||
           detection.sourceType ===
-            "sociablekit_facebook_events",
+            "sociablekit_facebook_events" ||
+          detection.sourceType ===
+            "google_calendar",
       )
     ) {
       for (
