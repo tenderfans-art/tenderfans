@@ -5,6 +5,7 @@ import { eventFingerprint, normalizeTitle } from "../identity";
 import { parseIcsEvents } from "./ics";
 import { fetchGoogleCalendarEvents } from "./google-calendar-events";
 import { fetchBeatGigEvents } from "./beatgig-events";
+import { fetchBandzoogleEvents } from "./bandzoogle-events";
 import { fetchEventbriteOrganizerEvents } from "./eventbrite-organizer";
 import { fetchGoDaddyMenuRecurringEvents } from "./godaddy-menu-recurring";
 import { fetchCpMultiViewCalendarEvents } from "./cp-multi-view-calendar";
@@ -113,6 +114,8 @@ export async function previewFirstPartySource(
     );
   } else if (source.source_type === "beatgig_events") {
     events = await fetchBeatGigEvents(source.source_url);
+  } else if (source.source_type === "bandzoogle_events") {
+    events = await fetchBandzoogleEvents(source.source_url);
   } else if (source.source_type === "ics") {
     const response = await fetch(source.source_url, {
       headers: {

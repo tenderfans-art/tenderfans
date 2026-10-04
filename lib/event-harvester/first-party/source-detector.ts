@@ -15,6 +15,7 @@ export type DetectedSourceType =
   | "next_rsc_events"
   | "google_calendar"
   | "beatgig_events"
+  | "bandzoogle_events"
   | "ics"
   | "wordpress_ajax_events"
   | "wordpress_event_feed"
@@ -537,6 +538,45 @@ function inspectPage(
       supported: true,
       evidence: [
         "Google Calendar embed found on first-party event surface",
+      ],
+    });
+  }
+
+  /*
+   * Bandzoogle exposes its native calendar directly in first-party
+   * HTML. The calendar feature ID identifies the server-rendered
+   * Turbo inventory surface, while event/occurrence IDs identify
+   * individual scheduled occurrences.
+   */
+  const bandzoogleCalendarMatch =
+    html.match(
+      /\bclass=["'][^"']*\bcalendar_feature\b[^"']*["'][^>]*\bdata-feature-id=["'](\d+)["']/i,
+    ) ??
+    html.match(
+      /\bdata-feature-id=["'](\d+)["'][^>]*\bclass=["'][^"']*\bcalendar_feature\b/i,
+    ) ??
+    html.match(
+      /\bid=["']calendar_feature_(\d+)["']/i,
+    );
+
+  const hasBandzoogleOccurrence =
+    /\bdata-event-id=["']\d+["'][^>]*\bdata-occurrence-id=["']\d+["']/i.test(
+      html,
+    );
+
+  if (
+    bandzoogleCalendarMatch &&
+    hasBandzoogleOccurrence
+  ) {
+    pushDetection(detections, {
+      sourceType: "bandzoogle_events",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Bandzoogle native calendar feature found on first-party event surface",
+        "Bandzoogle event and occurrence IDs exposed by calendar inventory",
       ],
     });
   }
