@@ -600,6 +600,28 @@ export async function GET(
           }
 
           /*
+           * A successfully registered structured first-party source
+           * also makes any browser-required discovery finding
+           * non-actionable. Browser transport has completed its job
+           * once it exposes a provider source that can be registered.
+           */
+          const {
+            error: browserResolutionError,
+          } = await supabase.rpc(
+            "resolve_event_harvest_detector_findings",
+            {
+              p_venue_id: venue.id,
+              p_category: "browser_required",
+            }
+          );
+
+          if (browserResolutionError) {
+            throw new Error(
+              `Could not resolve browser-required findings after source registration: ${browserResolutionError.message}`
+            );
+          }
+
+          /*
            * A successfully registered Facebook adapter is no longer
            * actionable discovery work. Resolve the Facebook finding
            * after registration succeeds.

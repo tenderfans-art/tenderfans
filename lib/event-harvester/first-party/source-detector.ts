@@ -10,6 +10,7 @@ export type DetectedSourceType =
   | "shopify_events"
   | "calendar_image"
   | "eventscalendar_events"
+  | "sociablekit_facebook_events"
   | "browser_required"
   | "spothopper_events"
   | "shared_event_calendar"
@@ -507,6 +508,32 @@ function inspectObservedBrowserUrl(
       supported: true,
       evidence: [
         "EventsCalendar.co public events API observed during browser execution",
+      ],
+    });
+  }
+
+  if (
+    url.hostname.toLowerCase() ===
+      "data.accentapi.com" &&
+    /^\/feed\/\d+\.json$/i.test(
+      url.pathname,
+    )
+  ) {
+    /*
+     * SociableKIT appends a nocache value while loading the widget.
+     * Store the durable public feed URL rather than a transient request.
+     */
+    url.searchParams.delete("nocache");
+
+    pushDetection(detections, {
+      sourceType:
+        "sociablekit_facebook_events",
+      url: url.toString(),
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "SociableKIT Facebook Page Events public feed observed during browser execution",
       ],
     });
   }
@@ -1369,7 +1396,10 @@ export async function detectFirstPartySources(
         if (
           detections.some(
             (detection) =>
-              detection.sourceType === "eventscalendar_events",
+              detection.sourceType ===
+                "eventscalendar_events" ||
+              detection.sourceType ===
+                "sociablekit_facebook_events",
           )
         ) {
           break;
@@ -1391,7 +1421,10 @@ export async function detectFirstPartySources(
     if (
       detections.some(
         (detection) =>
-          detection.sourceType === "eventscalendar_events",
+          detection.sourceType ===
+            "eventscalendar_events" ||
+          detection.sourceType ===
+            "sociablekit_facebook_events",
       )
     ) {
       for (

@@ -280,6 +280,7 @@ const directlyRatifiableSourceTypes = new Set([
   "beatgig_events",
   "bandzoogle_events",
   "eventscalendar_events",
+  "sociablekit_facebook_events",
   "tribe_rest",
   "next_rsc_events",
   "wordpress_event_feed",

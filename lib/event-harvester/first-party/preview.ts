@@ -7,6 +7,7 @@ import { fetchGoogleCalendarEvents } from "./google-calendar-events";
 import { fetchBeatGigEvents } from "./beatgig-events";
 import { fetchBandzoogleEvents } from "./bandzoogle-events";
 import { fetchEventsCalendarEvents } from "./eventscalendar-events";
+import { fetchSociableKitFacebookEvents } from "./sociablekit-facebook-events";
 import { fetchEventbriteOrganizerEvents } from "./eventbrite-organizer";
 import { fetchGoDaddyMenuRecurringEvents } from "./godaddy-menu-recurring";
 import { fetchCpMultiViewCalendarEvents } from "./cp-multi-view-calendar";
@@ -126,6 +127,12 @@ export async function previewFirstPartySource(
     events = await fetchEventsCalendarEvents(
       source.source_url,
       { timeZone },
+    );
+  } else if (
+    source.source_type === "sociablekit_facebook_events"
+  ) {
+    events = await fetchSociableKitFacebookEvents(
+      source.source_url,
     );
   } else if (source.source_type === "ics") {
     const response = await fetch(source.source_url, {
