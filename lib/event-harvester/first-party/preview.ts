@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { eventFingerprint, normalizeTitle } from "../identity";
 
 import { parseIcsEvents } from "./ics";
+import { fetchGoogleCalendarEvents } from "./google-calendar-events";
 import { fetchEventbriteOrganizerEvents } from "./eventbrite-organizer";
 import { fetchGoDaddyMenuRecurringEvents } from "./godaddy-menu-recurring";
 import { fetchCpMultiViewCalendarEvents } from "./cp-multi-view-calendar";
@@ -105,7 +106,11 @@ export async function previewFirstPartySource(
 
   let events;
 
-  if (source.source_type === "ics") {
+  if (source.source_type === "google_calendar") {
+    events = await fetchGoogleCalendarEvents(
+      source.source_url,
+    );
+  } else if (source.source_type === "ics") {
     const response = await fetch(source.source_url, {
       headers: {
         Accept: "text/calendar,text/plain;q=0.9,*/*;q=0.8",

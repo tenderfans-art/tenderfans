@@ -13,6 +13,7 @@ export type DetectedSourceType =
   | "squarespace_events"
   | "tribe_rest"
   | "next_rsc_events"
+  | "google_calendar"
   | "ics"
   | "wordpress_ajax_events"
   | "wordpress_event_feed"
@@ -502,6 +503,39 @@ function inspectPage(
       evidence: [
         "EventsCalendar.co runtime widget detected",
         "Browser execution required to obtain runtime event-source configuration",
+      ],
+    });
+  }
+
+  /*
+   * Google Calendar is commonly embedded as an iframe rather
+   * than exposed through an ordinary anchor. discoverLinks()
+   * intentionally handles anchors only, so recognize the
+   * provider directly from the page HTML here.
+   *
+   * Preserve the discovered embed URL. The Google Calendar
+   * adapter owns conversion from that URL to the public ICS
+   * endpoint.
+   */
+  const googleCalendarEmbedMatch = html.match(
+    /https?:\\?\/\\?\/(?:www\\?\.)?google\\?\.com\\?\/calendar\\?\/embed\?[^"'<>\\\s]*\bsrc=[^"'<>\\\s&]+[^"'<>\\\s]*/i,
+  );
+
+  if (googleCalendarEmbedMatch) {
+    const googleCalendarUrl = decodeHtml(
+      googleCalendarEmbedMatch[0]
+        .replace(/\\\//g, "/")
+        .replace(/\\u0026/gi, "&"),
+    );
+
+    pushDetection(detections, {
+      sourceType: "google_calendar",
+      url: googleCalendarUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Google Calendar embed found on first-party event surface",
       ],
     });
   }
