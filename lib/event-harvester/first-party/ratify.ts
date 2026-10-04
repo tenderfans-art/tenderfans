@@ -277,6 +277,7 @@ const directlyRatifiableSourceTypes = new Set([
   "spothopper_events",
   "squarespace_events",
   "google_calendar",
+  "beatgig_events",
   "tribe_rest",
   "next_rsc_events",
   "wordpress_event_feed",

@@ -14,6 +14,7 @@ export type DetectedSourceType =
   | "tribe_rest"
   | "next_rsc_events"
   | "google_calendar"
+  | "beatgig_events"
   | "ics"
   | "wordpress_ajax_events"
   | "wordpress_event_feed"
@@ -536,6 +537,51 @@ function inspectPage(
       supported: true,
       evidence: [
         "Google Calendar embed found on first-party event surface",
+      ],
+    });
+  }
+
+  /*
+   * Dusk is BeatGig's public venue-calendar embed. The venue slug is
+   * supplied by the first-party site through data-venue-slug and is
+   * the durable public identifier used by BeatGig's calendar API.
+   */
+  const hasDuskVenueCalendar =
+    /https?:\\?\/\\?\/(?:www\\?\.)?dusk\\?\.fm\\?\/iframe\\?\/venue-calendar/i.test(
+      html,
+    ) ||
+    /https?:\\?\/\\?\/(?:www\\?\.)?dusk\\?\.fm\\?\/embed\\?\/venue-calendar/i.test(
+      html,
+    );
+
+  const beatGigVenueSlugMatch =
+    html.match(
+      /\bdata-venue-slug\s*=\s*(["'])([^"']+)\1/i,
+    ) ??
+    html.match(
+      /["']data-venue-slug["']\s*:\s*["']([^"']+)["']/i,
+    );
+
+  const beatGigVenueSlug =
+    beatGigVenueSlugMatch?.[2] ??
+    beatGigVenueSlugMatch?.[1] ??
+    null;
+
+  if (hasDuskVenueCalendar && beatGigVenueSlug) {
+    const beatGigSourceUrl =
+      `https://dusk.fm/embed/venue-calendar/${encodeURIComponent(
+        decodeHtml(beatGigVenueSlug),
+      )}`;
+
+    pushDetection(detections, {
+      sourceType: "beatgig_events",
+      url: beatGigSourceUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Dusk / BeatGig venue calendar embed found on first-party event surface",
+        "BeatGig venue slug exposed by first-party embed configuration",
       ],
     });
   }
