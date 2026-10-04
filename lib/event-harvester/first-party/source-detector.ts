@@ -1,3 +1,5 @@
+import { fetchBrowserEvidence } from "./browser-transport";
+
 export type DetectedSourceType =
   | "eventbrite_organizer"
   | "godaddy_menu_recurring"
@@ -7,6 +9,7 @@ export type DetectedSourceType =
   | "pwpc_events_calendar"
   | "shopify_events"
   | "calendar_image"
+  | "eventscalendar_events"
   | "browser_required"
   | "spothopper_events"
   | "shared_event_calendar"
@@ -474,6 +477,38 @@ function pushDetection(
     if (!existing.evidence.includes(evidence)) {
       existing.evidence.push(evidence);
     }
+  }
+}
+
+function inspectObservedBrowserUrl(
+  value: string,
+  detections: SourceDetection[],
+): void {
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    return;
+  }
+
+  if (
+    url.hostname.toLowerCase() === "inffuse.eventscalendar.co" &&
+    /^\/api\/v0\.1\/projects\/[^/]+\/data\/public\/events\/?$/i.test(
+      url.pathname,
+    ) &&
+    url.searchParams.get("app") === "calendar"
+  ) {
+    pushDetection(detections, {
+      sourceType: "eventscalendar_events",
+      url: url.toString(),
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "EventsCalendar.co public events API observed during browser execution",
+      ],
+    });
   }
 }
 
@@ -1278,6 +1313,98 @@ export async function detectFirstPartySources(
       );
     } catch {
       // Individual discovery-page failures do not fail the site scan.
+    }
+  }
+
+  /*
+   * Browser escalation is transport enrichment, not a source type.
+   *
+   * Static detection may prove that a runtime event application exists
+   * without exposing its actual provider data source. Revisit the
+   * already-discovered same-site event surfaces in the browser and feed
+   * the resulting evidence back through the same detector.
+   *
+   * Stop as soon as the browser exposes a harvestable EventsCalendar
+   * source. This keeps the first browser integration intentionally
+   * bounded while preserving the existing HTTP discovery path.
+   */
+  const needsBrowserResolution = detections.some(
+    (detection) => detection.sourceType === "browser_required",
+  );
+
+  if (needsBrowserResolution) {
+    const browserCandidates = discoveredEventPages.filter(
+      (page) =>
+        page.sameSite &&
+        page.fetched &&
+        page.httpStatus !== null &&
+        page.httpStatus >= 200 &&
+        page.httpStatus < 400,
+    );
+
+    for (const candidate of browserCandidates) {
+      try {
+        const evidence = await fetchBrowserEvidence(
+          candidate.finalUrl ?? candidate.url,
+        );
+
+        pagesInspected += 1;
+
+        inspectPage(
+          evidence.html,
+          evidence.finalUrl,
+          detections,
+        );
+
+        for (const observedUrl of [
+          ...evidence.iframeUrls,
+          ...evidence.observedUrls,
+        ]) {
+          inspectObservedBrowserUrl(
+            observedUrl,
+            detections,
+          );
+        }
+
+        if (
+          detections.some(
+            (detection) =>
+              detection.sourceType === "eventscalendar_events",
+          )
+        ) {
+          break;
+        }
+      } catch {
+        /*
+         * A failed browser attempt on one discovered event surface
+         * does not invalidate the HTTP detector result or prevent
+         * another candidate page from being tried.
+         */
+      }
+    }
+
+    /*
+     * browser_required describes an unresolved transport condition.
+     * Once browser execution identifies the real harvestable provider,
+     * retain the provider source rather than the superseded condition.
+     */
+    if (
+      detections.some(
+        (detection) =>
+          detection.sourceType === "eventscalendar_events",
+      )
+    ) {
+      for (
+        let index = detections.length - 1;
+        index >= 0;
+        index -= 1
+      ) {
+        if (
+          detections[index].sourceType === "browser_required"
+        ) {
+          detections.splice(index, 1);
+        }
+      }
     }
   }
 
