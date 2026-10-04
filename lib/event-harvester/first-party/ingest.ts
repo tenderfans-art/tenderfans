@@ -103,6 +103,20 @@ async function ingestEvent(
     attributionMethod: attribution.method,
   };
 
+  /*
+   * Preserve malformed publisher end times as raw provenance, but do
+   * not let an equal/earlier end invalidate an otherwise usable event.
+   *
+   * The start remains authoritative. A later harvest with a corrected
+   * publisher end time will flow through normally and replace the null
+   * normalized end during first-party synchronization.
+   */
+  const normalizedEndsAt =
+    event.endsAt &&
+    new Date(event.endsAt).getTime() > new Date(event.startsAt).getTime()
+      ? event.endsAt
+      : null;
+
   const { data: candidateData, error: candidateError } = await supabase.rpc(
     "upsert_event_harvest_candidate",
     {
@@ -117,7 +131,7 @@ async function ingestEvent(
       p_raw_ends_at: event.endsAt,
       p_normalized_title: event.normalizedTitle,
       p_starts_at: event.startsAt,
-      p_ends_at: event.endsAt,
+      p_ends_at: normalizedEndsAt,
       p_venue_id: attribution.venueId,
       p_confidence_score: attribution.confidenceScore,
       p_event_fingerprint: resolvedFingerprint,
@@ -215,7 +229,7 @@ async function ingestEvent(
       p_raw_ends_at: event.endsAt,
       p_normalized_title: event.normalizedTitle,
       p_starts_at: event.startsAt,
-      p_ends_at: event.endsAt,
+      p_ends_at: normalizedEndsAt,
       p_event_fingerprint: resolvedFingerprint,
       p_flyer_url: event.flyerUrl,
       p_raw_payload: harvestPayload,
