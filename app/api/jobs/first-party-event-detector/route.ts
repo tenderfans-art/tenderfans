@@ -481,6 +481,57 @@ export async function GET(
 
           ratified += 1;
 
+          /*
+           * UVTix subdomains identify provider-side venue/account
+           * inventories. A shared first-party website can link to more
+           * than one UVTix account, so discovery from the current Spot's
+           * web surface alone is not sufficient ownership evidence.
+           *
+           * Preserve venue-scoped source registration generally, but do
+           * not automatically attach an already-owned UVTix identity to
+           * a different TenderFans Spot.
+           */
+          if (
+            ratification.source.sourceType ===
+            "uvtix_events"
+          ) {
+            const {
+              data: existingUvTixOwners,
+              error: existingUvTixOwnerError,
+            } = await supabase
+              .from("event_harvest_sources")
+              .select("id,venue_id,name")
+              .eq("provider", "first_party")
+              .eq(
+                "external_source_id",
+                ratification.source.externalSourceId
+              )
+              .eq("is_enabled", true)
+              .neq("venue_id", venue.id)
+              .limit(1);
+
+            if (existingUvTixOwnerError) {
+              throw new Error(
+                `Could not verify UVTix source ownership: ${existingUvTixOwnerError.message}`
+              );
+            }
+
+            const existingUvTixOwner =
+              existingUvTixOwners?.[0];
+
+            if (existingUvTixOwner) {
+              failed += 1;
+              failures.push({
+                venueId: venue.id,
+                name: venue.name,
+                stage: "attribution",
+                error:
+                  `UVTix source ${ratification.source.sourceUrl} is already registered to another Spot (${existingUvTixOwner.name ?? existingUvTixOwner.venue_id}).`,
+              });
+              continue;
+            }
+          }
+
           const source: FirstPartySource = {
             id: `probe:${venue.id}`,
             provider: "first_party",
