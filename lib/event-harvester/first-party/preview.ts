@@ -21,6 +21,7 @@ import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
 import { fetchSpotHopperEvents } from "./spothopper-events";
 import { fetchFacebookEvents } from "./facebook-events";
+import { fetchCalendarImageEvents } from "./calendar-image-events";
 
 export type FirstPartySource = {
   id: string;
@@ -270,6 +271,16 @@ export async function previewFirstPartySource(
       timeZone,
       weeksForward,
     });
+  } else if (source.source_type === "calendar_image") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    events = await fetchCalendarImageEvents(
+      source.source_url,
+      { timeZone },
+    );
   } else if (source.source_type === "facebook_events") {
     events = await fetchFacebookEvents(source.source_url);
   } else if (source.source_type === "wordpress_event_feed") {

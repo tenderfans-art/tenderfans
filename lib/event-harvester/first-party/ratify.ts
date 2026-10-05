@@ -284,6 +284,7 @@ const directlyRatifiableSourceTypes = new Set([
   "tribe_rest",
   "next_rsc_events",
   "wordpress_event_feed",
+  "calendar_image",
 ]);
 
 function stableExternalSourceId(detection: SourceDetection): string {

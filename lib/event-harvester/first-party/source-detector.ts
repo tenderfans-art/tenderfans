@@ -1,4 +1,5 @@
 import { fetchBrowserEvidence } from "./browser-transport";
+import { discoverCalendarImageAssets } from "./calendar-image-assets";
 
 export type DetectedSourceType =
   | "eventbrite_organizer"
@@ -1022,19 +1023,16 @@ function inspectPage(
     });
   }
 
-  const calendarImageMatches = [
-    ...html.matchAll(
-      /(?:src|data-src|data-srclazy)=["']([^"']*(?:(?:wp-content\/uploads|\/uploads\/)|img1\.wsimg\.com\/isteam\/)[^"']*(?:calendar|entertainment|live(?:%20|[-_ ])?music|events?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?[0-9]{2,4}|(?:^|[-_\/])(?:0?[1-9]|1[0-2])[-_](?:20[0-9]{2}))[^"']*\.(?:jpe?g|png|webp)(?:(?:\/:\/)[^"']*|\?[^"']*)?)["']/gi,
-    ),
-  ];
+  const calendarImageAssets =
+    discoverCalendarImageAssets(html, pageUrl);
 
-  if (calendarImageMatches.length > 0) {
+  if (calendarImageAssets.length > 0) {
     pushDetection(detections, {
       sourceType: "calendar_image",
       url: pageUrl,
       confidence: "medium",
-      adapterAvailable: false,
-      supported: false,
+      adapterAvailable: true,
+      supported: true,
       evidence: ["Event/calendar-like uploaded image found"],
     });
   }
