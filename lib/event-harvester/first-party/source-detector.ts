@@ -754,36 +754,6 @@ function inspectPage(
   }
 
   /*
-   * Some event platforms embed Eventbrite as their ticket/calendar
-   * provider without exposing a literal eventbrite.com URL in the
-   * server-rendered page. Require multiple Eventbrite integration
-   * signals so ordinary mentions of Eventbrite do not qualify.
-   */
-  if (
-    !eventbriteOrganizerMatch &&
-    !eventbriteEventMatch &&
-    !eventsCalendarRuntimeMatch &&
-    /\beventbrite\b/i.test(html) &&
-    (/directed to your Eventbrite page/i.test(html) ||
-      /Eventbrite calendars?/i.test(html)) &&
-    (/purchase tickets?/i.test(html) ||
-      /sync with external calendars?/i.test(html) ||
-      /display multiple events?/i.test(html))
-  ) {
-    pushDetection(detections, {
-      sourceType: "eventbrite_organizer",
-      url: pageUrl,
-      confidence: "medium",
-      adapterAvailable: true,
-      supported: true,
-      evidence: [
-        "Embedded Eventbrite event/ticket integration",
-        "Multiple Eventbrite integration signals found",
-      ],
-    });
-  }
-
-  /*
    * Shopify event collections expose a stable public JSON
    * product feed. Require both Shopify storefront evidence
    * and an event-oriented collection path so an ordinary
