@@ -15,6 +15,11 @@ type CalendarEvent = {
   flyer_url: string | null;
   venue_name: string;
   venue_slug: string | null;
+  venue_city: string;
+  venue_state_region: string;
+  venue_postal_code: string;
+  venue_latitude: number | null;
+  venue_longitude: number | null;
 };
 
 type CalendarWeek = {
@@ -120,6 +125,13 @@ export default function EventsCalendar({
   const [selectedFlyer, setSelectedFlyer] = useState<CalendarEvent | null>(null);
   const [eventSearch, setEventSearch] = useState("");
   const [selectedWeekday, setSelectedWeekday] = useState<number | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [locationStatus, setLocationStatus] = useState<
+    "idle" | "loading" | "ready" | "denied" | "unsupported"
+  >("idle");
 
   useEffect(() => {
     const now = new Date();
@@ -131,6 +143,30 @@ export default function EventsCalendar({
     const params = new URLSearchParams(window.location.search);
     setRequestedEventId(params.get("event"));
   }, []);
+
+  useEffect(() => {
+    if (venueId) return;
+
+    if (!navigator.geolocation) {
+      setLocationStatus("unsupported");
+      return;
+    }
+
+    setLocationStatus("loading");
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setLocationStatus("ready");
+      },
+      () => {
+        setLocationStatus("denied");
+      }
+    );
+  }, [venueId]);
 
   useEffect(() => {
     async function loadRequestedEvent() {
@@ -149,7 +185,12 @@ export default function EventsCalendar({
           flyer_url,
           venues (
             name,
-            slug
+            slug,
+            city,
+            state_region,
+            postal_code,
+            latitude,
+            longitude
           )
         `)
         .eq("id", requestedEventId)
@@ -169,6 +210,11 @@ export default function EventsCalendar({
         flyer_url: data.flyer_url ?? null,
         venue_name: (data.venues as any)?.name ?? "TenderFans Spot",
         venue_slug: (data.venues as any)?.slug ?? null,
+        venue_city: (data.venues as any)?.city ?? "",
+        venue_state_region: (data.venues as any)?.state_region ?? "",
+        venue_postal_code: (data.venues as any)?.postal_code ?? "",
+        venue_latitude: (data.venues as any)?.latitude ?? null,
+        venue_longitude: (data.venues as any)?.longitude ?? null,
       };
 
       const eventDate = eventCalendarDate(event);
@@ -234,7 +280,12 @@ export default function EventsCalendar({
           flyer_url,
           venues (
             name,
-            slug
+            slug,
+            city,
+            state_region,
+            postal_code,
+            latitude,
+            longitude
           )
         `)
         .eq("status", "published")
@@ -268,6 +319,11 @@ export default function EventsCalendar({
         flyer_url: event.flyer_url ?? null,
         venue_name: event.venues?.name ?? "TenderFans Spot",
         venue_slug: event.venues?.slug ?? null,
+        venue_city: event.venues?.city ?? "",
+        venue_state_region: event.venues?.state_region ?? "",
+        venue_postal_code: event.venues?.postal_code ?? "",
+        venue_latitude: event.venues?.latitude ?? null,
+        venue_longitude: event.venues?.longitude ?? null,
       }));
 
       setEvents(normalized);
@@ -361,7 +417,55 @@ export default function EventsCalendar({
   ]);
 
   const visibleEvents = useMemo(() => {
-    if (!venueId) return selectedWeekEvents;
+    if (!venueId) {
+      /*
+       * Geolocation is the default discovery view, not a hard search
+       * boundary. An active search can discover matching events
+       * outside the default 10-mile radius.
+       */
+      if (eventSearch.trim()) {
+        return selectedWeekEvents;
+      }
+
+      if (
+        locationStatus === "idle" ||
+        locationStatus === "loading"
+      ) {
+        return [];
+      }
+
+      if (locationStatus !== "ready" || !userLocation) {
+        return selectedWeekEvents;
+      }
+
+      const toRad = (value: number) => (value * Math.PI) / 180;
+
+      return selectedWeekEvents.filter((event) => {
+        if (
+          event.venue_latitude == null ||
+          event.venue_longitude == null
+        ) {
+          return false;
+        }
+
+        const earthRadiusMiles = 3958.8;
+        const dLat = toRad(event.venue_latitude - userLocation.latitude);
+        const dLng = toRad(event.venue_longitude - userLocation.longitude);
+        const lat1 = toRad(userLocation.latitude);
+        const lat2 = toRad(event.venue_latitude);
+
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(lat1) *
+            Math.cos(lat2) *
+            Math.sin(dLng / 2) ** 2;
+
+        const distance =
+          2 * earthRadiusMiles * Math.asin(Math.sqrt(a));
+
+        return distance <= 10;
+      });
+    }
 
     if (!upcomingOnly) {
       return limit ? events.slice(0, limit) : events;
@@ -374,7 +478,16 @@ export default function EventsCalendar({
     });
 
     return limit ? upcoming.slice(0, limit) : upcoming;
-  }, [events, selectedWeekEvents, venueId, upcomingOnly, limit]);
+  }, [
+    events,
+    selectedWeekEvents,
+    venueId,
+    upcomingOnly,
+    limit,
+    eventSearch,
+    locationStatus,
+    userLocation,
+  ]);
 
   function selectMonth(nextMonth: Date) {
     setMonth(nextMonth);
@@ -462,12 +575,30 @@ export default function EventsCalendar({
         return false;
       }
 
-      if (
-        search &&
-        !event.title.toLowerCase().includes(search) &&
-        !event.venue_name.toLowerCase().includes(search)
-      ) {
-        return false;
+      if (search) {
+        const normalize = (value: string) =>
+          value
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s]/gu, " ")
+            .replace(/\bsaint\b/g, "st")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const normalizedSearch = normalize(search);
+        const searchableText = normalize(
+          [
+            event.title,
+            event.description ?? "",
+            event.venue_name,
+            event.venue_city,
+            event.venue_state_region,
+            event.venue_postal_code,
+          ].join(" ")
+        );
+
+        if (!searchableText.includes(normalizedSearch)) {
+          return false;
+        }
       }
 
       return true;
@@ -611,7 +742,7 @@ export default function EventsCalendar({
           <input
             type="search"
             className="events-search-input"
-            placeholder="Search events or Spots — Trivia, Live Music, Ferg's, Cage Brewing..."
+            placeholder="Search events, Spots, keywords or ZIP..."
             value={eventSearch}
             onChange={(event) => setEventSearch(event.target.value)}
             aria-label="Search events or spots"
@@ -626,24 +757,44 @@ export default function EventsCalendar({
           </div>
         )}
 
-        {!loading && filteredEvents.length === 0 && (
-          <div className="events-empty">
-            <strong>
-              {venueId
-                ? "No upcoming events posted."
-                : eventSearch || selectedWeekday !== null
-                  ? "No events match these filters."
-                  : "No events posted for this week."}
-            </strong>
-            <span>
-              {venueId
-                ? "Check back soon."
-                : eventSearch || selectedWeekday !== null
-                  ? "Try another search or day."
-                  : "Try another week or check back soon."}
-            </span>
-          </div>
-        )}
+        {!loading &&
+          !venueId &&
+          !eventSearch.trim() &&
+          (locationStatus === "idle" || locationStatus === "loading") && (
+            <div className="events-empty">
+              <strong>Finding events near you...</strong>
+              <span>Checking for events within 10 miles.</span>
+            </div>
+          )}
+
+        {!loading &&
+          !(
+            !venueId &&
+            !eventSearch.trim() &&
+            (locationStatus === "idle" || locationStatus === "loading")
+          ) &&
+          filteredEvents.length === 0 && (
+            <div className="events-empty">
+              <strong>
+                {venueId
+                  ? "No upcoming events posted."
+                  : eventSearch || selectedWeekday !== null
+                    ? "No events match these filters."
+                    : locationStatus === "ready"
+                      ? "No events within 10 miles this week."
+                      : "No events posted for this week."}
+              </strong>
+              <span>
+                {venueId
+                  ? "Check back soon."
+                  : eventSearch || selectedWeekday !== null
+                    ? "Try another search or day."
+                    : locationStatus === "ready"
+                      ? "Try another week or search for events outside your area."
+                      : "Try another week or check back soon."}
+              </span>
+            </div>
+          )}
 
         {!loading &&
           eventsByDay.map((dayEvents) => (
