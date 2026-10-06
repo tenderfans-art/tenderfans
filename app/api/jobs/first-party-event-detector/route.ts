@@ -76,18 +76,37 @@ export async function GET(
   const supabase =
     getAdminClient();
 
-  const { data: venues, error } =
-    await supabase
+  const requestUrl =
+    new URL(request.url);
+
+  const venueId =
+    requestUrl.searchParams.get(
+      "venue_id"
+    );
+
+  let venueQuery =
+    supabase
       .from("venues")
       .select(
         "id,name,website_url,street_address,city,state_region,postal_code,country_code,latitude,longitude"
       )
       .eq("status", "active")
-      .not("website_url", "is", null)
-      .order("created_at", {
-        ascending: false,
-      })
-      .limit(SPOT_LIMIT);
+      .not("website_url", "is", null);
+
+  if (venueId) {
+    venueQuery =
+      venueQuery.eq("id", venueId);
+  } else {
+    venueQuery =
+      venueQuery
+        .order("created_at", {
+          ascending: false,
+        })
+        .limit(SPOT_LIMIT);
+  }
+
+  const { data: venues, error } =
+    await venueQuery;
 
   if (error) {
     return NextResponse.json(
