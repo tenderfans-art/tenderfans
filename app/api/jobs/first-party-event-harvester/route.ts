@@ -51,13 +51,31 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getAdminClient();
 
-    const { data: sources, error: sourceError } =
-      await supabase
+    const sourceId =
+      request.nextUrl.searchParams.get(
+        "source_id"
+      );
+
+    let sourceQuery =
+      supabase
         .from("event_harvest_sources")
         .select("id, name")
         .eq("provider", "first_party")
-        .eq("is_enabled", true)
-        .order("created_at", { ascending: true });
+        .eq("is_enabled", true);
+
+    if (sourceId) {
+      sourceQuery =
+        sourceQuery.eq("id", sourceId);
+    } else {
+      sourceQuery =
+        sourceQuery.order(
+          "created_at",
+          { ascending: true }
+        );
+    }
+
+    const { data: sources, error: sourceError } =
+      await sourceQuery;
 
     if (sourceError) {
       throw new Error(
