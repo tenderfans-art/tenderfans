@@ -596,260 +596,207 @@ export default function AdminVenueMatchesPage() {
               {calendarEvents.map((item) => {
                 const busy = reviewingId === item.id;
                 const evidence = item.raw_payload?.eventEvidence;
-                const observation = item.raw_payload?.observation;
                 const imageUrl = item.raw_payload?.imageUrl;
 
+                const proposedDate = new Date(
+                  item.starts_at,
+                ).toLocaleDateString([], {
+                  timeZone: item.raw_payload?.timeZone,
+                });
+
+                const proposedTime = new Date(
+                  item.starts_at,
+                ).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  timeZone: item.raw_payload?.timeZone,
+                });
+
                 return (
-                  <article
+                  <div
                     key={`calendar-${item.id}`}
                     style={{
-                      padding: "18px",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "minmax(280px, 2fr) minmax(150px, 1fr) 150px 185px 82px 82px",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 10px",
                       border: "1px solid rgba(20, 35, 45, 0.12)",
-                      borderRadius: "14px",
+                      borderRadius: "10px",
                       background: "rgba(255,255,255,0.9)",
                     }}
                   >
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: "18px",
-                        alignItems: "flex-start",
-                        flexWrap: "wrap",
+                        minWidth: 0,
+                        fontSize: "0.88rem",
                       }}
                     >
-                      <div style={{ minWidth: 0 }}>
-                        <div
-                          className="eyebrow"
-                          style={{ marginBottom: "6px" }}
-                        >
-                          EVENT DETAIL REVIEW
-                        </div>
-
-                        <h2
+                      {item.source_url ? (
+                        <a
+                          href={item.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`${item.raw_title} — Open source`}
                           style={{
-                            margin: "0 0 5px",
-                            fontSize: "1.15rem",
+                            display: "block",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            fontWeight: 700,
+                            color: "inherit",
+                            textDecoration: "underline",
+                            textDecorationThickness: "1px",
+                            textUnderlineOffset: "3px",
                           }}
                         >
                           {item.raw_title}
-                        </h2>
-
-                        <div
+                        </a>
+                      ) : (
+                        <strong
+                          title={item.raw_title}
                           style={{
-                            fontSize: "0.86rem",
-                            opacity: 0.72,
+                            display: "block",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          {item.venue_name}
-                        </div>
-                      </div>
+                          {item.raw_title}
+                        </strong>
+                      )}
 
                       <div
                         style={{
-                          display: "flex",
-                          gap: "8px",
-                          flexWrap: "wrap",
+                          marginTop: "2px",
+                          fontSize: "0.72rem",
+                          opacity: 0.58,
                         }}
                       >
-                        {item.source_url && (
-                          <a
-                            href={item.source_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              padding: "7px 10px",
-                              border:
-                                "1px solid rgba(20, 35, 45, 0.16)",
-                              borderRadius: "8px",
-                              color: "inherit",
-                              fontSize: "0.8rem",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Open Source
-                          </a>
-                        )}
-
-                        {imageUrl && (
-                          <a
-                            href={imageUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              padding: "7px 10px",
-                              border:
-                                "1px solid rgba(20, 35, 45, 0.16)",
-                              borderRadius: "8px",
-                              color: "inherit",
-                              fontSize: "0.8rem",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Open Calendar
-                          </a>
-                        )}
+                        Calendar event review
                       </div>
                     </div>
 
                     <div
                       style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(auto-fit, minmax(150px, 1fr))",
-                        gap: "10px",
-                        marginTop: "16px",
+                        minWidth: 0,
+                        fontSize: "0.88rem",
                       }}
                     >
-                      <div>
-                        <div
-                          style={{
-                            fontSize: "0.68rem",
-                            fontWeight: 800,
-                            opacity: 0.55,
-                            textTransform: "uppercase",
-                            letterSpacing: ".06em",
-                          }}
-                        >
-                          Displayed Day
-                        </div>
-                        <strong>
-                          {evidence?.displayedWeekday ??
-                            observation?.displayedWeekday ??
-                            "—"}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            fontSize: "0.68rem",
-                            fontWeight: 800,
-                            opacity: 0.55,
-                            textTransform: "uppercase",
-                            letterSpacing: ".06em",
-                          }}
-                        >
-                          Displayed Time
-                        </div>
-                        <strong>
-                          {observation?.displayedTime ?? "—"}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            fontSize: "0.68rem",
-                            fontWeight: 800,
-                            opacity: 0.55,
-                            textTransform: "uppercase",
-                            letterSpacing: ".06em",
-                          }}
-                        >
-                          Proposed Date
-                        </div>
-                        <strong>
-                          {new Date(item.starts_at).toLocaleDateString(
-                            [],
-                            {
-                              timeZone:
-                                item.raw_payload?.timeZone,
-                            },
-                          )}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            fontSize: "0.68rem",
-                            fontWeight: 800,
-                            opacity: 0.55,
-                            textTransform: "uppercase",
-                            letterSpacing: ".06em",
-                          }}
-                        >
-                          Proposed Time
-                        </div>
-                        <strong>
-                          {new Date(item.starts_at).toLocaleTimeString(
-                            [],
-                            {
-                              hour: "numeric",
-                              minute: "2-digit",
-                              timeZone:
-                                item.raw_payload?.timeZone,
-                            },
-                          )}
-                        </strong>
-                      </div>
+                      <strong
+                        title={item.venue_name}
+                        style={{
+                          display: "block",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {item.venue_name}
+                      </strong>
                     </div>
 
                     <div
                       style={{
-                        marginTop: "14px",
-                        padding: "10px 12px",
-                        borderRadius: "9px",
-                        background: "rgba(245,243,236,0.65)",
                         fontSize: "0.82rem",
-                        lineHeight: 1.5,
                       }}
                     >
-                      <strong>Why review:</strong>{" "}
-                      {evidence?.reviewReasons?.includes(
-                        "calendar_date_inferred_from_explicit_weekday",
-                      )
-                        ? "The weekday and event time are explicit on the calendar, but the actual date was inferred from the current week."
-                        : evidence?.reviewReasons?.join(", ") ||
-                          "Event details require verification."}
+                      {imageUrl ? (
+                        <a
+                          href={imageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "inline-block",
+                            padding: "7px 10px",
+                            border:
+                              "1px solid rgba(20, 35, 45, 0.2)",
+                            borderRadius: "8px",
+                            color: "inherit",
+                            fontWeight: 700,
+                            textDecoration: "none",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          View Calendar
+                        </a>
+                      ) : (
+                        <span style={{ opacity: 0.55 }}>
+                          No calendar file
+                        </span>
+                      )}
                     </div>
 
                     <div
                       style={{
-                        display: "flex",
-                        gap: "10px",
-                        marginTop: "16px",
-                        flexWrap: "wrap",
+                        minWidth: 0,
+                        fontSize: "0.82rem",
+                        lineHeight: 1.35,
                       }}
                     >
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() =>
-                          reviewCalendarEvent(item.id, true)
-                        }
-                        style={{
-                          padding: "9px 15px",
-                          border: 0,
-                          borderRadius: "9px",
-                          cursor: busy ? "default" : "pointer",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {busy ? "Working..." : "Approve Event"}
-                      </button>
+                      <strong>
+                        {proposedDate} · {proposedTime}
+                      </strong>
 
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() =>
-                          reviewCalendarEvent(item.id, false)
-                        }
-                        style={{
-                          padding: "9px 15px",
-                          border:
-                            "1px solid rgba(20, 35, 45, 0.2)",
-                          borderRadius: "9px",
-                          background: "transparent",
-                          cursor: busy ? "default" : "pointer",
-                          fontWeight: 700,
-                        }}
-                      >
-                        Reject
-                      </button>
+                      {evidence?.displayedWeekday && (
+                        <div
+                          style={{
+                            marginTop: "2px",
+                            fontSize: "0.72rem",
+                            opacity: 0.58,
+                          }}
+                        >
+                          Calendar says {evidence.displayedWeekday}
+                          {evidence.dateBasis ===
+                          "current_week_from_explicit_weekday"
+                            ? " · date inferred"
+                            : ""}
+                        </div>
+                      )}
                     </div>
-                  </article>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        reviewCalendarEvent(item.id, true)
+                      }
+                      style={{
+                        padding: "7px 11px",
+                        border: 0,
+                        borderRadius: "8px",
+                        cursor: busy ? "default" : "pointer",
+                        fontWeight: 700,
+                        fontSize: "0.8rem",
+                        whiteSpace: "nowrap",
+                        opacity: busy ? 0.55 : 1,
+                      }}
+                    >
+                      {busy ? "Working..." : "Approve"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        reviewCalendarEvent(item.id, false)
+                      }
+                      style={{
+                        padding: "6px 10px",
+                        border:
+                          "1px solid rgba(20, 35, 45, 0.2)",
+                        borderRadius: "8px",
+                        background: "transparent",
+                        cursor: busy ? "default" : "pointer",
+                        fontWeight: 700,
+                        fontSize: "0.8rem",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </div>
                 );
               })}
 
