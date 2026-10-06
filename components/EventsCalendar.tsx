@@ -152,6 +152,7 @@ export default function EventsCalendar({
   const [selectedFlyer, setSelectedFlyer] = useState<CalendarEvent | null>(null);
   const [eventSearch, setEventSearch] = useState("");
   const [selectedWeekday, setSelectedWeekday] = useState<number | null>(null);
+  const [radiusMiles, setRadiusMiles] = useState<number | null>(15);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -448,7 +449,7 @@ export default function EventsCalendar({
       /*
        * Geolocation is the default discovery view, not a hard search
        * boundary. An active search can discover matching events
-       * outside the default 10-mile radius.
+       * outside the selected discovery radius.
        */
       if (eventSearch.trim()) {
         return selectedWeekEvents;
@@ -462,6 +463,10 @@ export default function EventsCalendar({
       }
 
       if (locationStatus !== "ready" || !userLocation) {
+        return selectedWeekEvents;
+      }
+
+      if (radiusMiles === null) {
         return selectedWeekEvents;
       }
 
@@ -490,7 +495,7 @@ export default function EventsCalendar({
         const distance =
           2 * earthRadiusMiles * Math.asin(Math.sqrt(a));
 
-        return distance <= 10;
+        return distance <= radiusMiles;
       });
     }
 
@@ -514,6 +519,7 @@ export default function EventsCalendar({
     eventSearch,
     locationStatus,
     userLocation,
+    radiusMiles,
   ]);
 
   function selectMonth(nextMonth: Date) {
@@ -793,6 +799,25 @@ export default function EventsCalendar({
             onChange={(event) => setEventSearch(event.target.value)}
             aria-label="Search events or spots"
           />
+
+          <select
+            className="events-radius-select"
+            value={radiusMiles === null ? "all" : String(radiusMiles)}
+            onChange={(event) => {
+              const value = event.target.value;
+              setRadiusMiles(value === "all" ? null : Number(value));
+            }}
+            aria-label="Event search radius"
+          >
+            <option value="1">1 mi</option>
+            <option value="5">5 mi</option>
+            <option value="10">10 mi</option>
+            <option value="15">15 mi</option>
+            <option value="20">20 mi</option>
+            <option value="25">25 mi</option>
+            <option value="50">50 mi</option>
+            <option value="all">All</option>
+          </select>
         </div>
       )}
 
@@ -809,7 +834,11 @@ export default function EventsCalendar({
           (locationStatus === "idle" || locationStatus === "loading") && (
             <div className="events-empty">
               <strong>Finding events near you...</strong>
-              <span>Checking for events within 10 miles.</span>
+              <span>
+                {radiusMiles === null
+                  ? "Checking your location."
+                  : `Checking for events within ${radiusMiles} ${radiusMiles === 1 ? "mile" : "miles"}.`}
+              </span>
             </div>
           )}
 
@@ -827,7 +856,9 @@ export default function EventsCalendar({
                   : eventSearch || selectedWeekday !== null
                     ? "No events match these filters."
                     : locationStatus === "ready"
-                      ? "No events within 10 miles this week."
+                      ? radiusMiles === null
+                        ? "No events posted for this week."
+                        : `No events within ${radiusMiles} ${radiusMiles === 1 ? "mile" : "miles"} this week.`
                       : "No events posted for this week."}
               </strong>
               <span>
@@ -836,7 +867,9 @@ export default function EventsCalendar({
                   : eventSearch || selectedWeekday !== null
                     ? "Try another search or day."
                     : locationStatus === "ready"
-                      ? "Try another week or search for events outside your area."
+                      ? radiusMiles === null
+                        ? "Try another week or check back soon."
+                        : "Try increasing the distance, another week, or search for a specific event."
                       : "Try another week or check back soon."}
               </span>
             </div>
