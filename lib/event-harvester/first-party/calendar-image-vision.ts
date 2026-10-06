@@ -32,6 +32,10 @@ export type CalendarImageExtractedEvent = {
 export type CalendarImageExtraction = {
   isEventCalendar: boolean;
   qualificationReason: string;
+  weekStart:
+    | "Monday"
+    | "Sunday"
+    | null;
   events: CalendarImageExtractedEvent[];
 };
 
@@ -44,6 +48,14 @@ const EXTRACTION_SCHEMA = {
     },
     qualificationReason: {
       type: "string",
+    },
+    weekStart: {
+      type: ["string", "null"],
+      enum: [
+        "Monday",
+        "Sunday",
+        null,
+      ],
     },
     events: {
       type: "array",
@@ -160,6 +172,7 @@ const EXTRACTION_SCHEMA = {
   required: [
     "isEventCalendar",
     "qualificationReason",
+    "weekStart",
     "events",
   ],
 } as const;
@@ -181,6 +194,10 @@ function extractionPrompt(
     "- If an event explicitly identifies a weekday but no calendar date can be determined without inference, set localDate=null and preserve the explicit weekday in displayedWeekday.",
     "- Normalize displayedWeekday to Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, or Sunday.",
     "- Never convert a weekday-only schedule into calendar dates. Downstream deterministic code handles that mapping.",
+    "- Set weekStart=Monday only when the calendar or schedule visibly establishes a Monday-through-Sunday week ordering.",
+    "- Set weekStart=Sunday only when the calendar or schedule visibly establishes a Sunday-through-Saturday week ordering.",
+    "- Set weekStart=null when the week ordering is absent, ambiguous, or cannot be established from the image.",
+    "- Do not infer weekStart from the supplied current date or from an individual event's weekday.",
     "- Use dateBasis=event_explicit when the event itself displays its date.",
     "- Use dateBasis=calendar_explicit when an explicit calendar structure supplies the event date.",
     "- Use dateBasis=weekday_explicit when only an explicit weekday is available.",
@@ -408,6 +425,11 @@ export async function extractCalendarImage(
       "boolean" ||
     typeof result.qualificationReason !==
       "string" ||
+    (
+      result.weekStart !== "Monday" &&
+      result.weekStart !== "Sunday" &&
+      result.weekStart !== null
+    ) ||
     !Array.isArray(result.events)
   ) {
     throw new Error(

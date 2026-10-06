@@ -294,6 +294,7 @@ function formatLocalDate(
 function currentWeekDateForWeekday(
   currentDate: string,
   displayedWeekday: string,
+  weekStart: "Monday" | "Sunday",
 ): string | null {
   const current =
     parseLocalDate(currentDate);
@@ -320,26 +321,28 @@ function currentWeekDateForWeekday(
   const currentWeekday =
     currentUtc.getUTCDay();
 
-  /*
-   * Treat Monday as the start of the displayed/current week.
-   * This maps every explicit weekday to the occurrence within
-   * the same local Monday-Sunday week as currentDate.
-   */
-  const mondayOffset =
-    currentWeekday === 0
-      ? -6
-      : 1 - currentWeekday;
+  const weekStartIndex =
+    WEEKDAY_INDEX[weekStart];
 
-  const targetMondayIndex =
-    targetWeekday === 0
-      ? 6
-      : targetWeekday - 1;
+  const currentOffset =
+    (
+      currentWeekday -
+      weekStartIndex +
+      7
+    ) % 7;
+
+  const targetOffset =
+    (
+      targetWeekday -
+      weekStartIndex +
+      7
+    ) % 7;
 
   return formatLocalDate(
     addUtcDays(
       current,
-      mondayOffset +
-        targetMondayIndex,
+      targetOffset -
+        currentOffset,
     ),
   );
 }
@@ -353,6 +356,10 @@ type CalendarEventEvidence = {
     | "current_week_from_explicit_weekday"
     | null;
   displayedWeekday: string | null;
+  calendarWeekStart:
+    | "Monday"
+    | "Sunday"
+    | null;
   titleBasis: "image_explicit";
   timeBasis:
     | "event_explicit"
@@ -364,6 +371,10 @@ function resolveObservationDate(
   observation:
     CalendarImageExtractedEvent,
   currentDate: string,
+  weekStart:
+    | "Monday"
+    | "Sunday"
+    | null,
 ): {
   observation:
     CalendarImageExtractedEvent;
@@ -387,6 +398,8 @@ function resolveObservationDate(
             : "calendar_explicit",
         displayedWeekday:
           observation.displayedWeekday,
+        calendarWeekStart:
+          weekStart,
         titleBasis:
           "image_explicit",
         timeBasis:
@@ -398,7 +411,8 @@ function resolveObservationDate(
   if (
     observation.dateBasis !==
       "weekday_explicit" ||
-    !observation.displayedWeekday
+    !observation.displayedWeekday ||
+    !weekStart
   ) {
     return null;
   }
@@ -407,6 +421,7 @@ function resolveObservationDate(
     currentWeekDateForWeekday(
       currentDate,
       observation.displayedWeekday,
+      weekStart,
     );
 
   if (!inferredDate) {
@@ -427,6 +442,8 @@ function resolveObservationDate(
         "current_week_from_explicit_weekday",
       displayedWeekday:
         observation.displayedWeekday,
+      calendarWeekStart:
+        weekStart,
       titleBasis:
         "image_explicit",
       timeBasis:
@@ -493,12 +510,17 @@ function canonicalizeEvent(
     timeZone: string;
     qualificationReason: string;
     currentDate: string;
+    weekStart:
+      | "Monday"
+      | "Sunday"
+      | null;
   },
 ): FirstPartyHarvestEvent | null {
   const resolved =
     resolveObservationDate(
       observation,
       options.currentDate,
+      options.weekStart,
     );
 
   if (!resolved) {
@@ -814,6 +836,8 @@ export async function fetchCalendarImageEvents(
             qualificationReason:
               extraction.qualificationReason,
             currentDate,
+            weekStart:
+              extraction.weekStart,
           },
         );
 
