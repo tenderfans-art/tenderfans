@@ -291,14 +291,74 @@ export default function EventsCalendar({
     return calendarWeeks[0];
   }, [calendarWeeks, selectedWeekStart]);
 
+  const selectedWeekIsCurrent = useMemo(() => {
+    if (!selectedWeek || !today) return false;
+
+    return sameWeek(
+      selectedWeek,
+      {
+        start: startOfWeek(today),
+        end: endOfWeek(today),
+      }
+    );
+  }, [selectedWeek, today]);
+
   const selectedWeekEvents = useMemo(() => {
     if (!selectedWeek) return [];
 
     return events.filter((event) => {
       const eventDate = eventCalendarDate(event);
-      return eventDate >= selectedWeek.start && eventDate <= selectedWeek.end;
+
+      if (
+        eventDate < selectedWeek.start ||
+        eventDate > selectedWeek.end
+      ) {
+        return false;
+      }
+
+      /*
+       * Current Week is forward-looking from the current local
+       * calendar day. Completed days remain stored and become
+       * visible again when this week is viewed historically.
+       */
+      if (
+        selectedWeekIsCurrent &&
+        today &&
+        eventDate < new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        )
+      ) {
+        return false;
+      }
+
+      return true;
     });
-  }, [events, selectedWeek]);
+  }, [
+    events,
+    selectedWeek,
+    selectedWeekIsCurrent,
+    today,
+  ]);
+
+  useEffect(() => {
+    if (
+      !selectedWeekIsCurrent ||
+      !today ||
+      selectedWeekday === null
+    ) {
+      return;
+    }
+
+    if (selectedWeekday < today.getDay()) {
+      setSelectedWeekday(null);
+    }
+  }, [
+    selectedWeekIsCurrent,
+    selectedWeekday,
+    today,
+  ]);
 
   const visibleEvents = useMemo(() => {
     if (!venueId) return selectedWeekEvents;
@@ -503,7 +563,19 @@ export default function EventsCalendar({
             { label: "Thu", value: 4 },
             { label: "Fri", value: 5 },
             { label: "Sat", value: 6 },
-          ].map((day) => {
+          ]
+            .filter((day) => {
+              if (
+                day.value === null ||
+                !selectedWeekIsCurrent ||
+                !today
+              ) {
+                return true;
+              }
+
+              return day.value >= today.getDay();
+            })
+            .map((day) => {
             const active = selectedWeekday === day.value;
 
             return (
