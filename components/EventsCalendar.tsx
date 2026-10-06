@@ -407,8 +407,15 @@ export default function EventsCalendar({
   function goToday() {
     if (!today) return;
 
-    setMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    setMonth(
+      new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1
+      )
+    );
     setSelectedWeekStart(startOfWeek(today));
+    setSelectedWeekday(today.getDay());
   }
 
   function eventTime(value: string) {
