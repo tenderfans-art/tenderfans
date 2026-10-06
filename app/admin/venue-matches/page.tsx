@@ -669,12 +669,13 @@ export default function AdminVenueMatchesPage() {
 
                       <div
                         style={{
-                          marginTop: "2px",
-                          fontSize: "0.72rem",
-                          opacity: 0.58,
+                          marginTop: "3px",
+                          fontSize: "0.76rem",
+                          opacity: 0.68,
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        Calendar event review
+                        {proposedDate} · {proposedTime}
                       </div>
                     </div>
 
@@ -731,29 +732,32 @@ export default function AdminVenueMatchesPage() {
                     <div
                       style={{
                         minWidth: 0,
-                        fontSize: "0.82rem",
+                        fontSize: "0.76rem",
                         lineHeight: 1.35,
+                        padding: "6px 8px",
+                        borderRadius: "8px",
+                        background: "rgba(245,243,236,0.65)",
                       }}
                     >
-                      <strong>
-                        {proposedDate} · {proposedTime}
+                      <strong
+                        style={{
+                          display: "block",
+                          marginBottom: "2px",
+                          fontSize: "0.68rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                          opacity: 0.62,
+                        }}
+                      >
+                        Reason for review
                       </strong>
 
-                      {evidence?.displayedWeekday && (
-                        <div
-                          style={{
-                            marginTop: "2px",
-                            fontSize: "0.72rem",
-                            opacity: 0.58,
-                          }}
-                        >
-                          Calendar says {evidence.displayedWeekday}
-                          {evidence.dateBasis ===
-                          "current_week_from_explicit_weekday"
-                            ? " · date inferred"
-                            : ""}
-                        </div>
-                      )}
+                      {evidence?.reviewReasons?.includes(
+                        "calendar_date_inferred_from_explicit_weekday",
+                      )
+                        ? `${evidence.displayedWeekday || "Weekday"} shown · date inferred`
+                        : evidence?.reviewReasons?.join(", ") ||
+                          "Verification required"}
                     </div>
 
                     <button
