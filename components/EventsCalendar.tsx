@@ -22,6 +22,33 @@ type CalendarEvent = {
   venue_longitude: number | null;
 };
 
+const EVENT_SEARCH_CONCEPTS: Record<string, string[]> = {
+  game: ["game", "games", "trivia", "bingo", "poker", "board game", "arcade"],
+  music: ["music", "live music", "band", "acoustic", "dj", "karaoke"],
+  sports: [
+    "sport",
+    "sports",
+    "football",
+    "baseball",
+    "basketball",
+    "hockey",
+    "soccer",
+    "watch party",
+  ],
+  food: ["food", "dinner", "brunch", "lunch", "buffet", "cookout"],
+  drink: [
+    "drink",
+    "drinks",
+    "cocktail",
+    "cocktails",
+    "beer",
+    "wine",
+    "happy hour",
+  ],
+  comedy: ["comedy", "comedian", "stand up", "standup"],
+  dance: ["dance", "dancing", "dj"],
+};
+
 type CalendarWeek = {
   start: Date;
   end: Date;
@@ -596,7 +623,26 @@ export default function EventsCalendar({
           ].join(" ")
         );
 
-        if (!searchableText.includes(normalizedSearch)) {
+        /*
+         * Literal matching always remains authoritative so searches
+         * for performers, Spots, cities, ZIPs, and exact event names
+         * continue to work normally.
+         *
+         * Concept expansion only adds additional matches for common
+         * hospitality-event searches.
+         */
+        const literalMatch =
+          searchableText.includes(normalizedSearch);
+
+        const expandedTerms =
+          EVENT_SEARCH_CONCEPTS[normalizedSearch] ?? [];
+
+        const conceptMatch =
+          expandedTerms.some((term) =>
+            searchableText.includes(normalize(term))
+          );
+
+        if (!literalMatch && !conceptMatch) {
           return false;
         }
       }
