@@ -630,7 +630,11 @@ export default function AdminVenueMatchesPage() {
                     <div
                       style={{
                         minWidth: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
                         fontSize: "0.88rem",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {item.source_url ? (
@@ -640,7 +644,7 @@ export default function AdminVenueMatchesPage() {
                           rel="noopener noreferrer"
                           title={`${item.raw_title} — Open source`}
                           style={{
-                            display: "block",
+                            minWidth: 0,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
@@ -657,7 +661,7 @@ export default function AdminVenueMatchesPage() {
                         <strong
                           title={item.raw_title}
                           style={{
-                            display: "block",
+                            minWidth: 0,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
@@ -667,16 +671,15 @@ export default function AdminVenueMatchesPage() {
                         </strong>
                       )}
 
-                      <div
+                      <span
                         style={{
-                          marginTop: "3px",
-                          fontSize: "0.76rem",
-                          opacity: 0.68,
-                          whiteSpace: "nowrap",
+                          flexShrink: 0,
+                          fontSize: "0.78rem",
+                          opacity: 0.62,
                         }}
                       >
-                        {proposedDate} · {proposedTime}
-                      </div>
+                        · {proposedDate} · {proposedTime}
+                      </span>
                     </div>
 
                     <div
