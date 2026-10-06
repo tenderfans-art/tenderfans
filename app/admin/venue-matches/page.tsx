@@ -622,8 +622,6 @@ export default function AdminVenueMatchesPage() {
                       alignItems: "center",
                       gap: "8px",
                       padding: "8px 10px",
-                      height: "60px",
-                      boxSizing: "border-box",
                       border: "1px solid rgba(20, 35, 45, 0.12)",
                       borderRadius: "10px",
                       background: "rgba(255,255,255,0.9)",
