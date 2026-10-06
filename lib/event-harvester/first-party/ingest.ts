@@ -177,6 +177,56 @@ async function ingestEvent(
   if (canonicalEventId) {
     action = "linked_existing";
   } else {
+    /*
+     * Calendar-image extraction may establish the event itself while
+     * leaving a critical occurrence fact, such as its calendar date,
+     * deterministically inferred from explicit image evidence.
+     *
+     * Preserve the candidate and route it to the existing event-review
+     * lifecycle rather than publishing a new canonical occurrence.
+     *
+     * Exact cross-source matches above remain authoritative enough to
+     * link without creating a new event from the inferred occurrence.
+     */
+    const eventEvidence =
+      event.rawPayload?.eventEvidence;
+
+    const requiresEventReview =
+      event.rawPayload?.adapter ===
+        "calendar_image" &&
+      eventEvidence &&
+      typeof eventEvidence ===
+        "object" &&
+      (
+        eventEvidence as {
+          requiresReview?: unknown;
+        }
+      ).requiresReview === true;
+
+    if (requiresEventReview) {
+      const {
+        error: reviewError,
+      } = await supabase.rpc(
+        "mark_harvest_candidate_for_review",
+        {
+          p_candidate_id:
+            candidateId,
+        },
+      );
+
+      if (reviewError) {
+        throw new Error(
+          `Candidate review routing failed for "${event.title}": ${reviewError.message}`,
+        );
+      }
+
+      return {
+        candidateId,
+        canonicalEventId: null,
+        action: "needs_review",
+      };
+    }
+
     const graduationRpc = bootstrap
       ? "bootstrap_first_party_harvest_candidate"
       : "graduate_harvest_candidate";

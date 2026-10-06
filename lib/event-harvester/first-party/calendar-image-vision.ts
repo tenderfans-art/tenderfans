@@ -4,13 +4,19 @@ import type {
 
 export type CalendarImageExtractedEvent = {
   title: string;
-  localDate: string;
+  localDate: string | null;
+  displayedWeekday: string | null;
   startTime: string | null;
   endTime: string | null;
   allDay: boolean;
   titleConfidence: number;
-  dateConfidence: number;
+  dateConfidence: number | null;
   timeConfidence: number | null;
+  dateBasis:
+    | "event_explicit"
+    | "calendar_explicit"
+    | "weekday_explicit"
+    | null;
   timeBasis:
     | "event_explicit"
     | "calendar_global_rule"
@@ -49,13 +55,30 @@ const EXTRACTION_SCHEMA = {
             type: "string",
           },
           localDate: {
-            type: "string",
+            type: ["string", "null"],
+          },
+          displayedWeekday: {
+            type: ["string", "null"],
+            enum: [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday",
+              null,
+            ],
           },
           startTime: {
             type: ["string", "null"],
+            pattern:
+              "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
           },
           endTime: {
             type: ["string", "null"],
+            pattern:
+              "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
           },
           allDay: {
             type: "boolean",
@@ -64,10 +87,19 @@ const EXTRACTION_SCHEMA = {
             type: "number",
           },
           dateConfidence: {
-            type: "number",
+            type: ["number", "null"],
           },
           timeConfidence: {
             type: ["number", "null"],
+          },
+          dateBasis: {
+            type: ["string", "null"],
+            enum: [
+              "event_explicit",
+              "calendar_explicit",
+              "weekday_explicit",
+              null,
+            ],
           },
           timeBasis: {
             type: ["string", "null"],
@@ -111,12 +143,14 @@ const EXTRACTION_SCHEMA = {
         required: [
           "title",
           "localDate",
+          "displayedWeekday",
           "startTime",
           "endTime",
           "allDay",
           "titleConfidence",
           "dateConfidence",
           "timeConfidence",
+          "dateBasis",
           "timeBasis",
           "evidence",
         ],
@@ -136,19 +170,30 @@ function extractionPrompt(
   return [
     "You are reading an image discovered on a public venue website.",
     "",
-    "Determine whether the image is actually a current public event calendar or event schedule.",
-    "An event-themed photograph, promotional image, historical event image, venue photo, or isolated old event graphic is NOT by itself an event calendar.",
-    "If the image does contain a current event calendar or schedule, extract every distinct public event shown.",
+    "Determine whether the image is actually a public event calendar or event schedule.",
+    "An event-themed photograph, promotional image, venue photo, or isolated event graphic is NOT by itself an event calendar or schedule.",
+    "If the image contains an event calendar or schedule, extract every distinct public event shown.",
     "",
     "Rules:",
     "- Preserve performer/event titles as displayed.",
-    "- Associate each event with the correct calendar date.",
-    "- Use YYYY-MM-DD for localDate.",
-    `- The current date is ${currentDate}.`,
-    "- A schedule whose dated events are wholly before the current date is historical, not current.",
-    "- If every event date shown is before the current date, set isEventCalendar=false and return an empty events array.",
-    "- A current monthly calendar may contain earlier dates in the same month as long as it also contains the current date or future event dates.",
+    "- Extract explicit calendar dates when they are shown or unambiguously supplied by the calendar.",
+    "- Use YYYY-MM-DD for localDate when a calendar date is supported.",
+    "- If an event explicitly identifies a weekday but no calendar date can be determined without inference, set localDate=null and preserve the explicit weekday in displayedWeekday.",
+    "- Normalize displayedWeekday to Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, or Sunday.",
+    "- Never convert a weekday-only schedule into calendar dates. Downstream deterministic code handles that mapping.",
+    "- Use dateBasis=event_explicit when the event itself displays its date.",
+    "- Use dateBasis=calendar_explicit when an explicit calendar structure supplies the event date.",
+    "- Use dateBasis=weekday_explicit when only an explicit weekday is available.",
+    "- Use dateBasis=null when neither a supported date nor explicit weekday is available.",
+    `- The supplied current date is ${currentDate}. Use it only as context when a calendar omits an otherwise necessary year.`,
+    "- If the image explicitly supplies a year, use that year.",
+    "- If a monthly calendar clearly identifies a month but omits the year, and that month matches the supplied current month, use the supplied current year.",
+    "- Do not infer or reject a year by reverse-engineering weekday/date alignment from the calendar grid.",
+    "- Do not decide whether extracted dates are stale, historical, current, or future. Downstream deterministic code handles date freshness.",
+    "- Extract events even when some or all displayed dates are before the supplied current date.",
     "- Extract start/end times only when supported by the image.",
+    "- Normalize non-null startTime and endTime to 24-hour HH:MM format. Example: 6:00 PM becomes 18:00.",
+    "- Preserve the time text as visibly displayed in evidence.displayedTime; do not use the normalized HH:MM value there unless that is how the image displays it.",
     "- A time printed directly with an event uses timeBasis=event_explicit.",
     "- A clearly stated global or weekday schedule rule may supply the time for events to which that rule unambiguously applies.",
     "- When applying such a rule, use timeBasis=calendar_global_rule and include the rule in evidence.context.",
@@ -158,8 +203,8 @@ function extractionPrompt(
     "- Set allDay=true only when the image explicitly establishes that the event is all-day.",
     "- Do not infer weekday names merely from visual column position.",
     "- Do not treat decorative or unrelated poster content as additional events unless it clearly advertises a public event with a supported date.",
-    "- If the image is not a current public event calendar or schedule, set isEventCalendar=false and return an empty events array.",
-    "- Do not create IDs, UTC timestamps, venue attribution, deduplication decisions, or unsupported events.",
+    "- If the image is not a public event calendar or event schedule, set isEventCalendar=false and return an empty events array.",
+    "- Do not create IDs, UTC timestamps, venue attribution, deduplication decisions, freshness decisions, or unsupported events.",
   ].join("\n");
 }
 

@@ -590,6 +590,30 @@ export async function GET(
           }
 
           /*
+           * A successfully registered calendar-image adapter is no
+           * longer actionable discovery work. The image remains an
+           * independent first-party source even when the same Spot
+           * also has structured event sources.
+           */
+          if (candidate.sourceType === "calendar_image") {
+            const {
+              error: calendarImageResolutionError,
+            } = await supabase.rpc(
+              "resolve_event_harvest_detector_findings",
+              {
+                p_venue_id: venue.id,
+                p_category: "calendar_image",
+              }
+            );
+
+            if (calendarImageResolutionError) {
+              throw new Error(
+                `Could not resolve calendar-image findings after source registration: ${calendarImageResolutionError.message}`
+              );
+            }
+          }
+
+          /*
            * A successfully registered Facebook adapter is no longer
            * actionable discovery work. Resolve the Facebook finding
            * after registration succeeds.

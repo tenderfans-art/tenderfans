@@ -58,6 +58,50 @@ type Spot = {
   manager_email: string | null;
 };
 
+type CalendarEventVerification = {
+  id: string;
+  source_id: string;
+  source_name: string;
+  external_event_id: string;
+  source_url: string | null;
+  raw_title: string;
+  raw_description: string | null;
+  raw_starts_at: string | null;
+  raw_ends_at: string | null;
+  normalized_title: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  venue_id: string;
+  venue_name: string;
+  event_fingerprint: string | null;
+  is_all_day: boolean;
+  raw_payload: {
+    imageUrl?: string;
+    timeZone?: string;
+    eventEvidence?: {
+      dateBasis?: string;
+      timeBasis?: string;
+      titleBasis?: string;
+      reviewReasons?: string[];
+      requiresReview?: boolean;
+      displayedWeekday?: string | null;
+    };
+    observation?: {
+      displayedDate?: string;
+      displayedTime?: string | null;
+      displayedWeekday?: string | null;
+      titleConfidence?: number;
+      dateConfidence?: number | null;
+      timeConfidence?: number | null;
+    };
+    resolvedObservation?: {
+      localDate?: string | null;
+    };
+  } | null;
+  last_seen_at: string;
+  created_at: string;
+};
+
 function formatAddress(
   address: string | null,
   city: string | null,
@@ -78,6 +122,9 @@ function evidenceLabel(evidence: Record<string, unknown> | null, key: string) {
 export default function AdminVenueMatchesPage() {
   const [matches, setMatches] = useState<VenueMatch[]>([]);
   const [unresolved, setUnresolved] = useState<UnresolvedVenue[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<
+    CalendarEventVerification[]
+  >([]);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [spotSearch, setSpotSearch] = useState<Record<string, string>>({});
   const [selectedSpot, setSelectedSpot] = useState<Record<string, string>>({});
@@ -89,21 +136,29 @@ export default function AdminVenueMatchesPage() {
     setLoading(true);
     setMessage("");
 
-    const [matchResult, unresolvedResult, spotsResult] = await Promise.all([
+    const [
+      matchResult,
+      unresolvedResult,
+      calendarResult,
+      spotsResult,
+    ] = await Promise.all([
       supabase.rpc("admin_pending_event_harvest_venue_matches"),
       supabase.rpc("admin_pending_event_harvest_unresolved_venues"),
+      supabase.rpc("admin_list_calendar_event_verifications"),
       supabase.rpc("admin_list_spots"),
     ]);
 
     const errors = [
       matchResult.error,
       unresolvedResult.error,
+      calendarResult.error,
       spotsResult.error,
     ].filter(Boolean);
 
     if (errors.length > 0) {
       setMatches([]);
       setUnresolved([]);
+      setCalendarEvents([]);
       setSpots([]);
       setMessage(errors.map((error) => error!.message).join(" "));
       setLoading(false);
@@ -114,6 +169,9 @@ export default function AdminVenueMatchesPage() {
 
     setMatches((matchResult.data as VenueMatch[]) || []);
     setUnresolved(unresolvedRows);
+    setCalendarEvents(
+      (calendarResult.data as CalendarEventVerification[]) || [],
+    );
     setSpots(
       ((spotsResult.data as Spot[]) || []).filter(
         (spot) => spot.status === "active",
@@ -190,6 +248,37 @@ export default function AdminVenueMatchesPage() {
     await loadMatches();
   }
 
+  async function reviewCalendarEvent(
+    id: string,
+    approve: boolean,
+  ) {
+    setReviewingId(id);
+    setMessage("");
+
+    const { error } = await supabase.rpc(
+      "admin_review_calendar_event_verification",
+      {
+        p_candidate_id: id,
+        p_approve: approve,
+      },
+    );
+
+    if (error) {
+      setMessage(error.message);
+      setReviewingId(null);
+      return;
+    }
+
+    setMessage(
+      approve
+        ? "Calendar event approved and published."
+        : "Calendar event rejected.",
+    );
+
+    setReviewingId(null);
+    await loadMatches();
+  }
+
   const spotChoices = useMemo(() => {
     const result: Record<string, Spot[]> = {};
 
@@ -239,7 +328,7 @@ export default function AdminVenueMatchesPage() {
 
           <div className="eyebrow">TENDERFANS ADMIN</div>
 
-          <h1 style={{ marginBottom: "8px" }}>Venue Matches</h1>
+          <h1 style={{ marginBottom: "8px" }}>Event Venue Match Review</h1>
 
           <p
             className="lead-copy"
@@ -248,8 +337,8 @@ export default function AdminVenueMatchesPage() {
               marginBottom: "28px",
             }}
           >
-            Review uncertain matches between TenderFans Spots and external event
-            provider venues.
+            Review event venue matches and event details that require human
+            verification before publication.
           </p>
 
           {message && (
@@ -266,8 +355,10 @@ export default function AdminVenueMatchesPage() {
           )}
 
           {loading ? (
-            <p>Loading venue matches...</p>
-          ) : matches.length === 0 && unresolved.length === 0 ? (
+            <p>Loading event reviews...</p>
+          ) : matches.length === 0 &&
+              unresolved.length === 0 &&
+              calendarEvents.length === 0 ? (
             <div
               style={{
                 padding: "32px",
@@ -283,7 +374,7 @@ export default function AdminVenueMatchesPage() {
                   fontSize: "1.25rem",
                 }}
               >
-                No venue matches need review
+                No events need review
               </h2>
 
               <p
@@ -293,8 +384,8 @@ export default function AdminVenueMatchesPage() {
                   lineHeight: 1.55,
                 }}
               >
-                Ambiguous provider matches will appear here automatically when
-                the Event Harvester finds them.
+                Venue attribution and event-detail questions will appear here
+                automatically when the Event Harvester needs human verification.
               </p>
             </div>
           ) : (
@@ -499,6 +590,266 @@ export default function AdminVenueMatchesPage() {
                       Reject
                     </button>
                   </div>
+                );
+              })}
+
+              {calendarEvents.map((item) => {
+                const busy = reviewingId === item.id;
+                const evidence = item.raw_payload?.eventEvidence;
+                const observation = item.raw_payload?.observation;
+                const imageUrl = item.raw_payload?.imageUrl;
+
+                return (
+                  <article
+                    key={`calendar-${item.id}`}
+                    style={{
+                      padding: "18px",
+                      border: "1px solid rgba(20, 35, 45, 0.12)",
+                      borderRadius: "14px",
+                      background: "rgba(255,255,255,0.9)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: "18px",
+                        alignItems: "flex-start",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          className="eyebrow"
+                          style={{ marginBottom: "6px" }}
+                        >
+                          EVENT DETAIL REVIEW
+                        </div>
+
+                        <h2
+                          style={{
+                            margin: "0 0 5px",
+                            fontSize: "1.15rem",
+                          }}
+                        >
+                          {item.raw_title}
+                        </h2>
+
+                        <div
+                          style={{
+                            fontSize: "0.86rem",
+                            opacity: 0.72,
+                          }}
+                        >
+                          {item.venue_name}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {item.source_url && (
+                          <a
+                            href={item.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: "7px 10px",
+                              border:
+                                "1px solid rgba(20, 35, 45, 0.16)",
+                              borderRadius: "8px",
+                              color: "inherit",
+                              fontSize: "0.8rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            Open Source
+                          </a>
+                        )}
+
+                        {imageUrl && (
+                          <a
+                            href={imageUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: "7px 10px",
+                              border:
+                                "1px solid rgba(20, 35, 45, 0.16)",
+                              borderRadius: "8px",
+                              color: "inherit",
+                              fontSize: "0.8rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            Open Calendar
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(150px, 1fr))",
+                        gap: "10px",
+                        marginTop: "16px",
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            opacity: 0.55,
+                            textTransform: "uppercase",
+                            letterSpacing: ".06em",
+                          }}
+                        >
+                          Displayed Day
+                        </div>
+                        <strong>
+                          {evidence?.displayedWeekday ??
+                            observation?.displayedWeekday ??
+                            "—"}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            opacity: 0.55,
+                            textTransform: "uppercase",
+                            letterSpacing: ".06em",
+                          }}
+                        >
+                          Displayed Time
+                        </div>
+                        <strong>
+                          {observation?.displayedTime ?? "—"}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            opacity: 0.55,
+                            textTransform: "uppercase",
+                            letterSpacing: ".06em",
+                          }}
+                        >
+                          Proposed Date
+                        </div>
+                        <strong>
+                          {new Date(item.starts_at).toLocaleDateString(
+                            [],
+                            {
+                              timeZone:
+                                item.raw_payload?.timeZone,
+                            },
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            opacity: 0.55,
+                            textTransform: "uppercase",
+                            letterSpacing: ".06em",
+                          }}
+                        >
+                          Proposed Time
+                        </div>
+                        <strong>
+                          {new Date(item.starts_at).toLocaleTimeString(
+                            [],
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              timeZone:
+                                item.raw_payload?.timeZone,
+                            },
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "14px",
+                        padding: "10px 12px",
+                        borderRadius: "9px",
+                        background: "rgba(245,243,236,0.65)",
+                        fontSize: "0.82rem",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <strong>Why review:</strong>{" "}
+                      {evidence?.reviewReasons?.includes(
+                        "calendar_date_inferred_from_explicit_weekday",
+                      )
+                        ? "The weekday and event time are explicit on the calendar, but the actual date was inferred from the current week."
+                        : evidence?.reviewReasons?.join(", ") ||
+                          "Event details require verification."}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginTop: "16px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          reviewCalendarEvent(item.id, true)
+                        }
+                        style={{
+                          padding: "9px 15px",
+                          border: 0,
+                          borderRadius: "9px",
+                          cursor: busy ? "default" : "pointer",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {busy ? "Working..." : "Approve Event"}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          reviewCalendarEvent(item.id, false)
+                        }
+                        style={{
+                          padding: "9px 15px",
+                          border:
+                            "1px solid rgba(20, 35, 45, 0.2)",
+                          borderRadius: "9px",
+                          background: "transparent",
+                          cursor: busy ? "default" : "pointer",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </article>
                 );
               })}
 

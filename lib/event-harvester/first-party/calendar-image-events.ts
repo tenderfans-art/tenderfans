@@ -264,6 +264,177 @@ function normalizeIdentityText(
     .replace(/^-+|-+$/g, "");
 }
 
+const WEEKDAY_INDEX: Record<
+  string,
+  number
+> = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
+function formatLocalDate(
+  date: {
+    year: number;
+    month: number;
+    day: number;
+  },
+): string {
+  return [
+    String(date.year).padStart(4, "0"),
+    String(date.month).padStart(2, "0"),
+    String(date.day).padStart(2, "0"),
+  ].join("-");
+}
+
+function currentWeekDateForWeekday(
+  currentDate: string,
+  displayedWeekday: string,
+): string | null {
+  const current =
+    parseLocalDate(currentDate);
+
+  const targetWeekday =
+    WEEKDAY_INDEX[displayedWeekday];
+
+  if (
+    !current ||
+    targetWeekday === undefined
+  ) {
+    return null;
+  }
+
+  const currentUtc =
+    new Date(
+      Date.UTC(
+        current.year,
+        current.month - 1,
+        current.day,
+      ),
+    );
+
+  const currentWeekday =
+    currentUtc.getUTCDay();
+
+  /*
+   * Treat Monday as the start of the displayed/current week.
+   * This maps every explicit weekday to the occurrence within
+   * the same local Monday-Sunday week as currentDate.
+   */
+  const mondayOffset =
+    currentWeekday === 0
+      ? -6
+      : 1 - currentWeekday;
+
+  const targetMondayIndex =
+    targetWeekday === 0
+      ? 6
+      : targetWeekday - 1;
+
+  return formatLocalDate(
+    addUtcDays(
+      current,
+      mondayOffset +
+        targetMondayIndex,
+    ),
+  );
+}
+
+type CalendarEventEvidence = {
+  requiresReview: boolean;
+  reviewReasons: string[];
+  dateBasis:
+    | "event_explicit"
+    | "calendar_explicit"
+    | "current_week_from_explicit_weekday"
+    | null;
+  displayedWeekday: string | null;
+  titleBasis: "image_explicit";
+  timeBasis:
+    | "event_explicit"
+    | "calendar_global_rule"
+    | null;
+};
+
+function resolveObservationDate(
+  observation:
+    CalendarImageExtractedEvent,
+  currentDate: string,
+): {
+  observation:
+    CalendarImageExtractedEvent;
+  evidence: CalendarEventEvidence;
+} | null {
+  if (
+    observation.localDate &&
+    parseLocalDate(
+      observation.localDate,
+    )
+  ) {
+    return {
+      observation,
+      evidence: {
+        requiresReview: false,
+        reviewReasons: [],
+        dateBasis:
+          observation.dateBasis ===
+          "event_explicit"
+            ? "event_explicit"
+            : "calendar_explicit",
+        displayedWeekday:
+          observation.displayedWeekday,
+        titleBasis:
+          "image_explicit",
+        timeBasis:
+          observation.timeBasis,
+      },
+    };
+  }
+
+  if (
+    observation.dateBasis !==
+      "weekday_explicit" ||
+    !observation.displayedWeekday
+  ) {
+    return null;
+  }
+
+  const inferredDate =
+    currentWeekDateForWeekday(
+      currentDate,
+      observation.displayedWeekday,
+    );
+
+  if (!inferredDate) {
+    return null;
+  }
+
+  return {
+    observation: {
+      ...observation,
+      localDate: inferredDate,
+    },
+    evidence: {
+      requiresReview: true,
+      reviewReasons: [
+        "calendar_date_inferred_from_explicit_weekday",
+      ],
+      dateBasis:
+        "current_week_from_explicit_weekday",
+      displayedWeekday:
+        observation.displayedWeekday,
+      titleBasis:
+        "image_explicit",
+      timeBasis:
+        observation.timeBasis,
+    },
+  };
+}
+
 function externalEventId(
   event: CalendarImageExtractedEvent,
 ): string {
@@ -321,10 +492,24 @@ function canonicalizeEvent(
     imageUrl: string;
     timeZone: string;
     qualificationReason: string;
+    currentDate: string;
   },
 ): FirstPartyHarvestEvent | null {
+  const resolved =
+    resolveObservationDate(
+      observation,
+      options.currentDate,
+    );
+
+  if (!resolved) {
+    return null;
+  }
+
+  const resolvedObservation =
+    resolved.observation;
+
   const title =
-    observation.title.trim();
+    resolvedObservation.title.trim();
 
   if (!title) {
     return null;
@@ -332,12 +517,12 @@ function canonicalizeEvent(
 
   const date =
     parseLocalDate(
-      observation.localDate,
+      resolvedObservation.localDate!,
     );
 
   const startTime =
     parseLocalTime(
-      observation.startTime,
+      resolvedObservation.startTime,
     );
 
   /*
@@ -367,7 +552,7 @@ function canonicalizeEvent(
 
   const endTime =
     parseLocalTime(
-      observation.endTime,
+      resolvedObservation.endTime,
     );
 
   if (endTime) {
@@ -416,7 +601,7 @@ function canonicalizeEvent(
   return {
     externalEventId:
       externalEventId(
-        observation,
+        resolvedObservation,
       ),
     title,
     description: null,
@@ -426,7 +611,7 @@ function canonicalizeEvent(
       endsAt?.toISOString() ??
       null,
     allDay:
-      observation.allDay,
+      resolvedObservation.allDay,
     sourceUrl:
       options.pageUrl,
     flyerUrl:
@@ -444,6 +629,12 @@ function canonicalizeEvent(
       qualificationReason:
         options.qualificationReason,
       observation,
+      resolvedObservation:
+        resolvedObservation === observation
+          ? undefined
+          : resolvedObservation,
+      eventEvidence:
+        resolved.evidence,
     },
   };
 }
@@ -583,7 +774,10 @@ export async function fetchCalendarImageEvents(
             observation.localDate,
         )
         .filter(
-          (localDate) =>
+          (
+            localDate,
+          ): localDate is string =>
+            localDate !== null &&
             parseLocalDate(
               localDate,
             ) !== null,
@@ -619,6 +813,7 @@ export async function fetchCalendarImageEvents(
             timeZone,
             qualificationReason:
               extraction.qualificationReason,
+            currentDate,
           },
         );
 
