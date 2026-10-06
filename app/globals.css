@@ -5344,9 +5344,13 @@
 }
 
 .events-weekday-selector{
-  display:grid;
-  grid-template-columns:repeat(8,minmax(0,1fr));
+  display:flex;
+  justify-content:center;
   gap:6px;
+}
+
+.events-weekday-selector .events-weekday-link{
+  flex:0 1 calc((100% - 42px) / 8);
 }
 
 .events-weekday-link{
