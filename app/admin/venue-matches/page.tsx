@@ -58,6 +58,24 @@ type Spot = {
   manager_email: string | null;
 };
 
+type EventOccurrenceReview = {
+  id: string;
+  source_id: string;
+  source_name: string;
+  external_event_id: string;
+  source_url: string | null;
+  raw_title: string;
+  raw_description: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  venue_id: string;
+  venue_name: string;
+  confidence_score: number | null;
+  canonical_event_id: string | null;
+  last_seen_at: string;
+  created_at: string;
+};
+
 type CalendarEventVerification = {
   id: string;
   source_id: string;
@@ -125,6 +143,9 @@ export default function AdminVenueMatchesPage() {
   const [calendarEvents, setCalendarEvents] = useState<
     CalendarEventVerification[]
   >([]);
+  const [occurrenceReviews, setOccurrenceReviews] = useState<
+    EventOccurrenceReview[]
+  >([]);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [spotSearch, setSpotSearch] = useState<Record<string, string>>({});
   const [selectedSpot, setSelectedSpot] = useState<Record<string, string>>({});
@@ -140,11 +161,13 @@ export default function AdminVenueMatchesPage() {
       matchResult,
       unresolvedResult,
       calendarResult,
+      occurrenceResult,
       spotsResult,
     ] = await Promise.all([
       supabase.rpc("admin_pending_event_harvest_venue_matches"),
       supabase.rpc("admin_pending_event_harvest_unresolved_venues"),
       supabase.rpc("admin_list_calendar_event_verifications"),
+      supabase.rpc("admin_list_event_occurrence_reviews"),
       supabase.rpc("admin_list_spots"),
     ]);
 
@@ -152,6 +175,7 @@ export default function AdminVenueMatchesPage() {
       matchResult.error,
       unresolvedResult.error,
       calendarResult.error,
+      occurrenceResult.error,
       spotsResult.error,
     ].filter(Boolean);
 
@@ -159,6 +183,7 @@ export default function AdminVenueMatchesPage() {
       setMatches([]);
       setUnresolved([]);
       setCalendarEvents([]);
+      setOccurrenceReviews([]);
       setSpots([]);
       setMessage(errors.map((error) => error!.message).join(" "));
       setLoading(false);
@@ -171,6 +196,9 @@ export default function AdminVenueMatchesPage() {
     setUnresolved(unresolvedRows);
     setCalendarEvents(
       (calendarResult.data as CalendarEventVerification[]) || [],
+    );
+    setOccurrenceReviews(
+      (occurrenceResult.data as EventOccurrenceReview[]) || [],
     );
     setSpots(
       ((spotsResult.data as Spot[]) || []).filter(
@@ -279,6 +307,37 @@ export default function AdminVenueMatchesPage() {
     await loadMatches();
   }
 
+  async function reviewOccurrence(
+    id: string,
+    approve: boolean,
+  ) {
+    setReviewingId(id);
+    setMessage("");
+
+    const { error } = await supabase.rpc(
+      "admin_review_event_occurrence",
+      {
+        p_candidate_id: id,
+        p_approve: approve,
+      },
+    );
+
+    if (error) {
+      setMessage(error.message);
+      setReviewingId(null);
+      return;
+    }
+
+    setMessage(
+      approve
+        ? "Event approved and published."
+        : "Event rejected.",
+    );
+
+    setReviewingId(null);
+    await loadMatches();
+  }
+
   const spotChoices = useMemo(() => {
     const result: Record<string, Spot[]> = {};
 
@@ -358,7 +417,8 @@ export default function AdminVenueMatchesPage() {
             <p>Loading event reviews...</p>
           ) : matches.length === 0 &&
               unresolved.length === 0 &&
-              calendarEvents.length === 0 ? (
+              calendarEvents.length === 0 &&
+              occurrenceReviews.length === 0 ? (
             <div
               style={{
                 padding: "32px",
@@ -579,6 +639,147 @@ export default function AdminVenueMatchesPage() {
                       style={{
                         padding: "6px 10px",
                         border: "1px solid rgba(20, 35, 45, 0.2)",
+                        borderRadius: "8px",
+                        background: "transparent",
+                        cursor: busy ? "default" : "pointer",
+                        fontWeight: 700,
+                        fontSize: "0.8rem",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                );
+              })}
+
+              {occurrenceReviews.map((item) => {
+                const busy = reviewingId === item.id;
+
+                const proposedDate = new Date(
+                  item.starts_at,
+                ).toLocaleDateString();
+
+                const proposedTime = new Date(
+                  item.starts_at,
+                ).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                });
+
+                return (
+                  <div
+                    key={`occurrence-${item.id}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "minmax(280px, 2fr) minmax(150px, 1fr) 150px 185px 82px 82px",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 10px",
+                      border: "1px solid rgba(20, 35, 45, 0.12)",
+                      borderRadius: "10px",
+                      background: "rgba(255,255,255,0.9)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        minWidth: 0,
+                        fontSize: "0.88rem",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.source_url ? (
+                        <a
+                          href={item.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`${item.raw_title} — Open source`}
+                          style={{
+                            display: "block",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            fontWeight: 700,
+                            color: "inherit",
+                            textDecoration: "underline",
+                            textDecorationThickness: "1px",
+                            textUnderlineOffset: "3px",
+                          }}
+                        >
+                          {item.raw_title}
+                        </a>
+                      ) : (
+                        <strong>{item.raw_title}</strong>
+                      )}
+
+                      <span
+                        style={{
+                          fontSize: "0.78rem",
+                          opacity: 0.62,
+                        }}
+                      >
+                        {proposedDate} · {proposedTime}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        minWidth: 0,
+                        fontSize: "0.88rem",
+                      }}
+                    >
+                      <strong>{item.venue_name}</strong>
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "0.78rem",
+                        opacity: 0.7,
+                      }}
+                    >
+                      {item.source_name}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "0.76rem",
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      Possible duplicate occurrence
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        reviewOccurrence(item.id, true)
+                      }
+                      style={{
+                        padding: "7px 11px",
+                        border: 0,
+                        borderRadius: "8px",
+                        cursor: busy ? "default" : "pointer",
+                        fontWeight: 700,
+                        fontSize: "0.8rem",
+                        whiteSpace: "nowrap",
+                        opacity: busy ? 0.55 : 1,
+                      }}
+                    >
+                      {busy ? "Working..." : "Approve"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        reviewOccurrence(item.id, false)
+                      }
+                      style={{
+                        padding: "6px 10px",
+                        border:
+                          "1px solid rgba(20, 35, 45, 0.2)",
                         borderRadius: "8px",
                         background: "transparent",
                         cursor: busy ? "default" : "pointer",

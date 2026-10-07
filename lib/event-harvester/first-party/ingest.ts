@@ -178,6 +178,41 @@ async function ingestEvent(
     action = "linked_existing";
   } else {
     /*
+     * Exact fingerprint dedupe above intentionally remains strict.
+     *
+     * Before creating a new canonical event, check whether this
+     * candidate exposes a plausible duplicate occurrence that needs
+     * human adjudication. The database function also places any
+     * implicated peer candidates into the same review lifecycle.
+     */
+    const {
+      data: occurrenceReviewData,
+      error: occurrenceReviewError,
+    } = await supabase.rpc(
+      "flag_event_harvest_occurrence_review",
+      {
+        p_candidate_id: candidateId,
+      },
+    );
+
+    if (occurrenceReviewError) {
+      throw new Error(
+        `Occurrence review routing failed for "${event.title}": ${occurrenceReviewError.message}`,
+      );
+    }
+
+    const requiresOccurrenceReview =
+      rpcValue<boolean>(occurrenceReviewData);
+
+    if (requiresOccurrenceReview) {
+      return {
+        candidateId,
+        canonicalEventId: null,
+        action: "needs_review",
+      };
+    }
+
+    /*
      * Calendar-image extraction may establish the event itself while
      * leaving a critical occurrence fact, such as its calendar date,
      * deterministically inferred from explicit image evidence.
