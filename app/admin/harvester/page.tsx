@@ -35,6 +35,13 @@ const tools = [
     href: "/admin/harvester/transport-errors",
     status: "OPEN",
   },
+  {
+    title: "No Sources",
+    description:
+      "Review Spots where detector discovery completed but found no event source.",
+    href: "/admin/harvester/no-source",
+    status: "OPEN",
+  },
 ];
 
 export default function AdminHarvesterPage() {

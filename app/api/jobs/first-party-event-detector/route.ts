@@ -1,37 +1,25 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-import {
-  detectFirstPartySources,
-} from "@/lib/event-harvester/first-party/source-detector";
+import { detectFirstPartySources } from "@/lib/event-harvester/first-party/source-detector";
 
-import {
-  ratifyDetectedSource,
-} from "@/lib/event-harvester/first-party/ratify";
+import { ratifyDetectedSource } from "@/lib/event-harvester/first-party/ratify";
 
-import {
-  validateFirstPartySource,
-} from "@/lib/event-harvester/first-party/validate";
+import { validateFirstPartySource } from "@/lib/event-harvester/first-party/validate";
 
-import type {
-  FirstPartySource,
-} from "@/lib/event-harvester/first-party/preview";
+import type { FirstPartySource } from "@/lib/event-harvester/first-party/preview";
 
 export const dynamic = "force-dynamic";
 
 const SPOT_LIMIT = 30;
 
 function getAdminClient() {
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  const secret =
-    process.env.SUPABASE_SECRET_KEY;
+  const secret = process.env.SUPABASE_SECRET_KEY;
 
   if (!url || !secret) {
-    throw new Error(
-      "Server Supabase credentials are not configured."
-    );
+    throw new Error("Server Supabase credentials are not configured.");
   }
 
   return createClient(url, secret, {
@@ -42,88 +30,75 @@ function getAdminClient() {
   });
 }
 
-export async function GET(
-  request: Request
-) {
-  const expectedSecret =
-    process.env.CRON_SECRET;
+export async function GET(request: Request) {
+  const expectedSecret = process.env.CRON_SECRET;
 
   if (!expectedSecret) {
     return NextResponse.json(
       {
-        error:
-          "Cron secret is not configured.",
+        error: "Cron secret is not configured.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
-  const auth =
-    request.headers.get(
-      "authorization"
-    );
+  const auth = request.headers.get("authorization");
 
-  if (
-    auth !==
-    `Bearer ${expectedSecret}`
-  ) {
-    return NextResponse.json(
-      { error: "Unauthorized." },
-      { status: 401 }
-    );
+  if (auth !== `Bearer ${expectedSecret}`) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const supabase =
-    getAdminClient();
+  const supabase = getAdminClient();
 
-  const requestUrl =
-    new URL(request.url);
+  const requestUrl = new URL(request.url);
 
-  const venueId =
-    requestUrl.searchParams.get(
-      "venue_id"
-    );
+  const venueId = requestUrl.searchParams.get("venue_id");
 
-  let venueQuery =
-    supabase
-      .from("venues")
-      .select(
-        "id,name,website_url,street_address,city,state_region,postal_code,country_code,latitude,longitude"
-      )
-      .eq("status", "active")
-      .not("website_url", "is", null);
+  let venueQuery = supabase
+    .from("venues")
+    .select(
+      "id,name,website_url,street_address,city,state_region,postal_code,country_code,latitude,longitude",
+    )
+    .eq("status", "active")
+    .not("website_url", "is", null);
 
   if (venueId) {
-    venueQuery =
-      venueQuery.eq("id", venueId);
+    venueQuery = venueQuery.eq("id", venueId);
   } else {
-    venueQuery =
-      venueQuery
-        .order("created_at", {
-          ascending: false,
-        })
-        .limit(SPOT_LIMIT);
+    venueQuery = venueQuery
+      .order("created_at", {
+        ascending: false,
+      })
+      .limit(SPOT_LIMIT);
   }
 
-  const { data: venues, error } =
-    await venueQuery;
+  const { data: venues, error } = await venueQuery;
 
   if (error) {
     return NextResponse.json(
       {
-        error:
-          `Could not load Spots: ${error.message}`,
+        error: `Could not load Spots: ${error.message}`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
+  let processedSpots = 0;
   let detected = 0;
   let ratified = 0;
   let validated = 0;
   let registered = 0;
   let unsupported = 0;
   let failed = 0;
+
+  const bucketCounts = {
+    validated: 0,
+    calendar_image: 0,
+    facebook: 0,
+    browser_required: 0,
+    transport: 0,
+    no_source: 0,
+  };
 
   const failures: Array<{
     venueId: string;
@@ -137,39 +112,123 @@ export async function GET(
       continue;
     }
 
-    try {
-      const detection =
-        await detectFirstPartySources(
-          venue.website_url
-        );
+    processedSpots += 1;
 
+    try {
+      let successfullyRegistered = false;
+      let hasPersistedBrowserRequired = false;
+
+      /*
+       * Final bucket classification must account for venue-scoped
+       * first-party sources established before the current detector run.
+       *
+       * Registration occurs only after source validation succeeds.
+       * Harvest lifecycle fields such as last_success_at describe later
+       * ingestion health and do not determine detector validation state.
+       */
+      const {
+        data: previouslyValidatedSources,
+        error: previouslyValidatedSourceError,
+      } = await supabase
+        .from("event_harvest_sources")
+        .select("id")
+        .eq("venue_id", venue.id)
+        .eq("provider", "first_party")
+        .eq("is_enabled", true)
+        .limit(1);
+
+      if (previouslyValidatedSourceError) {
+        throw new Error(
+          `Could not check previously validated first-party sources: ${previouslyValidatedSourceError.message}`,
+        );
+      }
+
+      const hasPreviouslyValidatedSource =
+        (previouslyValidatedSources?.length ?? 0) > 0;
+
+      const detection = await detectFirstPartySources(venue.website_url);
+
+      const calendarImageCandidate =
+        detection.detections.find(
+          (candidate) => candidate.sourceType === "calendar_image",
+        ) ?? null;
+
+      const facebookCandidate =
+        detection.detections.find(
+          (candidate) => candidate.sourceType === "facebook",
+        ) ?? null;
+
+      const browserRequiredCandidate =
+        detection.detections.find(
+          (candidate) => candidate.sourceType === "browser_required",
+        ) ?? null;
       /*
        * Transport findings are transient. Resolve the previous
        * transport state for this Spot first; if the current scan is
        * still blocked/failed, the upsert below immediately reactivates
        * the current finding and refreshes last_seen_at.
        */
-      const {
-        error: transportResolutionError,
-      } = await supabase.rpc(
+      const { error: transportResolutionError } = await supabase.rpc(
         "resolve_event_harvest_detector_findings",
         {
           p_venue_id: venue.id,
           p_category: "transport",
-        }
+        },
       );
 
       if (transportResolutionError) {
         throw new Error(
-          `Could not resolve previous transport findings: ${transportResolutionError.message}`
+          `Could not resolve previous transport findings: ${transportResolutionError.message}`,
         );
       }
 
+      /*
+       * No-source findings represent the current successful detector
+       * conclusion for a Spot. Clear the previous state first; a clean
+       * no_event_source result below immediately reactivates it.
+       */
+      const { error: noSourceResolutionError } = await supabase.rpc(
+        "resolve_event_harvest_detector_findings",
+        {
+          p_venue_id: venue.id,
+          p_category: "no_source",
+        },
+      );
+
+      if (noSourceResolutionError) {
+        throw new Error(
+          `Could not resolve previous no-source finding: ${noSourceResolutionError.message}`,
+        );
+      }
+
+      if (detection.status === "no_event_source") {
+        const { error: noSourceFindingError } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "no_source",
+            p_finding_key: "no_source",
+            p_detector_status: detection.status,
+            p_source_type: null,
+            p_website_url: detection.websiteUrl,
+            p_source_url: null,
+            p_fetched_url: detection.fetchedUrl,
+            p_confidence: null,
+            p_evidence: [],
+            p_error: null,
+          },
+        );
+
+        if (noSourceFindingError) {
+          throw new Error(
+            `Could not persist no-source finding: ${noSourceFindingError.message}`,
+          );
+        }
+      }
+
       if (
-        detection.status ===
-          "transport_blocked" ||
-        detection.status ===
-          "transport_failed"
+        detection.status === "transport_blocked" ||
+        detection.status === "transport_failed"
       ) {
         /*
          * A Spot that has already been verified as browser-required
@@ -189,51 +248,44 @@ export async function GET(
 
         if (browserRequiredLookupError) {
           throw new Error(
-            `Could not check browser-required findings: ${browserRequiredLookupError.message}`
+            `Could not check browser-required findings: ${browserRequiredLookupError.message}`,
           );
         }
 
-        if ((browserRequiredFindings?.length ?? 0) === 0) {
-          const {
-            error: transportFindingError,
-          } = await supabase.rpc(
+        hasPersistedBrowserRequired =
+          (browserRequiredFindings?.length ?? 0) > 0;
+
+        if (!hasPersistedBrowserRequired) {
+          const { error: transportFindingError } = await supabase.rpc(
             "upsert_event_harvest_detector_finding",
             {
               p_venue_id: venue.id,
               p_category: "transport",
               p_finding_key: "transport",
-              p_detector_status:
-                detection.status,
+              p_detector_status: detection.status,
               p_source_type: null,
-              p_website_url:
-                detection.websiteUrl,
+              p_website_url: detection.websiteUrl,
               p_source_url: null,
-              p_fetched_url:
-                detection.fetchedUrl,
+              p_fetched_url: detection.fetchedUrl,
               p_confidence: null,
               p_evidence: [],
               p_error: detection.error,
-            }
+            },
           );
 
           if (transportFindingError) {
             throw new Error(
-              `Could not persist transport finding: ${transportFindingError.message}`
+              `Could not persist transport finding: ${transportFindingError.message}`,
             );
           }
         }
       }
 
-      if (
-        detection.status === "detected"
-      ) {
+      if (detection.status === "detected") {
         detected += 1;
       }
 
-      for (
-        const candidate
-        of detection.detections
-      ) {
+      for (const candidate of detection.detections) {
         if (candidate.sourceType === "browser_required") {
           /*
            * Browser-required findings are actionable discovery work.
@@ -351,14 +403,13 @@ export async function GET(
              * finding before persisting the current candidate so redirects
              * or URL normalization cannot leave duplicate active rows.
              */
-            const { error: staleFacebookResolutionError } =
-              await supabase.rpc(
-                "resolve_event_harvest_detector_findings",
-                {
-                  p_venue_id: venue.id,
-                  p_category: "facebook",
-                },
-              );
+            const { error: staleFacebookResolutionError } = await supabase.rpc(
+              "resolve_event_harvest_detector_findings",
+              {
+                p_venue_id: venue.id,
+                p_category: "facebook",
+              },
+            );
 
             if (staleFacebookResolutionError) {
               throw new Error(
@@ -391,48 +442,30 @@ export async function GET(
           }
         }
 
-        if (
-          !candidate.adapterAvailable
-        ) {
+        if (!candidate.adapterAvailable) {
           unsupported += 1;
           continue;
         }
 
         try {
-          const ratification =
-            await ratifyDetectedSource(
-              candidate,
-              {
-                name: venue.name,
-                streetAddress:
-                  venue.street_address,
-                city: venue.city,
-                region:
-                  venue.state_region,
-                postalCode:
-                  venue.postal_code,
-                country:
-                  venue.country_code,
-                latitude:
-                  venue.latitude,
-                longitude:
-                  venue.longitude,
-              }
-            );
+          const ratification = await ratifyDetectedSource(candidate, {
+            name: venue.name,
+            streetAddress: venue.street_address,
+            city: venue.city,
+            region: venue.state_region,
+            postalCode: venue.postal_code,
+            country: venue.country_code,
+            latitude: venue.latitude,
+            longitude: venue.longitude,
+          });
 
-          if (
-            ratification.status !==
-              "ratified" ||
-            !ratification.source
-          ) {
+          if (ratification.status !== "ratified" || !ratification.source) {
             failed += 1;
             failures.push({
               venueId: venue.id,
               name: venue.name,
               stage: "ratification",
-              error:
-                ratification.error ??
-                "Source was not ratified.",
+              error: ratification.error ?? "Source was not ratified.",
             });
             continue;
           }
@@ -449,10 +482,7 @@ export async function GET(
            * not automatically attach an already-owned UVTix identity to
            * a different TenderFans Spot.
            */
-          if (
-            ratification.source.sourceType ===
-            "uvtix_events"
-          ) {
+          if (ratification.source.sourceType === "uvtix_events") {
             const {
               data: existingUvTixOwners,
               error: existingUvTixOwnerError,
@@ -460,22 +490,18 @@ export async function GET(
               .from("event_harvest_sources")
               .select("id,venue_id,name")
               .eq("provider", "first_party")
-              .eq(
-                "external_source_id",
-                ratification.source.externalSourceId
-              )
+              .eq("external_source_id", ratification.source.externalSourceId)
               .eq("is_enabled", true)
               .neq("venue_id", venue.id)
               .limit(1);
 
             if (existingUvTixOwnerError) {
               throw new Error(
-                `Could not verify UVTix source ownership: ${existingUvTixOwnerError.message}`
+                `Could not verify UVTix source ownership: ${existingUvTixOwnerError.message}`,
               );
             }
 
-            const existingUvTixOwner =
-              existingUvTixOwners?.[0];
+            const existingUvTixOwner = existingUvTixOwners?.[0];
 
             if (existingUvTixOwner) {
               failed += 1;
@@ -483,8 +509,7 @@ export async function GET(
                 venueId: venue.id,
                 name: venue.name,
                 stage: "attribution",
-                error:
-                  `UVTix source ${ratification.source.sourceUrl} is already registered to another Spot (${existingUvTixOwner.name ?? existingUvTixOwner.venue_id}).`,
+                error: `UVTix source ${ratification.source.sourceUrl} is already registered to another Spot (${existingUvTixOwner.name ?? existingUvTixOwner.venue_id}).`,
               });
               continue;
             }
@@ -493,42 +518,26 @@ export async function GET(
           const source: FirstPartySource = {
             id: `probe:${venue.id}`,
             provider: "first_party",
-            source_type:
-              ratification.source
-                .sourceType,
-            name:
-              `${venue.name} official events`,
-            source_url:
-              ratification.source
-                .sourceUrl,
-            external_source_id:
-              ratification.source
-                .externalSourceId,
+            source_type: ratification.source.sourceType,
+            name: `${venue.name} official events`,
+            source_url: ratification.source.sourceUrl,
+            external_source_id: ratification.source.externalSourceId,
             venue_id: venue.id,
             is_enabled: true,
             trust_level: "trusted",
-            config:
-              ratification.source.config,
+            config: ratification.source.config,
             bootstrapped_at: null,
           };
 
-          const validation =
-            await validateFirstPartySource(
-              source
-            );
+          const validation = await validateFirstPartySource(source);
 
-          if (
-            validation.status !==
-            "validated"
-          ) {
+          if (validation.status !== "validated") {
             failed += 1;
             failures.push({
               venueId: venue.id,
               name: venue.name,
               stage: "validation",
-              error:
-                validation.error ??
-                "Source validation failed.",
+              error: validation.error ?? "Source validation failed.",
             });
             continue;
           }
@@ -537,74 +546,51 @@ export async function GET(
 
           const registration =
             ratification.source.sourceType === "facebook_events"
-              ? await supabase.rpc(
-                  "upsert_global_first_party_event_source",
-                  {
-                    p_source_type:
-                      ratification.source.sourceType,
-                    p_name:
-                      `${venue.name} Facebook events`,
-                    p_source_url:
-                      ratification.source.sourceUrl,
-                    p_external_source_id:
-                      ratification.source.externalSourceId,
-                    p_config:
-                      ratification.source.config,
-                  },
-                )
-              : await supabase.rpc(
-                  "upsert_first_party_event_source",
-                  {
-                    p_venue_id: venue.id,
-                    p_source_type:
-                      ratification.source.sourceType,
-                    p_name:
-                      `${venue.name} official events`,
-                    p_source_url:
-                      ratification.source.sourceUrl,
-                    p_external_source_id:
-                      ratification.source.externalSourceId,
-                    p_config:
-                      ratification.source.config,
-                  },
-                );
+              ? await supabase.rpc("upsert_global_first_party_event_source", {
+                  p_source_type: ratification.source.sourceType,
+                  p_name: `${venue.name} Facebook events`,
+                  p_source_url: ratification.source.sourceUrl,
+                  p_external_source_id: ratification.source.externalSourceId,
+                  p_config: ratification.source.config,
+                })
+              : await supabase.rpc("upsert_first_party_event_source", {
+                  p_venue_id: venue.id,
+                  p_source_type: ratification.source.sourceType,
+                  p_name: `${venue.name} official events`,
+                  p_source_url: ratification.source.sourceUrl,
+                  p_external_source_id: ratification.source.externalSourceId,
+                  p_config: ratification.source.config,
+                });
 
-          const {
-            data: sourceId,
-            error: registrationError,
-          } = registration;
+          const { data: sourceId, error: registrationError } = registration;
 
-          if (
-            registrationError ||
-            !sourceId
-          ) {
+          if (registrationError || !sourceId) {
             throw new Error(
               registrationError?.message ??
-                "Source registration returned no source ID."
+                "Source registration returned no source ID.",
             );
           }
 
           registered += 1;
 
+          successfullyRegistered = true;
           /*
            * A successfully registered structured first-party source
            * also makes any browser-required discovery finding
            * non-actionable. Browser transport has completed its job
            * once it exposes a provider source that can be registered.
            */
-          const {
-            error: browserResolutionError,
-          } = await supabase.rpc(
+          const { error: browserResolutionError } = await supabase.rpc(
             "resolve_event_harvest_detector_findings",
             {
               p_venue_id: venue.id,
               p_category: "browser_required",
-            }
+            },
           );
 
           if (browserResolutionError) {
             throw new Error(
-              `Could not resolve browser-required findings after source registration: ${browserResolutionError.message}`
+              `Could not resolve browser-required findings after source registration: ${browserResolutionError.message}`,
             );
           }
 
@@ -615,19 +601,17 @@ export async function GET(
            * also has structured event sources.
            */
           if (candidate.sourceType === "calendar_image") {
-            const {
-              error: calendarImageResolutionError,
-            } = await supabase.rpc(
+            const { error: calendarImageResolutionError } = await supabase.rpc(
               "resolve_event_harvest_detector_findings",
               {
                 p_venue_id: venue.id,
                 p_category: "calendar_image",
-              }
+              },
             );
 
             if (calendarImageResolutionError) {
               throw new Error(
-                `Could not resolve calendar-image findings after source registration: ${calendarImageResolutionError.message}`
+                `Could not resolve calendar-image findings after source registration: ${calendarImageResolutionError.message}`,
               );
             }
           }
@@ -638,19 +622,17 @@ export async function GET(
            * after registration succeeds.
            */
           if (candidate.sourceType === "facebook") {
-            const {
-              error: facebookResolutionError,
-            } = await supabase.rpc(
+            const { error: facebookResolutionError } = await supabase.rpc(
               "resolve_event_harvest_detector_findings",
               {
                 p_venue_id: venue.id,
                 p_category: "facebook",
-              }
+              },
             );
 
             if (facebookResolutionError) {
               throw new Error(
-                `Could not resolve Facebook findings after source registration: ${facebookResolutionError.message}`
+                `Could not resolve Facebook findings after source registration: ${facebookResolutionError.message}`,
               );
             }
           }
@@ -660,12 +642,186 @@ export async function GET(
             venueId: venue.id,
             name: venue.name,
             stage: "source",
-            error:
-              error instanceof Error
-                ? error.message
-                : String(error),
+            error: error instanceof Error ? error.message : String(error),
           });
         }
+      }
+
+      /*
+       * Final detector outcome routing.
+       *
+       * The detector, ratifier, validator, and registration paths above
+       * keep their existing behavior. This block only reconciles the
+       * completed Spot result into one mutually exclusive outcome.
+       *
+       * Precedence:
+       * Validated -> Calendar Image -> Facebook ->
+       * Browser Required -> Transport Error -> No Sources.
+       */
+      const actionableCategories = [
+        "calendar_image",
+        "facebook",
+        "browser_required",
+        "transport",
+        "no_source",
+      ] as const;
+
+      for (const category of actionableCategories) {
+        if (
+          category === "browser_required" &&
+          hasPersistedBrowserRequired &&
+          !browserRequiredCandidate
+        ) {
+          continue;
+        }
+
+        const { error: resolutionError } = await supabase.rpc(
+          "resolve_event_harvest_detector_findings",
+          {
+            p_venue_id: venue.id,
+            p_category: category,
+          },
+        );
+
+        if (resolutionError) {
+          throw new Error(
+            `Could not reconcile ${category} detector finding: ${resolutionError.message}`,
+          );
+        }
+      }
+
+      if (successfullyRegistered || hasPreviouslyValidatedSource) {
+        bucketCounts.validated += 1;
+      } else if (calendarImageCandidate) {
+        const { error: findingError } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "calendar_image",
+            p_finding_key: "calendar_image",
+            p_detector_status: detection.status,
+            p_source_type: calendarImageCandidate.sourceType,
+            p_website_url: detection.websiteUrl,
+            p_source_url: calendarImageCandidate.url,
+            p_fetched_url: detection.fetchedUrl,
+            p_confidence: calendarImageCandidate.confidence,
+            p_evidence: calendarImageCandidate.evidence,
+            p_error: detection.error,
+          },
+        );
+
+        if (findingError) {
+          throw new Error(
+            `Could not persist final calendar-image finding: ${findingError.message}`,
+          );
+        }
+
+        bucketCounts.calendar_image += 1;
+      } else if (facebookCandidate) {
+        const { error: findingError } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "facebook",
+            p_finding_key: `facebook:${facebookCandidate.url}`,
+            p_detector_status: detection.status,
+            p_source_type: facebookCandidate.sourceType,
+            p_website_url: detection.websiteUrl,
+            p_source_url: facebookCandidate.url,
+            p_fetched_url: detection.fetchedUrl,
+            p_confidence: facebookCandidate.confidence,
+            p_evidence: facebookCandidate.evidence,
+            p_error: detection.error,
+          },
+        );
+
+        if (findingError) {
+          throw new Error(
+            `Could not persist final Facebook finding: ${findingError.message}`,
+          );
+        }
+
+        bucketCounts.facebook += 1;
+      } else if (browserRequiredCandidate || hasPersistedBrowserRequired) {
+        if (browserRequiredCandidate) {
+          const { error: findingError } = await supabase.rpc(
+            "upsert_event_harvest_detector_finding",
+            {
+              p_venue_id: venue.id,
+              p_category: "browser_required",
+              p_finding_key: "browser_required",
+              p_detector_status: detection.status,
+              p_source_type: browserRequiredCandidate.sourceType,
+              p_website_url: detection.websiteUrl,
+              p_source_url: browserRequiredCandidate.url,
+              p_fetched_url: detection.fetchedUrl,
+              p_confidence: browserRequiredCandidate.confidence,
+              p_evidence: browserRequiredCandidate.evidence,
+              p_error: detection.error,
+            },
+          );
+
+          if (findingError) {
+            throw new Error(
+              `Could not persist final browser-required finding: ${findingError.message}`,
+            );
+          }
+        }
+
+        bucketCounts.browser_required += 1;
+      } else if (
+        detection.status === "transport_blocked" ||
+        detection.status === "transport_failed"
+      ) {
+        const { error: findingError } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "transport",
+            p_finding_key: "transport",
+            p_detector_status: detection.status,
+            p_source_type: null,
+            p_website_url: detection.websiteUrl,
+            p_source_url: null,
+            p_fetched_url: detection.fetchedUrl,
+            p_confidence: null,
+            p_evidence: [],
+            p_error: detection.error,
+          },
+        );
+
+        if (findingError) {
+          throw new Error(
+            `Could not persist final transport finding: ${findingError.message}`,
+          );
+        }
+
+        bucketCounts.transport += 1;
+      } else {
+        const { error: findingError } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "no_source",
+            p_finding_key: "no_source",
+            p_detector_status: detection.status,
+            p_source_type: null,
+            p_website_url: detection.websiteUrl,
+            p_source_url: null,
+            p_fetched_url: detection.fetchedUrl,
+            p_confidence: null,
+            p_evidence: [],
+            p_error: detection.error,
+          },
+        );
+
+        if (findingError) {
+          throw new Error(
+            `Could not persist final no-source finding: ${findingError.message}`,
+          );
+        }
+
+        bucketCounts.no_source += 1;
       }
     } catch (error) {
       failed += 1;
@@ -673,22 +829,39 @@ export async function GET(
         venueId: venue.id,
         name: venue.name,
         stage: "detection",
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
+  const bucketTotal =
+    bucketCounts.validated +
+    bucketCounts.calendar_image +
+    bucketCounts.facebook +
+    bucketCounts.browser_required +
+    bucketCounts.transport +
+    bucketCounts.no_source;
+
+  const bucketInvariantHolds = bucketTotal === processedSpots;
+
   return NextResponse.json({
-    spots: venues?.length ?? 0,
+    spots: processedSpots,
+    bucketInvariantHolds,
     detected,
     ratified,
     validated,
     registered,
     unsupported,
     failed,
+    buckets: {
+      validated: bucketCounts.validated,
+      calendarImage: bucketCounts.calendar_image,
+      facebook: bucketCounts.facebook,
+      browserRequired: bucketCounts.browser_required,
+      transportError: bucketCounts.transport,
+      noSources: bucketCounts.no_source,
+      total: bucketTotal,
+    },
     failures,
   });
 }

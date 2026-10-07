@@ -2561,11 +2561,14 @@
 }
 
 .events-calendar-event-title {
-  display: block;
+  display: -webkit-box;
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   margin-top: 1px;
   font-size: 8.5px;
   line-height: 1.05;

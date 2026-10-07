@@ -341,6 +341,36 @@ export async function resolveFirstPartyAttribution(
 
   const best = scored[0];
 
+  /*
+   * Some publishers can degrade a venue's name into its street
+   * address. In that case the apparent name must not manufacture
+   * confidence for Google venue creation.
+   *
+   * Preserve the best existing Spot as a suggestion and route the
+   * event through the established venue-match review workflow.
+   */
+  const publisherNameIsAddress =
+    normalizeVenueMatchText(evidence.name) !== "" &&
+    normalizeVenueMatchText(evidence.name) ===
+      normalizeVenueMatchText(evidence.streetAddress);
+
+  if (publisherNameIsAddress) {
+    return {
+      status: "unresolved",
+      rawVenueName: evidence.name,
+      rawAddress: event.venueAddress ?? null,
+      publisherEvidence: evidence,
+      suggestedVenueId: best?.venue.id ?? null,
+      confidenceScore: best?.match.score ?? null,
+      evidence: {
+        ...(best?.match.evidence ?? {}),
+        autoAttach: best?.match.autoAttach ?? false,
+        needsReview: true,
+        reason: "publisher_venue_name_is_address",
+      },
+    };
+  }
+
   if (best) {
     const publisherName = normalizeVenueMatchText(evidence.name);
 
