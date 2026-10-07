@@ -393,7 +393,19 @@ begin
     return v_event_id;
   end if;
 
-  if v_candidate.canonical_event_id is not null then
+  /*
+   * Reject the first-party representation without retracting a
+   * canonical event that is also protected by Ticketmaster provenance.
+   */
+  if v_candidate.canonical_event_id is not null
+     and not exists (
+       select 1
+       from public.event_source_links esl
+       join public.event_harvest_sources s
+         on s.id = esl.source_id
+       where esl.event_id = v_candidate.canonical_event_id
+         and s.provider = 'ticketmaster'
+     ) then
     update public.events
     set status = 'draft'
     where id = v_candidate.canonical_event_id
