@@ -1,3 +1,4 @@
+import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
 import { fetchBrowserEvidence } from "./browser-transport";
 import { discoverCalendarImageAssets } from "./calendar-image-assets";
 
@@ -1112,12 +1113,11 @@ async function fetchHtml(url: string): Promise<{
   url: string;
   html: string;
 }> {
-  const response = await fetch(url, {
+  const response = await signedHarvesterFetch(url, {
     headers: {
       Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
       "User-Agent": USER_AGENT,
     },
-    redirect: "follow",
     cache: "no-store",
   });
 
