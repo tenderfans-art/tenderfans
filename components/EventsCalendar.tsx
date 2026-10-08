@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import NotificationSignup from "@/components/NotificationSignup";
+import { readDiscoveryRadius, saveDiscoveryRadius } from "@/lib/discovery-radius";
 
 type CalendarEvent = {
   id: string;
@@ -164,6 +165,7 @@ export default function EventsCalendar({
   useEffect(() => {
     const now = new Date();
 
+    setRadiusMiles(readDiscoveryRadius());
     setToday(now);
     setMonth(new Date(now.getFullYear(), now.getMonth(), 1));
     setSelectedWeekStart(startOfWeek(now));
@@ -805,7 +807,9 @@ export default function EventsCalendar({
             value={radiusMiles === null ? "all" : String(radiusMiles)}
             onChange={(event) => {
               const value = event.target.value;
-              setRadiusMiles(value === "all" ? null : Number(value));
+              const nextRadius = value === "all" ? null : Number(value);
+              setRadiusMiles(nextRadius);
+              saveDiscoveryRadius(nextRadius);
             }}
             aria-label="Event search radius"
           >

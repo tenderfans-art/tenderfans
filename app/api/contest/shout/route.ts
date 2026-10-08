@@ -21,11 +21,6 @@ export async function POST(request: Request) {
         ? body.venueId.trim()
         : "";
 
-    const voiceName =
-      typeof body.voiceName === "string"
-        ? body.voiceName.trim()
-        : "";
-
     const traits = Array.isArray(body.traits)
       ? body.traits.filter(
           (value: unknown): value is string =>
@@ -37,14 +32,13 @@ export async function POST(request: Request) {
     if (
       !bartenderId ||
       !venueId ||
-      !voiceName ||
       traits.length < 1 ||
       traits.length > 5
     ) {
       return NextResponse.json(
         {
           error:
-            "Complete your Tender selection, Shout style and badges.",
+            "Complete your Tender selection and badges.",
         },
         { status: 400 }
       );
@@ -196,7 +190,6 @@ export async function POST(request: Request) {
             phoneIdentity.id,
           p_bartender_id: bartenderId,
           p_venue_id: venueId,
-          p_voice_name: voiceName,
           p_traits: traits,
         }
       );

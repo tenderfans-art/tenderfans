@@ -5515,3 +5515,228 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+
+/* Compact, centered Discover landing and cocktail shortcuts */
+.discover-flow-card .search-wrap {
+  margin-top: 0;
+  max-width: none;
+}
+.discover-flow-card .section-title {
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.discover-flow-card .section-title > div {
+  width: 100%;
+  max-width: none;
+  text-align: center;
+}
+.discover-flow-card .section-title h2 {
+  margin: 5px auto 0;
+  line-height: 1.08;
+}
+.discover-flow-card .discover-intro {
+  margin: 10px auto 0;
+  text-align: center;
+}
+.discover-flow-card .search-box input {
+  height: 52px;
+}
+.cocktail-discovery {
+  margin-top: 14px;
+  text-align: center;
+}
+.cocktail-eyebrow {
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: 11px;
+  font-weight: 850;
+  color: var(--olive);
+  margin-bottom: 10px;
+}
+.cocktail-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.cocktail-tile {
+  min-height: 46px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-weight: 750;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.cocktail-tile:hover,
+.cocktail-tile:focus-visible {
+  border-color: var(--olive);
+  background: var(--cream);
+}
+.cocktail-tile-last {
+  grid-column: 1 / -1;
+  width: calc((100% - 9px) / 2);
+  justify-self: center;
+}
+.cocktail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(4, 13, 20, .72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.cocktail-modal {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  width: min(560px, 100%);
+  max-height: min(85vh, 850px);
+  overflow-y: auto;
+  border-radius: 22px;
+  padding: 26px;
+  text-align: center;
+}
+.cocktail-modal h2 {
+  font-family: Georgia, serif;
+  margin: 0;
+  font-size: clamp(28px, 5vw, 40px);
+}
+.cocktail-modal-subtitle {
+  color: var(--muted);
+  margin: 8px 0 18px;
+}
+.cocktail-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  background: transparent;
+  border: 0;
+  font-size: 30px;
+  color: var(--ink);
+}
+.cocktail-modal-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  text-align: left;
+}
+.cocktail-modal-tender {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  min-width: 0;
+}
+.cocktail-modal-tender:hover {
+  border-color: var(--olive);
+}
+.cocktail-modal-kicker {
+  color: var(--olive);
+  font-size: 10px;
+  font-weight: 800;
+}
+.cocktail-modal-tender strong {
+  overflow-wrap: anywhere;
+}
+.cocktail-modal-tender small {
+  color: var(--muted);
+}
+.cocktail-modal-message {
+  padding: 20px 4px;
+}
+.cocktail-refresh {
+  margin-top: 16px;
+  background: var(--olive);
+  color: white;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-weight: 800;
+}
+@media (max-width: 480px) {
+  .cocktail-modal { padding: 22px 14px; }
+  .cocktail-modal-results { grid-template-columns: 1fr; }
+}
+
+/* Tighten Discover heading-to-search spacing */
+.discover-flow-card .section-title {
+  margin-bottom: 8px;
+}
+.discover-flow-card .search-wrap {
+  margin-top: 0;
+}
+
+/* Consistent Discover and cocktail discovery eyebrows */
+.discover-flow-card .section-title .eyebrow,
+.discover-flow-card .cocktail-eyebrow {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .10em;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Allow longer cocktail discovery heading to wrap on small screens */
+.discover-flow-card .cocktail-eyebrow {
+  white-space: normal;
+  text-wrap: balance;
+}
+
+/* Allow the longer Discover cocktail heading to wrap on mobile */
+.discover-flow-card .cocktail-discovery .cocktail-eyebrow {
+  white-space: normal;
+  text-wrap: balance;
+}
+
+/* Allow longer cocktail names without enlarging the tile significantly */
+.cocktail-tiles button {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  overflow-wrap: normal;
+  padding-block: 10px;
+}
+
+/* Discover-style Shout trait buttons */
+.shout-shell .trait-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.shout-shell .trait-button {
+  min-width: 0;
+  min-height: 54px;
+  padding: 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: normal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shout-shell .trait-button.selected {
+  border-color: var(--olive);
+  background: #f1f4dd;
+}
+.discover-flow-card .cocktail-tile {
+  white-space: normal;
+  line-height: 1.25;
+  text-wrap: balance;
+}

@@ -19,7 +19,6 @@ export default function ShoutFlow({
   const [bartenderId, setBartenderId] = useState("");
   const [traits, setTraits] = useState<string[]>([]);
   const [liveTraits, setLiveTraits] = useState<string[]>([]);
-  const [voices, setVoices] = useState<string[]>([]);
   const [liveVenues, setLiveVenues] = useState<any[]>([]);
   const [liveBartenders, setLiveBartenders] = useState<any[]>([]);
   const [searchTenders, setSearchTenders] = useState<any[]>([]);
@@ -30,14 +29,12 @@ export default function ShoutFlow({
   const [marketingSmsConsent, setMarketingSmsConsent] = useState(false);
   const [contestCode, setContestCode] = useState("");
   const [contestChallengeId, setContestChallengeId] = useState("");
-  const [contestPendingVoice, setContestPendingVoice] = useState("");
   const [contestMessage, setContestMessage] = useState("");
   const [contestSubmitting, setContestSubmitting] = useState(false);
   const [developmentCode, setDevelopmentCode] = useState("");
   useEffect(() => {
     const loadOptions = async () => {
       const { data: traitData } = await supabase.from("traits").select("label").eq("audience", "bartender").eq("active", true).order("id");
-      const { data: voiceData } = await supabase.from("voices").select("name").eq("active", true).order("id");
       const { data: venueData } = await supabase
         .from("venues")
         .select("id, slug, name, city, street_address, state_region")
@@ -84,8 +81,8 @@ export default function ShoutFlow({
         "Makes the Best Margarita",
         "Makes the Best Martini",
         "Makes the Best Beach Cocktail",
-        "Makes the Best Manhattan",
-        "Makes the Best Old Fashioned",
+        "Makes the Best Mojito",
+        "Makes the Best Old Fashioned / Manhattan",
         "Makes everyone feel welcome",
         "Great recommendations",
         "Fast when it’s packed",
@@ -100,7 +97,6 @@ export default function ShoutFlow({
       setLiveTraits(
         traitOrder.filter(label => activeLabels.has(label))
       );
-      setVoices((voiceData ?? []).map(v => v.name));
       setLiveVenues(venueData ?? []);
       setSearchTenders(tenderData ?? []);
     };
@@ -260,25 +256,9 @@ export default function ShoutFlow({
   );
   const toggleTrait = (trait:string) => setTraits(current => current.includes(trait) ? current.filter(t=>t!==trait) : current.length < 5 ? [...current, trait] : current);
 
-  async function submitContestShout(
-    voiceOverride?: string
-  ) {
+  async function submitContestShout() {
     if (!selectedBartender || !selectedVenue) return false;
 
-    const voice =
-      voiceOverride ||
-      contestPendingVoice ||
-      (document.querySelector(
-        ".voice-row select"
-      ) as HTMLSelectElement | null)?.value ||
-      "";
-
-    if (!voice) {
-      setContestMessage("Select a Shout style.");
-      return false;
-    }
-
-    setContestPendingVoice(voice);
     setContestSubmitting(true);
     setContestMessage("");
 
@@ -291,7 +271,6 @@ export default function ShoutFlow({
         body: JSON.stringify({
           bartenderId: selectedBartender.id,
           venueId: selectedVenue.id,
-          voiceName: voice,
           traits,
         }),
       });
@@ -442,9 +421,7 @@ export default function ShoutFlow({
        * HttpOnly contest cookie. Submit the pending Shout
        * immediately using that newly verified identity.
        */
-      await submitContestShout(
-        contestPendingVoice
-      );
+      await submitContestShout();
     } catch (error) {
       console.error(
         "Contest verification check failed:",
@@ -653,13 +630,6 @@ export default function ShoutFlow({
         ))}
       </div>
 
-      <div className="voice-row">
-        <label>Shout style</label>
-        <select className="field">
-          {voices.map(v => <option key={v}>{v}</option>)}
-        </select>
-      </div>
-
       <button
         className="btn primary"
         disabled={
@@ -671,14 +641,8 @@ export default function ShoutFlow({
         onClick={async()=>{
           if(!selectedBartender || !selectedVenue) return;
 
-          const voice =
-            (document.querySelector(
-              ".voice-row select"
-            ) as HTMLSelectElement)?.value ?? "";
-
           if (contestMode) {
-            setContestPendingVoice(voice);
-            await submitContestShout(voice);
+            await submitContestShout();
             return;
           }
 
@@ -687,7 +651,6 @@ export default function ShoutFlow({
             {
               p_bartender_id: selectedBartender.id,
               p_venue_id: selectedVenue.id,
-              p_voice_name: voice,
               p_traits: traits
             }
           );

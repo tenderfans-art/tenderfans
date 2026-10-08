@@ -391,9 +391,7 @@ export default function HomeSearch({
               Find your vibe.<br />
               Find your Tender.
             </h2>
-            <p className="discover-intro">
-              Search Tenders, Spots or cities to find your favorites and discover somewhere new.
-            </p>
+
           </div>
         </div>
       )}
