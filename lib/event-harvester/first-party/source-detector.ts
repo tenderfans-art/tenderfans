@@ -1107,7 +1107,10 @@ async function inspectProviderHandoffs(
   return inspected;
 }
 
-async function fetchHtml(url: string): Promise<{
+async function fetchHtml(
+  url: string,
+  proxyUrl?: string,
+): Promise<{
   ok: boolean;
   status: number;
   url: string;
@@ -1119,7 +1122,7 @@ async function fetchHtml(url: string): Promise<{
       "User-Agent": USER_AGENT,
     },
     cache: "no-store",
-  });
+  }, proxyUrl);
 
   return {
     ok: response.ok,
@@ -1133,20 +1136,67 @@ export async function detectFirstPartySources(
   websiteUrl: string,
 ): Promise<SiteDetectionResult> {
   const detections: SourceDetection[] = [];
-  let homepage;
+
+  const recoveryProxy =
+    process.env.TENDERFANS_TRANSPORT_RECOVERY_ENABLED === "true"
+      ? process.env.TENDERFANS_TRANSPORT_PROXY_URL
+      : undefined;
+
+  let homepage: Awaited<ReturnType<typeof fetchHtml>>;
 
   try {
     homepage = await fetchHtml(websiteUrl);
   } catch (error) {
-    return {
-      websiteUrl,
-      fetchedUrl: null,
-      status: "transport_failed",
-      pagesInspected: 0,
-      discoveredEventPages: [],
-      detections: [],
-      error: error instanceof Error ? error.message : String(error),
-    };
+    if (recoveryProxy) {
+      try {
+        const recovered = await fetchHtml(websiteUrl, recoveryProxy);
+
+        if (recovered.ok) {
+          homepage = recovered;
+        } else {
+          throw new Error("Transport recovery did not succeed.");
+        }
+      } catch {
+        return {
+          websiteUrl,
+          fetchedUrl: null,
+          status: "transport_failed",
+          pagesInspected: 0,
+          discoveredEventPages: [],
+          detections: [],
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    } else {
+      return {
+        websiteUrl,
+        fetchedUrl: null,
+        status: "transport_failed",
+        pagesInspected: 0,
+        discoveredEventPages: [],
+        detections: [],
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  if (!homepage.ok) {
+    const eligible =
+      homepage.status === 403 ||
+      homepage.status === 429 ||
+      homepage.status === 503;
+
+    if (eligible && recoveryProxy) {
+      try {
+        const recovered = await fetchHtml(websiteUrl, recoveryProxy);
+
+        if (recovered.ok) {
+          homepage = recovered;
+        }
+      } catch {
+        // Preserve the original transport result.
+      }
+    }
   }
 
   if (!homepage.ok) {

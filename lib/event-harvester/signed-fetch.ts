@@ -1,3 +1,5 @@
+import { ProxyAgent, fetch as undiciFetch } from "undici";
+
 import {
   appendSignature,
   createSignature,
@@ -39,6 +41,7 @@ async function getSigner() {
 export async function signedHarvesterFetch(
   url: string,
   init: RequestInit = {},
+  proxyUrl?: string,
 ): Promise<Response> {
   if (init.method && init.method.toUpperCase() !== "GET") {
     throw new Error("Signed harvester fetch supports GET only.");
@@ -53,7 +56,9 @@ export async function signedHarvesterFetch(
 
   const signer = await getSigner();
   let currentUrl = url;
+  const proxy = proxyUrl ? new ProxyAgent(proxyUrl) : null;
 
+  try {
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
     const parsed = new URL(currentUrl);
 
@@ -95,14 +100,41 @@ export async function signedHarvesterFetch(
       signature,
     );
 
-    const response = await fetch(request.url, {
-      ...init,
-      method: "GET",
-      headers: signedHeaders,
-      redirect: "manual",
-    });
+    const response: Response = proxy
+      ? await (async () => {
+          const proxied = await undiciFetch(request.url, {
+            method: "GET",
+            headers: signedHeaders,
+            redirect: "manual",
+            dispatcher: proxy,
+            signal: init.signal ?? undefined,
+          });
+
+          const body = await proxied.arrayBuffer();
+
+          return new Response(body, {
+            status: proxied.status,
+            statusText: proxied.statusText,
+            headers: Array.from(
+              proxied.headers.entries(),
+              ([name, value]): [string, string] => [name, value],
+            ),
+          });
+        })()
+      : await fetch(request.url, {
+          ...init,
+          method: "GET",
+          headers: signedHeaders,
+          redirect: "manual",
+        });
 
     if (![301, 302, 303, 307, 308].includes(response.status)) {
+      if (proxy) {
+        Object.defineProperty(response, "url", {
+          value: request.url,
+          configurable: true,
+        });
+      }
       return response;
     }
 
@@ -113,6 +145,12 @@ export async function signedHarvesterFetch(
     const location = response.headers.get("location");
 
     if (!location) {
+      if (proxy) {
+        Object.defineProperty(response, "url", {
+          value: request.url,
+          configurable: true,
+        });
+      }
       return response;
     }
 
@@ -124,8 +162,17 @@ export async function signedHarvesterFetch(
       );
     }
 
+    if (proxy) {
+      await response.body?.cancel();
+    }
+
     currentUrl = nextUrl.toString();
   }
 
   throw new Error("Harvester redirect limit exceeded.");
+  } finally {
+    if (proxy) {
+      await proxy.close();
+    }
+  }
 }
