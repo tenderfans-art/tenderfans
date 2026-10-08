@@ -80,7 +80,26 @@ export default function ShoutFlow({
         );
       }
 
-      setLiveTraits((traitData ?? []).map(t => t.label));
+      const traitOrder = [
+        "Makes the Best Margarita",
+        "Makes the Best Martini",
+        "Makes the Best Beach Cocktail",
+        "Makes the Best Manhattan",
+        "Makes the Best Old Fashioned",
+        "Makes everyone feel welcome",
+        "Great recommendations",
+        "Fast when it’s packed",
+        "Remembers regulars",
+        "Great energy",
+      ];
+
+      const activeLabels = new Set(
+        (traitData ?? []).map(t => t.label)
+      );
+
+      setLiveTraits(
+        traitOrder.filter(label => activeLabels.has(label))
+      );
       setVoices((voiceData ?? []).map(v => v.name));
       setLiveVenues(venueData ?? []);
       setSearchTenders(tenderData ?? []);
