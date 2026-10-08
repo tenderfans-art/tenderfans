@@ -1019,7 +1019,13 @@ export default function EventsCalendar({
               <div className="events-detail-group">
                 <span className="events-detail-label">Where</span>
                 <div className="events-detail-value events-detail-venue">
-                  {selectedEvent.venue_name}
+                  {selectedEvent.venue_slug ? (
+                    <a href={`/s/${selectedEvent.venue_slug}`}>
+                      {selectedEvent.venue_name}
+                    </a>
+                  ) : (
+                    selectedEvent.venue_name
+                  )}
                 </div>
               </div>
 
