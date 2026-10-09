@@ -19,6 +19,7 @@ import { fetchSchemaOrgEvents } from "./schema-org-events";
 import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
 import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
+import { fetchEventerEvents } from "./eventer-events";
 import { fetchSpotHopperEvents } from "./spothopper-events";
 import { fetchFacebookEvents } from "./facebook-events";
 import { fetchCalendarImageEvents } from "./calendar-image-events";
@@ -283,6 +284,10 @@ export async function previewFirstPartySource(
     );
   } else if (source.source_type === "facebook_events") {
     events = await fetchFacebookEvents(source.source_url);
+  } else if (source.source_type === "eventer_events") {
+    const timeZone = typeof source.config?.timezone === "string"
+      ? source.config.timezone : "America/New_York";
+    events = await fetchEventerEvents(source.source_url, { timeZone });
   } else if (source.source_type === "wordpress_event_feed") {
     const timeZone =
       typeof source.config?.timezone === "string"

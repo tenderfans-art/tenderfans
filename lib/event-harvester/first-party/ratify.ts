@@ -283,6 +283,7 @@ const directlyRatifiableSourceTypes = new Set([
   "sociablekit_facebook_events",
   "tribe_rest",
   "next_rsc_events",
+  "eventer_events",
   "wordpress_event_feed",
   "calendar_image",
 ]);

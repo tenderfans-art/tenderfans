@@ -24,6 +24,7 @@ export type DetectedSourceType =
   | "bandzoogle_events"
   | "ics"
   | "wordpress_ajax_events"
+  | "eventer_events"
   | "wordpress_event_feed"
   | "timely"
   | "facebook"
@@ -77,6 +78,8 @@ export type SiteDetectionResult = {
 };
 
 const USER_AGENT = "TenderFans Event Harvester/1.0";
+const RECOVERY_USER_AGENT =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
 
 const EVENT_HINT =
   /\b(events?|calendar|live[-\s]?music|music|entertainment|shows?|what'?s[-\s]?on|things[-\s]?to[-\s]?do)\b/i;
@@ -980,6 +983,51 @@ function inspectPage(
     });
   }
 
+  // WordPress Eventer occurrence inventory, not WordPress post RSS.
+  // Derive the archive from a dated occurrence link, including on homepages.
+  if (
+    /\beventer-event-item\b/i.test(html) &&
+    /\beventer-event-title\b/i.test(html)
+  ) {
+    const occurrenceHref = html.match(
+      /<a\b[^>]*href=["']([^"']+\/edate\/\d{4}-\d{2}-\d{2}(?:\/)?(?:\?[^"']*)?)["']/i,
+    )?.[1];
+
+    if (occurrenceHref) {
+      try {
+        const occurrenceUrl = new URL(
+          occurrenceHref.replace(/&amp;/gi, "&"),
+          pageUrl,
+        );
+
+        const archivePath = occurrenceUrl.pathname.replace(
+          /\/[^/]+\/edate\/\d{4}-\d{2}-\d{2}\/?$/i,
+          "/",
+        );
+
+        if (
+          archivePath !== occurrenceUrl.pathname &&
+          occurrenceUrl.origin === new URL(pageUrl).origin
+        ) {
+          const archiveUrl = new URL(archivePath, occurrenceUrl.origin);
+
+          pushDetection(detections, {
+            sourceType: "eventer_events",
+            url: archiveUrl.toString(),
+            confidence: "high",
+            adapterAvailable: true,
+            supported: true,
+            evidence: [
+              "WordPress Eventer occurrence cards and dated event URLs",
+            ],
+          });
+        }
+      } catch {
+        // Malformed occurrence URLs must not interrupt source discovery.
+      }
+    }
+  }
+
   const wordpressEventFeedMatch = html.match(
     /<link\b[^>]*rel=["']alternate["'][^>]*type=["']application\/rss\+xml["'][^>]*title=["'][^"']*\bEvents Feed\b[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>/i,
   ) ?? html.match(
@@ -1116,20 +1164,71 @@ async function fetchHtml(
   url: string;
   html: string;
 }> {
-  const response = await signedHarvesterFetch(url, {
-    headers: {
-      Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
-      "User-Agent": USER_AGENT,
-    },
-    cache: "no-store",
-  }, proxyUrl);
+  const recoveryProxy =
+    process.env.TENDERFANS_TRANSPORT_RECOVERY_ENABLED === "true"
+      ? process.env.TENDERFANS_TRANSPORT_PROXY_URL
+      : undefined;
 
-  return {
-    ok: response.ok,
-    status: response.status,
-    url: response.url || url,
-    html: await response.text(),
-  };
+  async function request(
+    targetUrl: string,
+    proxy?: string,
+  ) {
+    const normalizedUrl = new URL(targetUrl);
+
+    if (normalizedUrl.protocol === "http:") {
+      normalizedUrl.protocol = "https:";
+    }
+
+    const response = await signedHarvesterFetch(normalizedUrl.toString(), {
+      headers: proxy
+        ? {
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "User-Agent": RECOVERY_USER_AGENT,
+          }
+        : {
+            Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+            "User-Agent": USER_AGENT,
+          },
+      cache: "no-store",
+    }, proxy);
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      url: response.url || normalizedUrl.toString(),
+      html: await response.text(),
+    };
+  }
+
+  if (proxyUrl) {
+    return request(url, proxyUrl);
+  }
+
+  try {
+    const direct = await request(url);
+
+    if (
+      !recoveryProxy ||
+      ![403, 429, 503].includes(direct.status)
+    ) {
+      return direct;
+    }
+
+    try {
+      const recovered = await request(url, recoveryProxy);
+      return recovered.ok ? recovered : direct;
+    } catch {
+      return direct;
+    }
+  } catch (error) {
+    if (!recoveryProxy) {
+      throw error;
+    }
+
+    return request(url, recoveryProxy);
+  }
 }
 
 export async function detectFirstPartySources(
