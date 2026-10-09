@@ -1,6 +1,7 @@
 import {
   acquireCalendarImageAsset,
   discoverCalendarImageAssets,
+  fetchCalendarImageResource,
 } from "./calendar-image-assets";
 
 import {
@@ -682,18 +683,9 @@ export async function fetchCalendarImageEvents(
   }
 
   const response =
-    await fetch(
+    await fetchCalendarImageResource(
       pageUrl,
-      {
-        headers: {
-          "User-Agent":
-            USER_AGENT,
-          Accept:
-            "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
-        },
-        redirect: "follow",
-        cache: "no-store",
-      },
+      "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
     );
 
   if (!response.ok) {

@@ -1,3 +1,5 @@
+import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
+
 function decodeHtml(value: string): string {
   return value
     .replace(/&amp;/gi, "&")
@@ -134,6 +136,67 @@ function isImageContentType(
   );
 }
 
+const RECOVERY_USER_AGENT =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
+
+export async function fetchCalendarImageResource(
+  url: string,
+  accept: string,
+): Promise<Response> {
+  const proxy =
+    process.env.TENDERFANS_TRANSPORT_RECOVERY_ENABLED === "true"
+      ? process.env.TENDERFANS_TRANSPORT_PROXY_URL
+      : undefined;
+
+  async function request(proxyUrl?: string): Promise<Response> {
+    return signedHarvesterFetch(
+      url,
+      {
+        headers: {
+          Accept: accept,
+          "User-Agent": proxyUrl
+            ? RECOVERY_USER_AGENT
+            : "TenderFans Event Harvester/1.0",
+          ...(proxyUrl
+            ? { "Accept-Language": "en-US,en;q=0.9" }
+            : {}),
+        },
+        cache: "no-store",
+      },
+      proxyUrl,
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await request();
+
+    if (
+      proxy &&
+      [403, 429, 503].includes(response.status)
+    ) {
+      try {
+        const recovered = await request(proxy);
+
+        if (recovered.ok) {
+          response = recovered;
+        }
+      } catch {
+        // Preserve the original response.
+      }
+    }
+  } catch (error) {
+    if (!proxy) {
+      throw error;
+    }
+
+    response = await request(proxy);
+  }
+
+  return response;
+}
+
 async function fetchImageAsset(
   url: string,
 ): Promise<{
@@ -142,13 +205,10 @@ async function fetchImageAsset(
   bytes: Uint8Array;
 } | null> {
   try {
-    const response = await fetch(url, {
-      headers: {
-        "user-agent": "TenderFans Event Harvester/1.0",
-        accept: "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
-      },
-      redirect: "follow",
-    });
+    const response = await fetchCalendarImageResource(
+      url,
+      "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
+    );
 
     const contentType =
       response.headers.get("content-type");
