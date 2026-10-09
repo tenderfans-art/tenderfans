@@ -257,6 +257,13 @@ export async function signedHarvesterFetch(
 
     const nextUrl = new URL(location, request.url);
 
+    // Legacy websites sometimes issue HTTP redirects even though
+    // their destinations support HTTPS. Upgrade before requesting:
+    // the harvester must never transmit a request over HTTP.
+    if (nextUrl.protocol === "http:") {
+      nextUrl.protocol = "https:";
+    }
+
     if (nextUrl.protocol !== "https:") {
       throw new Error(
         "Harvester refused redirect to non-HTTPS destination.",
