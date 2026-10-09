@@ -154,200 +154,151 @@ export default function AdminEventsPage() {
 
   if (loading) {
     return (
-      <main style={{ padding: "40px 24px" }}>
-        <p>Loading events...</p>
+      <main className="flow-page">
+        <div className="shell">
+          <section className="flow-card">
+            <p>Loading events...</p>
+          </section>
+        </div>
       </main>
     );
   }
 
   return (
-    <main
-      style={{
-        maxWidth: "1100px",
-        margin: "0 auto",
-        padding: "42px 24px 70px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "20px",
-          marginBottom: "26px",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontSize: "0.76rem",
-              fontWeight: 800,
-              letterSpacing: "0.12em",
-              opacity: 0.55,
-              marginBottom: "5px",
-            }}
-          >
-            TENDERFANS ADMIN
-          </div>
-
-          <h1 style={{ margin: 0 }}>Manage Events</h1>
-        </div>
-
-        <Link
-          href="/partners/events/new"
-          className="button"
-          style={{
-            textDecoration: "none",
-            whiteSpace: "nowrap",
-          }}
+    <main className="flow-page">
+      <div className="shell">
+        <section
+          className="flow-card"
+          style={{ maxWidth: "1200px", margin: "0 auto" }}
         >
-          + Add Event
-        </Link>
-      </div>
-
-      <input
-        type="search"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search by event name or Spot..."
-        style={{
-          width: "100%",
-          padding: "13px 15px",
-          borderRadius: "10px",
-          border: "1px solid rgba(255,255,255,0.14)",
-          background: "rgba(255,255,255,0.04)",
-          color: "inherit",
-          font: "inherit",
-          marginBottom: "24px",
-        }}
-      />
-
-      {message && (
-        <p style={{ margin: "0 0 18px", opacity: 0.8 }}>
-          {message}
-        </p>
-      )}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "minmax(240px, 1.6fr) minmax(190px, 1.25fr) 190px 110px 100px",
-          gap: "18px",
-          padding: "0 12px 10px",
-          fontSize: "0.72rem",
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          opacity: 0.5,
-        }}
-      >
-        <div>EVENT</div>
-        <div>SPOT</div>
-        <div>DATE / TIME</div>
-        <div>STATUS</div>
-        <div />
-      </div>
-
-      <div
-        style={{
-          borderTop: "1px solid rgba(255,255,255,0.12)",
-        }}
-      >
-        {visibleEvents.map((event) => (
-          <div
-            key={event.id}
+          <Link
+            href="/admin"
             style={{
-              display: "grid",
-              gridTemplateColumns:
-                "minmax(240px, 1.6fr) minmax(190px, 1.25fr) 190px 110px 100px",
-              gap: "18px",
-              alignItems: "center",
-              padding: "15px 12px",
-              borderBottom:
-                "1px solid rgba(255,255,255,0.12)",
+              display: "inline-block",
+              marginBottom: "22px",
+              color: "inherit",
             }}
           >
-            <div
-              style={{
-                minWidth: 0,
-                fontWeight: 800,
-                lineHeight: 1.25,
-              }}
-            >
-              <a
-                href={`/events?event=${event.id}`}
-                style={{
-                  color: "inherit",
-                  textDecoration: "none",
-                }}
-              >
-                {event.title}
-              </a>
-            </div>
+            ← Admin Dashboard
+          </Link>
 
-            <div
-              style={{
-                minWidth: 0,
-                fontSize: "0.88rem",
-              }}
-            >
-              {event.venue_name}
-            </div>
+          <div className="eyebrow">TENDERFANS ADMIN</div>
 
-            <div
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "14px",
+              marginBottom: "8px",
+            }}
+          >
+            <h1 style={{ margin: 0 }}>Event Management</h1>
+
+            <Link
+              href="/partners/events/new"
+              className="button"
               style={{
-                fontSize: "0.82rem",
-                opacity: 0.72,
+                textDecoration: "none",
                 whiteSpace: "nowrap",
               }}
             >
-              {formatDateTime(event.starts_at)}
-            </div>
-
-            <div
-              style={{
-                fontSize: "0.76rem",
-                fontWeight: 800,
-              }}
-            >
-              {eventStatus(event)}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => deleteEvent(event)}
-              style={{
-                justifySelf: "end",
-                padding: "7px 12px",
-                borderRadius: "7px",
-                border: "1px solid rgba(255,255,255,0.18)",
-                background: "transparent",
-                color: "inherit",
-                cursor: "pointer",
-                fontWeight: 700,
-              }}
-            >
-              Delete
-            </button>
+              + Add Event
+            </Link>
           </div>
-        ))}
 
-        {visibleEvents.length === 0 && (
-          <div
+          <p
+            className="lead-copy"
             style={{
-              padding: "28px 12px",
-              opacity: 0.65,
+              marginTop: 0,
+              marginBottom: "24px",
             }}
           >
-            No events found.
-          </div>
-        )}
-      </div>
+            Search for and manage events across TenderFans.
+          </p>
 
-      <div style={{ marginTop: "30px" }}>
-        <Link href="/admin">
-          ← Back to Admin Dashboard
-        </Link>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by event name or Spot..."
+            aria-label="Search events"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              marginBottom: "20px",
+              font: "inherit",
+              borderRadius: "10px",
+              border: "1px solid rgba(20,35,45,0.18)",
+            }}
+          />
+
+          {message && (
+            <div
+              style={{
+                marginBottom: "20px",
+                padding: "14px 16px",
+                border: "1px solid rgba(20,35,45,0.12)",
+                borderRadius: "12px",
+              }}
+            >
+              {message}
+            </div>
+          )}
+
+          <div className="admin-event-list">
+            <div className="admin-event-head">
+              <span>Event</span>
+              <span>Spot</span>
+              <span>Date / Time</span>
+              <span>Status</span>
+              <span style={{ textAlign: "center" }}>Action</span>
+            </div>
+
+            {visibleEvents.map((event) => (
+              <div className="admin-event-row" key={event.id}>
+                <div className="admin-event-title">
+                  <a
+                    href={`/events?event=${event.id}`}
+                    title={event.title}
+                  >
+                    {event.title}
+                  </a>
+                </div>
+
+                <div
+                  className="admin-event-spot"
+                  title={event.venue_name}
+                >
+                  {event.venue_name}
+                </div>
+
+                <div className="admin-event-date">
+                  {formatDateTime(event.starts_at)}
+                </div>
+
+                <div className="admin-event-status">
+                  {eventStatus(event)}
+                </div>
+
+                <button
+                  type="button"
+                  className="admin-event-delete"
+                  onClick={() => deleteEvent(event)}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+
+            {visibleEvents.length === 0 && (
+              <div className="admin-event-empty">
+                No events found.
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </main>
   );
