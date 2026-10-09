@@ -1372,6 +1372,10 @@ function extractRedirectDestinationIdentities(
     "foodestablishment", "cafeorcoffeeshop", "brewery",
     "winery", "hotel", "lodgingbusiness", "eventvenue",
     "entertainmentbusiness", "sportsbar",
+    "pub", "fastfoodrestaurant", "bakery", "distillery",
+    "danceclub", "musicvenue", "performingartstheater",
+    "movie theater", "movietheater", "bowlingalley",
+    "amusementpark", "casino", "resort", "motel",
   ]);
 
   function collect(value: unknown): void {
