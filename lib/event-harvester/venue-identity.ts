@@ -11,6 +11,27 @@ export function normalizeVenueMatchText(
   value: string | null | undefined
 ) {
   return (value ?? "")
+    .replace(/&#(x[0-9a-f]+|[0-9]+);/gi, (entity, code: string) => {
+      const numeric = code.toLowerCase().startsWith("x")
+        ? parseInt(code.slice(1), 16)
+        : parseInt(code, 10);
+
+      return Number.isInteger(numeric) &&
+        numeric > 0 &&
+        numeric <= 0x10ffff &&
+        !(numeric >= 0xd800 && numeric <= 0xdfff)
+        ? String.fromCodePoint(numeric)
+        : entity;
+    })
+    .replace(/&(?:amp|quot|apos|nbsp);/gi, (entity) => {
+      const entities: Record<string, string> = {
+        "&amp;": "&",
+        "&quot;": '"',
+        "&apos;": "'",
+        "&nbsp;": " ",
+      };
+      return entities[entity.toLowerCase()] ?? entity;
+    })
     .toLowerCase()
     .replace(/&/g, " and ")
     .replace(/[^a-z0-9]+/g, " ")
