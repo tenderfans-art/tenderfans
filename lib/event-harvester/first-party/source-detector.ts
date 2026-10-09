@@ -69,7 +69,7 @@ export type RedirectDestinationIdentity = {
   city: string | null;
   stateRegion: string | null;
   postalCode: string | null;
-  source: "json_ld";
+  source: "json_ld" | "website_json_ld";
 };
 
 export type SiteDetectionResult = {
@@ -1390,13 +1390,17 @@ function extractRedirectDestinationIdentities(
       ? value["@type"]
       : [value["@type"]];
 
-    const matchesBusinessType = rawTypes.some((raw) => {
-      if (typeof raw !== "string") return false;
-      const type = raw.split(/[\/#]/).pop()?.toLowerCase() ?? "";
-      return businessTypes.has(type);
-    });
+    const normalizedTypes = rawTypes
+      .filter((raw): raw is string => typeof raw === "string")
+      .map((raw) => raw.split(/[\\/#]/).pop()?.toLowerCase() ?? "");
 
-    if (matchesBusinessType) {
+    const matchesBusinessType = normalizedTypes.some(
+      (type) => businessTypes.has(type),
+    );
+
+    const matchesWebsiteType = normalizedTypes.includes("website");
+
+    if (matchesBusinessType || matchesWebsiteType) {
       const address = value.address;
       const addressObject = isRecord(address)
         ? address
@@ -1418,7 +1422,9 @@ function extractRedirectDestinationIdentities(
         postalCode: addressObject
           ? stringField(addressObject.postalCode)
           : null,
-        source: "json_ld",
+        source: matchesBusinessType
+          ? "json_ld"
+          : "website_json_ld",
       };
 
       if (identity.name) {

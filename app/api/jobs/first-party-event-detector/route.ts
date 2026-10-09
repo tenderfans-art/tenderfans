@@ -316,6 +316,13 @@ export async function GET(request: Request) {
 
         const identities = detection.redirectIdentities ?? [];
 
+        const businessIdentities = identities.filter(
+          (identity) => identity.source === "json_ld",
+        );
+        const brandIdentities = identities.filter(
+          (identity) => identity.source === "website_json_ld",
+        );
+
         const evaluated = identities.map((candidate) => ({
           candidate,
           match: venueIdentityMatch({
@@ -343,8 +350,9 @@ export async function GET(request: Request) {
         // Ambiguous multi-location pages require human review.
         // Never infer the candidate's address from the Spot record.
         const canAutoApprove =
-          identities.length === 1 &&
+          businessIdentities.length === 1 &&
           best !== null &&
+          best.candidate.source === "json_ld" &&
           best.match.autoAttach;
 
         const { data: existingMatch, error: existingMatchError } =
@@ -390,6 +398,14 @@ export async function GET(request: Request) {
                 identity_source: best?.candidate.source ?? null,
                 match_evidence: best?.match.evidence ?? null,
                 identity_count: identities.length,
+                business_identity_count: businessIdentities.length,
+                brand_identity_count: brandIdentities.length,
+                brand_identity_only: businessIdentities.length === 0,
+                brand_name_exact: evaluated.some(
+                  (entry) =>
+                    entry.candidate.source === "website_json_ld" &&
+                    entry.match.evidence.nameExact,
+                ),
                 auto_attach_eligible: canAutoApprove,
                 requires_admin_review:
                   !canAutoApprove ||
