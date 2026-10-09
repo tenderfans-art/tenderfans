@@ -63,7 +63,17 @@ export type DiscoveredEventPage = {
   htmlBytes: number | null;
 };
 
+export type RedirectDestinationIdentity = {
+  name: string;
+  streetAddress: string | null;
+  city: string | null;
+  stateRegion: string | null;
+  postalCode: string | null;
+  source: "json_ld";
+};
+
 export type SiteDetectionResult = {
+  redirectIdentities?: RedirectDestinationIdentity[];
   websiteUrl: string;
   fetchedUrl: string | null;
   status:
@@ -1339,68 +1349,101 @@ function extractIdentityMetadata(html: string): string[] {
   return values;
 }
 
-function redirectMatchesVenueIdentity(
+function extractRedirectDestinationIdentities(
   html: string,
-  destinationUrl: string,
-  venue?: RedirectVenueIdentity,
-): boolean {
-  if (!venue?.name) return false;
+): RedirectDestinationIdentity[] {
+  const identities: RedirectDestinationIdentity[] = [];
+  const seen = new Set<string>();
 
-  const nameTokens = identityTokens(venue.name);
+  const stringField = (value: unknown): string | null =>
+    typeof value === "string" && value.trim()
+      ? value.trim()
+      : null;
 
-  if (!nameTokens.length) return false;
+  const isRecord = (
+    value: unknown,
+  ): value is Record<string, unknown> =>
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value);
 
-  const identityFields = extractIdentityMetadata(html);
+  const businessTypes = new Set([
+    "localbusiness", "restaurant", "barorpub", "nightclub",
+    "foodestablishment", "cafeorcoffeeshop", "brewery",
+    "winery", "hotel", "lodgingbusiness", "eventvenue",
+    "entertainmentbusiness", "sportsbar",
+  ]);
 
-  const nameMatches = identityFields.some((field) => {
-    const fieldTokens = new Set(identityTokens(field));
+  function collect(value: unknown): void {
+    if (Array.isArray(value)) {
+      value.forEach(collect);
+      return;
+    }
 
-    return nameTokens.every((token) => fieldTokens.has(token));
-  });
+    if (!isRecord(value)) return;
 
-  if (!nameMatches) return false;
+    const rawTypes = Array.isArray(value["@type"])
+      ? value["@type"]
+      : [value["@type"]];
 
-  const destination = new URL(destinationUrl);
+    const matchesBusinessType = rawTypes.some((raw) => {
+      if (typeof raw !== "string") return false;
+      const type = raw.split(/[\/#]/).pop()?.toLowerCase() ?? "";
+      return businessTypes.has(type);
+    });
 
-  const locationText = normalizeIdentityText([
-    stripTags(html.slice(0, 150000)),
-    destination.pathname,
-  ].join(" "));
+    if (matchesBusinessType) {
+      const address = value.address;
+      const addressObject = isRecord(address)
+        ? address
+        : Array.isArray(address)
+          ? address.find(isRecord)
+          : null;
 
-  const locationTokens = new Set(locationText.split(" "));
+      const identity: RedirectDestinationIdentity = {
+        name: stringField(value.name) ?? "",
+        streetAddress: addressObject
+          ? stringField(addressObject.streetAddress)
+          : null,
+        city: addressObject
+          ? stringField(addressObject.addressLocality)
+          : null,
+        stateRegion: addressObject
+          ? stringField(addressObject.addressRegion)
+          : null,
+        postalCode: addressObject
+          ? stringField(addressObject.postalCode)
+          : null,
+        source: "json_ld",
+      };
 
-  const streetTokens = venue.streetAddress
-    ? normalizeIdentityText(venue.streetAddress).split(" ")
-    : [];
+      if (identity.name) {
+        const key = JSON.stringify(identity);
+        if (!seen.has(key)) {
+          seen.add(key);
+          identities.push(identity);
+        }
+      }
+    }
 
-  const streetMatches =
-    streetTokens.length >= 2 &&
-    streetTokens.every((token) => locationTokens.has(token));
+    // JSON-LD commonly nests identities in @graph or mainEntity.
+    for (const key of ["@graph", "mainEntity", "mainEntityOfPage"]) {
+      if (value[key] !== undefined) collect(value[key]);
+    }
+  }
 
-  const postalMatches =
-    Boolean(venue.postalCode) &&
-    locationTokens.has(venue.postalCode!.trim().toLowerCase());
+  const pattern =
+    /<script\b[^>]*type\s*=\s*["']application\/ld\+json(?:\s*;\s*charset=[^"']+)?["'][^>]*>([\s\S]*?)<\/script>/gi;
 
-  const cityTokens = venue.city
-    ? normalizeIdentityText(venue.city).split(" ")
-    : [];
+  for (const match of html.matchAll(pattern)) {
+    try {
+      collect(JSON.parse(match[1]));
+    } catch {
+      // A malformed JSON-LD block must not invalidate the scan.
+    }
+  }
 
-  const cityMatches =
-    cityTokens.length > 0 &&
-    cityTokens.every((token) => locationTokens.has(token));
-
-  /*
-   * A name plus a city is insufficient for automatic attribution:
-   * multi-location businesses and shared hospitality websites may
-   * mention both without identifying this particular Spot.
-   *
-   * Require a street address or postal code, plus matching city
-   * when the venue record supplies one.
-   */
-  return Boolean(
-    (streetMatches || postalMatches) &&
-    (!venue.city || cityMatches)
-  );
+  return identities;
 }
 
 export type RedirectVenueIdentity = {
@@ -1414,6 +1457,7 @@ export type RedirectVenueIdentity = {
 export async function detectFirstPartySources(
   websiteUrl: string,
   venueIdentity?: RedirectVenueIdentity,
+  approvedRedirectUrls: readonly string[] = [],
 ): Promise<SiteDetectionResult> {
   const detections: SourceDetection[] = [];
 
@@ -1461,16 +1505,25 @@ export async function detectFirstPartySources(
     requestedHost &&
     fetchedHost &&
     !sameSite(websiteUrl, homepage.url) &&
-    !redirectMatchesVenueIdentity(
-      homepage.html,
-      homepage.url,
-      venueIdentity,
-    )
+    !approvedRedirectUrls.some((approvedUrl) => {
+      try {
+        const approved = new URL(approvedUrl);
+        const fetched = new URL(homepage.url);
+
+        approved.hash = "";
+        fetched.hash = "";
+
+        return approved.href === fetched.href;
+      } catch {
+        return false;
+      }
+    })
   ) {
     return {
       websiteUrl,
       fetchedUrl: homepage.url,
       status: "external_redirect",
+      redirectIdentities: extractRedirectDestinationIdentities(homepage.html),
       pagesInspected: 1,
       discoveredEventPages: [],
       detections: [],

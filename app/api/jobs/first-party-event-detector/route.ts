@@ -1,3 +1,4 @@
+import { venueIdentityMatch } from "@/lib/event-harvester/venue-identity";
 import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -268,7 +269,24 @@ export async function GET(request: Request) {
       const hasPreviouslyValidatedSource =
         (previouslyValidatedSources?.length ?? 0) > 0;
 
-      const detection = await detectFirstPartySources(
+      /*
+       * Approved website redirects are venue-scoped identities.
+       * Do not trust a shared domain or another Spot's approval.
+       */
+      const { data: approvedRedirectRefs, error: redirectRefsError } =
+        await supabase
+          .from("venue_external_refs")
+          .select("provider_place_id")
+          .eq("venue_id", venue.id)
+          .eq("provider", "website_redirect");
+
+      if (redirectRefsError) {
+        throw new Error(
+          `Could not load approved website redirects: ${redirectRefsError.message}`,
+        );
+      }
+
+      let detection = await detectFirstPartySources(
         venue.website_url,
         {
           name: venue.name,
@@ -277,7 +295,154 @@ export async function GET(request: Request) {
           streetAddress: venue.street_address,
           postalCode: venue.postal_code,
         },
+        (approvedRedirectRefs ?? []).map(
+          (ref) => ref.provider_place_id,
+        ),
       );
+
+      /*
+       * An unverified cross-domain redirect is an identity question,
+       * not evidence that the destination belongs to this Spot.
+       *
+       * Reuse the existing venue-match review queue and its durable
+       * pending/approved/rejected lifecycle.
+       */
+      if (
+        detection.status === "external_redirect" &&
+        detection.fetchedUrl
+      ) {
+        const destination = new URL(detection.fetchedUrl);
+        destination.hash = "";
+
+        const identities = detection.redirectIdentities ?? [];
+
+        const evaluated = identities.map((candidate) => ({
+          candidate,
+          match: venueIdentityMatch({
+            spot: {
+              name: venue.name,
+              streetAddress: venue.street_address,
+              city: venue.city,
+              stateRegion: venue.state_region,
+              postalCode: venue.postal_code,
+            },
+            candidate: {
+              name: candidate.name,
+              streetAddress: candidate.streetAddress,
+              city: candidate.city,
+              stateRegion: candidate.stateRegion,
+              postalCode: candidate.postalCode,
+            },
+          }),
+        }));
+
+        evaluated.sort((a, b) => b.match.score - a.match.score);
+
+        const best = evaluated[0] ?? null;
+
+        // Ambiguous multi-location pages require human review.
+        // Never infer the candidate's address from the Spot record.
+        const canAutoApprove =
+          identities.length === 1 &&
+          best !== null &&
+          best.match.autoAttach;
+
+        const { data: existingMatch, error: existingMatchError } =
+          await supabase
+            .from("event_harvest_venue_matches")
+            .select("id, status")
+            .eq("venue_id", venue.id)
+            .eq("provider", "website_redirect")
+            .eq("provider_place_id", destination.href)
+            .maybeSingle();
+
+        if (existingMatchError) {
+          throw new Error(
+            `Could not inspect redirect review history: ${existingMatchError.message}`,
+          );
+        }
+
+        const { data: matchId, error: redirectMatchError } =
+          await supabase.rpc(
+            "upsert_event_harvest_venue_match",
+            {
+              p_venue_id: venue.id,
+              p_provider: "website_redirect",
+              p_provider_place_id: destination.href,
+              p_provider_venue_name:
+                best?.candidate.name ?? destination.hostname,
+              p_provider_address:
+                best?.candidate.streetAddress ?? null,
+              p_provider_city:
+                best?.candidate.city ?? null,
+              p_provider_state_region:
+                best?.candidate.stateRegion ?? null,
+              p_provider_postal_code:
+                best?.candidate.postalCode ?? null,
+              p_confidence_score:
+                best?.match.score ?? 0,
+              p_evidence: {
+                reason: "cross_domain_redirect_identity",
+                registered_website_url: detection.websiteUrl,
+                redirected_destination_url: detection.fetchedUrl,
+                detector_status: detection.status,
+                detector_error: detection.error,
+                identity_source: best?.candidate.source ?? null,
+                match_evidence: best?.match.evidence ?? null,
+                identity_count: identities.length,
+                auto_attach_eligible: canAutoApprove,
+                requires_admin_review:
+                  !canAutoApprove ||
+                  existingMatch?.status === "rejected",
+              },
+              p_raw_payload: {
+                registered_website_url: detection.websiteUrl,
+                fetched_url: detection.fetchedUrl,
+                destination_identities: identities,
+              },
+            },
+          );
+
+        if (redirectMatchError) {
+          throw new Error(
+            `Could not persist website redirect Venue Match: ${redirectMatchError.message}`,
+          );
+        }
+
+        if (
+          canAutoApprove &&
+          existingMatch?.status !== "rejected"
+        ) {
+          const { error: approveError } = await supabase.rpc(
+            "auto_approve_event_harvest_venue_match",
+            { p_match_id: matchId },
+          );
+
+          if (approveError) {
+            throw new Error(
+              `Could not auto-approve website redirect: ${approveError.message}`,
+            );
+          }
+
+          // Continue the same scan with the newly approved identity.
+          detection = await detectFirstPartySources(
+            venue.website_url,
+            {
+              name: venue.name,
+              city: venue.city,
+              stateRegion: venue.state_region,
+              streetAddress: venue.street_address,
+              postalCode: venue.postal_code,
+            },
+            [
+              ...(approvedRedirectRefs ?? []).map(
+                (ref) => ref.provider_place_id,
+              ),
+              destination.href,
+            ],
+          );
+        }
+      }
 
       const calendarImageCandidate =
         detection.detections.find(

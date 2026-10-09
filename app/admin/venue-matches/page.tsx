@@ -1112,9 +1112,11 @@ export default function AdminVenueMatchesPage() {
                         }}
                       >
                         <strong>
-                          {match.provider === "ticketmaster"
-                            ? "Ticketmaster Venue"
-                            : "Provider Venue"}
+                          {match.provider === "website_redirect"
+                            ? "Website Redirect — Identity Review"
+                            : match.provider === "ticketmaster"
+                              ? "Ticketmaster Venue"
+                              : "Provider Venue"}
                         </strong>
 
                         <h3
@@ -1147,7 +1149,27 @@ export default function AdminVenueMatchesPage() {
                             opacity: 0.55,
                           }}
                         >
-                          ID: {match.provider_place_id}
+                          {match.provider === "website_redirect"
+                            ? "Redirect destination: "
+                            : "ID: "}
+                          {match.provider === "website_redirect" ? (
+                            <a
+                              href={match.provider_place_id}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ overflowWrap: "anywhere" }}
+                            >
+                              {match.provider_place_id}
+                            </a>
+                          ) : (
+                            match.provider_place_id
+                          )}
+                          {match.provider === "website_redirect" &&
+                            typeof match.evidence?.registered_website_url === "string" && (
+                              <div style={{ marginTop: "8px", overflowWrap: "anywhere" }}>
+                                Registered website: {match.evidence.registered_website_url}
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
