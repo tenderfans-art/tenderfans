@@ -1282,6 +1282,17 @@ async function fetchHtml(
 }
 
 
+
+function normalizeIdentityText(value: string): string {
+  return decodeHtml(value)
+    .toLowerCase()
+    .replace(/\bsaint\b/g, "st")
+    .replace(/\bst[.\s-]*pete\b/g, "st petersburg")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function identityTokens(value: string): string[] {
   const generic = new Set([
     "the", "and", "of", "at", "in", "a", "an",
@@ -1290,11 +1301,42 @@ function identityTokens(value: string): string[] {
     "st", "saint",
   ]);
 
-  return decodeHtml(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .split(/\s+/)
+  return normalizeIdentityText(value)
+    .split(" ")
     .filter((token) => token.length > 1 && !generic.has(token));
+}
+
+function extractIdentityMetadata(html: string): string[] {
+  const values: string[] = [];
+
+  const title =
+    html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+
+  if (title) values.push(stripTags(title));
+
+  for (const match of html.matchAll(
+    /<h1\b[^>]*>([\s\S]*?)<\/h1>/gi,
+  )) {
+    values.push(stripTags(match[1]));
+  }
+
+  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const tag = match[0];
+
+    const property =
+      tag.match(/\b(?:property|name)\s*=\s*(["'])(.*?)\1/i)?.[2];
+
+    if (!property || !/^(?:og:title|og:site_name|twitter:title)$/i.test(property)) {
+      continue;
+    }
+
+    const content =
+      tag.match(/\bcontent\s*=\s*(["'])(.*?)\1/i)?.[2];
+
+    if (content) values.push(stripTags(content));
+  }
+
+  return values;
 }
 
 function redirectMatchesVenueIdentity(
@@ -1304,59 +1346,61 @@ function redirectMatchesVenueIdentity(
 ): boolean {
   if (!venue?.name) return false;
 
-  const title =
-    html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
-
-  const heading =
-    html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? "";
-
-  const metadata = [
-    ...html.matchAll(
-      /<meta\b[^>]*\b(?:property|name)\s*=\s*["'](?:og:title|og:site_name|twitter:title)["'][^>]*>/gi,
-    ),
-  ].map((match) => match[0]);
-
-  const identityText = [
-    stripTags(title),
-    stripTags(heading),
-    ...metadata,
-  ].join(" ").toLowerCase();
-
   const nameTokens = identityTokens(venue.name);
 
-  if (nameTokens.length < 2) return false;
+  if (!nameTokens.length) return false;
 
-  const normalizedIdentity = identityTokens(identityText);
-  const identitySet = new Set(normalizedIdentity);
+  const identityFields = extractIdentityMetadata(html);
 
-  const nameMatches = nameTokens.every((token) =>
-    identitySet.has(token)
-  );
+  const nameMatches = identityFields.some((field) => {
+    const fieldTokens = new Set(identityTokens(field));
+
+    return nameTokens.every((token) => fieldTokens.has(token));
+  });
 
   if (!nameMatches) return false;
 
   const destination = new URL(destinationUrl);
 
-  const locationValues = [
-    venue.city,
-    venue.postalCode,
-    venue.streetAddress,
-  ].filter((value): value is string => Boolean(value?.trim()));
-
-  if (!locationValues.length) return false;
-
-  const locationText = [
+  const locationText = normalizeIdentityText([
     stripTags(html.slice(0, 150000)),
     destination.pathname,
-  ].join(" ").toLowerCase();
+  ].join(" "));
 
-  return locationValues.some((value) => {
-    const tokens = identityTokens(value);
-    return tokens.length > 0 &&
-      tokens.every((token) =>
-        identityTokens(locationText).includes(token)
-      );
-  });
+  const locationTokens = new Set(locationText.split(" "));
+
+  const streetTokens = venue.streetAddress
+    ? normalizeIdentityText(venue.streetAddress).split(" ")
+    : [];
+
+  const streetMatches =
+    streetTokens.length >= 2 &&
+    streetTokens.every((token) => locationTokens.has(token));
+
+  const postalMatches =
+    Boolean(venue.postalCode) &&
+    locationTokens.has(venue.postalCode!.trim().toLowerCase());
+
+  const cityTokens = venue.city
+    ? normalizeIdentityText(venue.city).split(" ")
+    : [];
+
+  const cityMatches =
+    cityTokens.length > 0 &&
+    cityTokens.every((token) => locationTokens.has(token));
+
+  /*
+   * A name plus a city is insufficient for automatic attribution:
+   * multi-location businesses and shared hospitality websites may
+   * mention both without identifying this particular Spot.
+   *
+   * Require a street address or postal code, plus matching city
+   * when the venue record supplies one.
+   */
+  return Boolean(
+    (streetMatches || postalMatches) &&
+    (!venue.city || cityMatches)
+  );
 }
 
 export type RedirectVenueIdentity = {
@@ -1430,7 +1474,7 @@ export async function detectFirstPartySources(
       pagesInspected: 1,
       discoveredEventPages: [],
       detections: [],
-      error: `Website redirected from ${requestedHost} to unrelated host ${fetchedHost}`,
+      error: `Website redirected from ${requestedHost} to unverified cross-domain host ${fetchedHost}`,
     };
   }
 
