@@ -1281,8 +1281,95 @@ async function fetchHtml(
   }
 }
 
+
+function identityTokens(value: string): string[] {
+  const generic = new Set([
+    "the", "and", "of", "at", "in", "a", "an",
+    "bar", "grill", "restaurant", "tavern",
+    "pub", "lounge", "club", "cafe", "hotel",
+    "st", "saint",
+  ]);
+
+  return decodeHtml(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 1 && !generic.has(token));
+}
+
+function redirectMatchesVenueIdentity(
+  html: string,
+  destinationUrl: string,
+  venue?: RedirectVenueIdentity,
+): boolean {
+  if (!venue?.name) return false;
+
+  const title =
+    html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
+
+  const heading =
+    html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? "";
+
+  const metadata = [
+    ...html.matchAll(
+      /<meta\b[^>]*\b(?:property|name)\s*=\s*["'](?:og:title|og:site_name|twitter:title)["'][^>]*>/gi,
+    ),
+  ].map((match) => match[0]);
+
+  const identityText = [
+    stripTags(title),
+    stripTags(heading),
+    ...metadata,
+  ].join(" ").toLowerCase();
+
+  const nameTokens = identityTokens(venue.name);
+
+  if (nameTokens.length < 2) return false;
+
+  const normalizedIdentity = identityTokens(identityText);
+  const identitySet = new Set(normalizedIdentity);
+
+  const nameMatches = nameTokens.every((token) =>
+    identitySet.has(token)
+  );
+
+  if (!nameMatches) return false;
+
+  const destination = new URL(destinationUrl);
+
+  const locationValues = [
+    venue.city,
+    venue.postalCode,
+    venue.streetAddress,
+  ].filter((value): value is string => Boolean(value?.trim()));
+
+  if (!locationValues.length) return false;
+
+  const locationText = [
+    stripTags(html.slice(0, 150000)),
+    destination.pathname,
+  ].join(" ").toLowerCase();
+
+  return locationValues.some((value) => {
+    const tokens = identityTokens(value);
+    return tokens.length > 0 &&
+      tokens.every((token) =>
+        identityTokens(locationText).includes(token)
+      );
+  });
+}
+
+export type RedirectVenueIdentity = {
+  name: string;
+  city?: string | null;
+  stateRegion?: string | null;
+  streetAddress?: string | null;
+  postalCode?: string | null;
+};
+
 export async function detectFirstPartySources(
   websiteUrl: string,
+  venueIdentity?: RedirectVenueIdentity,
 ): Promise<SiteDetectionResult> {
   const detections: SourceDetection[] = [];
 
@@ -1326,7 +1413,16 @@ export async function detectFirstPartySources(
   const requestedHost = hostname(websiteUrl);
   const fetchedHost = hostname(homepage.url);
 
-  if (requestedHost && fetchedHost && !sameSite(websiteUrl, homepage.url)) {
+  if (
+    requestedHost &&
+    fetchedHost &&
+    !sameSite(websiteUrl, homepage.url) &&
+    !redirectMatchesVenueIdentity(
+      homepage.html,
+      homepage.url,
+      venueIdentity,
+    )
+  ) {
     return {
       websiteUrl,
       fetchedUrl: homepage.url,

@@ -268,7 +268,16 @@ export async function GET(request: Request) {
       const hasPreviouslyValidatedSource =
         (previouslyValidatedSources?.length ?? 0) > 0;
 
-      const detection = await detectFirstPartySources(venue.website_url);
+      const detection = await detectFirstPartySources(
+        venue.website_url,
+        {
+          name: venue.name,
+          city: venue.city,
+          stateRegion: venue.state_region,
+          streetAddress: venue.street_address,
+          postalCode: venue.postal_code,
+        },
+      );
 
       const calendarImageCandidate =
         detection.detections.find(
