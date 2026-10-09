@@ -8,15 +8,15 @@ const tools = [
     status: "OPEN",
   },
   {
-    title: "Manage Spots",
-    description: "Search, add and manage venue profiles.",
-    href: "/admin/spots",
-    status: "OPEN",
-  },
-  {
     title: "Harvester Management",
     description: "Manage Event Harvester reviews, adapters and source issues.",
     href: "/admin/harvester",
+    status: "OPEN",
+  },
+  {
+    title: "Manage Spots",
+    description: "Search, add and manage venue profiles.",
+    href: "/admin/spots",
     status: "OPEN",
   },
   {
