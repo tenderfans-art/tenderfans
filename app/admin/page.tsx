@@ -14,6 +14,12 @@ const tools = [
     status: "OPEN",
   },
   {
+    title: "Venue Matches",
+    description: "Review event-to-Spot matches, calendar verifications and duplicate occurrences.",
+    href: "/admin/venue-matches",
+    status: "OPEN",
+  },
+  {
     title: "Harvester Management",
     description: "Manage Event Harvester reviews, adapters and source issues.",
     href: "/admin/harvester",
