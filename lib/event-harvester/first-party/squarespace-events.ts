@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import { parseIcsEvents } from "./ics";
 
 import type {
@@ -59,7 +60,7 @@ function eventPageUrl(
 export async function fetchSquarespaceEvents(
   sourceUrl: string
 ): Promise<FirstPartyHarvestEvent[]> {
-  const pageResponse = await fetch(sourceUrl, {
+  const pageResponse = await recoveryFetch(sourceUrl, {
     headers: {
       Accept: "text/html",
       "User-Agent":
@@ -93,7 +94,7 @@ export async function fetchSquarespaceEvents(
    * fan out into a large burst of requests against the venue site.
    */
   for (const icalUrl of icalUrls) {
-    const response = await fetch(icalUrl, {
+    const response = await recoveryFetch(icalUrl, {
       headers: {
         Accept: "text/calendar",
         "User-Agent":

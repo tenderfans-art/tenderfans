@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type {
   FirstPartyHarvestEvent,
 } from "./types";
@@ -453,7 +454,7 @@ export async function fetchPwpcEventsCalendarEvents(
     options.timeZone ??
     "America/New_York";
 
-  const response = await fetch(sourceUrl, {
+  const response = await recoveryFetch(sourceUrl, {
     headers: {
       Accept: "text/html,*/*;q=0.8",
       "User-Agent": USER_AGENT,
@@ -478,7 +479,7 @@ export async function fetchPwpcEventsCalendarEvents(
     [];
 
   for (const card of cards) {
-    const detailResponse = await fetch(
+    const detailResponse = await recoveryFetch(
       card.url,
       {
         headers: {

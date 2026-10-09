@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { FirstPartyHarvestEvent } from "./types";
 
 const USER_AGENT = "TenderFans Event Harvester/1.0";
@@ -429,7 +430,7 @@ async function fetchHtml(
   url: string;
   html: string;
 }> {
-  const response = await fetch(url, {
+  const response = await recoveryFetch(url, {
     headers: {
       Accept:
         "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",

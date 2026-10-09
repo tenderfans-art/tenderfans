@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { FirstPartyHarvestEvent } from "./types";
 
 type EventbriteOrganizerOptions = {
@@ -280,7 +281,7 @@ function firstString(
 export async function fetchEventbriteEventIdentity(
   sourceUrl: string
 ): Promise<EventbriteEventIdentity> {
-  const response = await fetch(sourceUrl, {
+  const response = await recoveryFetch(sourceUrl, {
     headers: {
       Accept:
         "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
@@ -460,7 +461,7 @@ async function fetchEventbriteSessionsForDate(
     `${encodeURIComponent(date)}/sessions?tzIdentifier=` +
     encodeURIComponent(timeZone);
 
-  const response = await fetch(url, {
+  const response = await recoveryFetch(url, {
     headers: {
       Accept: "application/json",
       "User-Agent":
@@ -609,7 +610,7 @@ export async function fetchEventbriteOrganizerEvents(
   sourceUrl: string,
   options: EventbriteOrganizerOptions = {}
 ): Promise<FirstPartyHarvestEvent[]> {
-  const response = await fetch(sourceUrl, {
+  const response = await recoveryFetch(sourceUrl, {
     headers: {
       Accept:
         "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",

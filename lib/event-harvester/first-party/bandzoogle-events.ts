@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type {
   FirstPartyHarvestEvent,
 } from "./types";
@@ -220,7 +221,7 @@ async function fetchHtml(
   url: string,
   accept = "text/html"
 ): Promise<string> {
-  const response = await fetch(url, {
+  const response = await recoveryFetch(url, {
     headers: {
       Accept: accept,
       "User-Agent":

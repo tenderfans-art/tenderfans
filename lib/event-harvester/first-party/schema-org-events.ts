@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 const USER_AGENT = "TenderFans Event Harvester/1.0";
 
 type JsonObject = Record<string, unknown>;
@@ -277,7 +278,7 @@ function stableEventId(
 export async function fetchSchemaOrgEvents(
   sourceUrl: string,
 ): Promise<SchemaOrgNormalizedEvent[]> {
-  const response = await fetch(sourceUrl, {
+  const response = await recoveryFetch(sourceUrl, {
     headers: {
       Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
       "User-Agent": USER_AGENT,

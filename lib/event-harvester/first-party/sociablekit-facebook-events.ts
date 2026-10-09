@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type {
   FirstPartyHarvestEvent,
 } from "./types";
@@ -126,7 +127,7 @@ export async function fetchSociableKitFacebookEvents(
 
   const durableSourceUrl = url.toString();
 
-  const response = await fetch(
+  const response = await recoveryFetch(
     durableSourceUrl,
     {
       headers: {

@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type {
   FirstPartyHarvestEvent,
 } from "./types";
@@ -220,7 +221,7 @@ function mapRscEvent(
 export async function fetchNextRscEvents(
   sourceUrl: string
 ): Promise<FirstPartyHarvestEvent[]> {
-  const response = await fetch(sourceUrl, {
+  const response = await recoveryFetch(sourceUrl, {
     headers: {
       Accept: "text/html",
       "User-Agent": "TenderFans-Event-Harvester/1.0",

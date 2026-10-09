@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type {
   FirstPartyHarvestEvent,
 } from "./types";
@@ -346,7 +347,7 @@ export async function fetchGoDaddyMenuRecurringEvents(
   const weeksForward =
     Math.max(1, Math.min(options.weeksForward ?? 8, 16));
 
-  const response = await fetch(sourceUrl, {
+  const response = await recoveryFetch(sourceUrl, {
     headers: {
       Accept: "text/html",
       "User-Agent":

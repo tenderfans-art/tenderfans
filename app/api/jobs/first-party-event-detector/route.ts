@@ -1,3 +1,4 @@
+import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -53,6 +54,26 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
 
   const venueId = requestUrl.searchParams.get("venue_id");
+  const recoveryMode =
+    requestUrl.searchParams.get("mode") === "transport-recovery";
+  const fullScanMode =
+    requestUrl.searchParams.get("mode") === "full-scan";
+
+  const recoveryIdsParam = requestUrl.searchParams.get("venue_ids");
+
+  if ((recoveryMode || fullScanMode) && venueId) {
+    return NextResponse.json(
+      { error: "Batch modes cannot be combined with venue_id." },
+      { status: 400 },
+    );
+  }
+
+  if (recoveryIdsParam !== null && !recoveryMode) {
+    return NextResponse.json(
+      { error: "venue_ids is only supported in transport-recovery mode." },
+      { status: 400 },
+    );
+  }
 
   let venueQuery = supabase
     .from("venues")
@@ -62,7 +83,107 @@ export async function GET(request: Request) {
     .eq("status", "active")
     .not("website_url", "is", null);
 
-  if (venueId) {
+  if (recoveryMode) {
+    const { data: findings, error: findingsError } = await supabase
+      .from("event_harvest_detector_findings")
+      .select("venue_id")
+      .eq("category", "transport")
+      .in("detector_status", ["transport_failed", "transport_blocked"])
+      .is("resolved_at", null);
+
+    if (findingsError) {
+      return NextResponse.json(
+        { error: findingsError.message },
+        { status: 500 },
+      );
+    }
+
+    const eligibleIds = new Set(
+      (findings ?? []).map((finding) => finding.venue_id),
+    );
+
+    let venueIds = [...eligibleIds];
+
+    if (recoveryIdsParam !== null) {
+      const requestedIds = [
+        ...new Set(
+          recoveryIdsParam
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean),
+        ),
+      ];
+
+      if (
+        requestedIds.length === 0 ||
+        requestedIds.length > SPOT_LIMIT ||
+        requestedIds.some(
+          (id) =>
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+        )
+      ) {
+        return NextResponse.json(
+          { error: "Recovery requires 1–30 valid venue IDs." },
+          { status: 400 },
+        );
+      }
+
+      const ineligibleIds = requestedIds.filter(
+        (id) => !eligibleIds.has(id),
+      );
+
+      if (ineligibleIds.length > 0) {
+        return NextResponse.json(
+          {
+            error: "Some Spots are no longer in the unresolved transport recovery queue.",
+            ineligibleIds,
+          },
+          { status: 409 },
+        );
+      }
+
+      venueIds = requestedIds;
+    }
+
+    if (venueIds.length === 0) {
+      return NextResponse.json({
+        spots: 0,
+        mode: "transport-recovery",
+        message: "No unresolved transport recovery Spots.",
+      });
+    }
+
+    venueQuery = venueQuery.in("id", venueIds);
+  } else if (fullScanMode) {
+    const offsetParam = requestUrl.searchParams.get("offset") ?? "0";
+    const limitParam = requestUrl.searchParams.get("limit") ?? "30";
+
+    if (!/^\d+$/.test(offsetParam) || !/^\d+$/.test(limitParam)) {
+      return NextResponse.json(
+        { error: "Full-scan offset and limit must be nonnegative integers." },
+        { status: 400 },
+      );
+    }
+
+    const offset = Number(offsetParam);
+    const limit = Number(limitParam);
+
+    if (
+      !Number.isSafeInteger(offset) ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 30
+    ) {
+      return NextResponse.json(
+        { error: "Invalid full-scan batch parameters (limit: 1–30)." },
+        { status: 400 },
+      );
+    }
+
+    venueQuery = venueQuery
+      .order("id", { ascending: true })
+      .range(offset, offset + limit - 1);
+  } else if (venueId) {
     venueQuery = venueQuery.eq("id", venueId);
   } else {
     venueQuery = venueQuery
@@ -112,6 +233,7 @@ export async function GET(request: Request) {
       continue;
     }
 
+    const processVenue = async () => {
     processedSpots += 1;
 
     try {
@@ -168,18 +290,20 @@ export async function GET(request: Request) {
        * still blocked/failed, the upsert below immediately reactivates
        * the current finding and refreshes last_seen_at.
        */
-      const { error: transportResolutionError } = await supabase.rpc(
-        "resolve_event_harvest_detector_findings",
-        {
-          p_venue_id: venue.id,
-          p_category: "transport",
-        },
-      );
-
-      if (transportResolutionError) {
-        throw new Error(
-          `Could not resolve previous transport findings: ${transportResolutionError.message}`,
+      if (!recoveryMode) {
+        const { error: transportResolutionError } = await supabase.rpc(
+          "resolve_event_harvest_detector_findings",
+          {
+            p_venue_id: venue.id,
+            p_category: "transport",
+          },
         );
+
+        if (transportResolutionError) {
+          throw new Error(
+            `Could not resolve previous transport findings: ${transportResolutionError.message}`,
+          );
+        }
       }
 
       /*
@@ -668,6 +792,14 @@ export async function GET(request: Request) {
 
       for (const category of actionableCategories) {
         if (
+          recoveryMode && category === "transport"
+        ) {
+          // Preserve the queued transport finding until the final
+          // classification has been persisted successfully.
+          continue;
+        }
+
+        if (
           category === "browser_required" &&
           hasPersistedBrowserRequired &&
           !browserRequiredCandidate
@@ -823,6 +955,36 @@ export async function GET(request: Request) {
 
         bucketCounts.no_source += 1;
       }
+
+      if (
+        recoveryMode &&
+        (
+          successfullyRegistered ||
+          hasPreviouslyValidatedSource ||
+          calendarImageCandidate ||
+          facebookCandidate ||
+          browserRequiredCandidate ||
+          hasPersistedBrowserRequired ||
+          (
+            detection.status !== "transport_blocked" &&
+            detection.status !== "transport_failed"
+          )
+        )
+      ) {
+        const { error: recoveryResolutionError } = await supabase.rpc(
+          "resolve_event_harvest_detector_findings",
+          {
+            p_venue_id: venue.id,
+            p_category: "transport",
+          },
+        );
+
+        if (recoveryResolutionError) {
+          throw new Error(
+            `Could not finalize transport recovery: ${recoveryResolutionError.message}`,
+          );
+        }
+      }
     } catch (error) {
       failed += 1;
       failures.push({
@@ -831,6 +993,19 @@ export async function GET(request: Request) {
         stage: "detection",
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+    };
+
+    if (recoveryMode) {
+      const proxyUrl = process.env.TENDERFANS_TRANSPORT_PROXY_URL;
+
+      if (!proxyUrl) {
+        throw new Error("Transport recovery proxy is not configured.");
+      }
+
+      await runWithTransportRecovery(proxyUrl, processVenue);
+    } else {
+      await processVenue();
     }
   }
 

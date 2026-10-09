@@ -1,3 +1,4 @@
+import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
 
 function decodeHtml(value: string): string {
@@ -144,8 +145,8 @@ export async function fetchCalendarImageResource(
   accept: string,
 ): Promise<Response> {
   const proxy =
-    process.env.TENDERFANS_TRANSPORT_RECOVERY_ENABLED === "true"
-      ? process.env.TENDERFANS_TRANSPORT_PROXY_URL
+    (getTransportRecoveryProxy() !== undefined)
+      ? getTransportRecoveryProxy()
       : undefined;
 
   async function request(proxyUrl?: string): Promise<Response> {

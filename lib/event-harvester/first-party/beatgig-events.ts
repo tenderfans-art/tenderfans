@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { FirstPartyHarvestEvent } from "./types";
 
 const GRAPHQL_URL = "https://backend.beatgig.com/api/v1/graphql";
@@ -154,7 +155,7 @@ export async function fetchBeatGigEvents(
     }
   `;
 
-  const response = await fetch(GRAPHQL_URL, {
+  const response = await recoveryFetch(GRAPHQL_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

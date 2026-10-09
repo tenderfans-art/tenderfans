@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { eventFingerprint, normalizeTitle } from "../identity";
@@ -137,7 +138,7 @@ export async function previewFirstPartySource(
       source.source_url,
     );
   } else if (source.source_type === "ics") {
-    const response = await fetch(source.source_url, {
+    const response = await recoveryFetch(source.source_url, {
       headers: {
         Accept: "text/calendar,text/plain;q=0.9,*/*;q=0.8",
         "User-Agent": "TenderFans-Event-Harvester/1.0",

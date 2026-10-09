@@ -29,3 +29,7 @@ tsconfig.tsbuildinfo
 
 # Supabase CLI local state
 /supabase/.temp/
+.env*
+
+# Local event harvester execution logs and checkpoints
+/.harvester-runs/

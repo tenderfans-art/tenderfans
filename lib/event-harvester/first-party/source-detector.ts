@@ -1,3 +1,4 @@
+import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
 import { fetchBrowserEvidence } from "./browser-transport";
 import { discoverCalendarImageAssets } from "./calendar-image-assets";
@@ -1157,21 +1158,19 @@ async function inspectProviderHandoffs(
 
 async function fetchHtml(
   url: string,
-  proxyUrl?: string,
 ): Promise<{
   ok: boolean;
   status: number;
   url: string;
   html: string;
+  recoveryDetail?: string;
 }> {
-  const recoveryProxy =
-    process.env.TENDERFANS_TRANSPORT_RECOVERY_ENABLED === "true"
-      ? process.env.TENDERFANS_TRANSPORT_PROXY_URL
-      : undefined;
+  const recoveryProxy = getTransportRecoveryProxy();
 
   async function request(
     targetUrl: string,
     proxy?: string,
+    browserHeaders = false,
   ) {
     const normalizedUrl = new URL(targetUrl);
 
@@ -1179,20 +1178,24 @@ async function fetchHtml(
       normalizedUrl.protocol = "https:";
     }
 
-    const response = await signedHarvesterFetch(normalizedUrl.toString(), {
-      headers: proxy
-        ? {
-            Accept:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-            "User-Agent": RECOVERY_USER_AGENT,
-          }
-        : {
-            Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
-            "User-Agent": USER_AGENT,
-          },
-      cache: "no-store",
-    }, proxy);
+    const response = await signedHarvesterFetch(
+      normalizedUrl.toString(),
+      {
+        headers: browserHeaders || Boolean(proxy)
+          ? {
+              Accept:
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "en-US,en;q=0.9",
+              "User-Agent": RECOVERY_USER_AGENT,
+            }
+          : {
+              Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+              "User-Agent": USER_AGENT,
+            },
+        cache: "no-store",
+      },
+      proxy,
+    );
 
     return {
       ok: response.ok,
@@ -1202,32 +1205,79 @@ async function fetchHtml(
     };
   }
 
-  if (proxyUrl) {
-    return request(url, proxyUrl);
+  let direct: Awaited<ReturnType<typeof request>> | undefined;
+  let directError: unknown;
+
+  try {
+    direct = await request(url);
+  } catch (error) {
+    directError = error;
+  }
+
+  // Some sites reject the harvester User-Agent with HTTP 400.
+  // During explicit transport recovery only, retry once directly
+  // with the existing browser-compatible request headers.
+  if (recoveryProxy && direct?.status === 400) {
+    try {
+      const compatible = await request(url, undefined, true);
+
+      if (compatible.ok) {
+        return compatible;
+      }
+
+      return {
+        ...direct,
+        recoveryDetail:
+          `Browser-header retry returned HTTP ${compatible.status}`,
+      };
+    } catch (error) {
+      return {
+        ...direct,
+        recoveryDetail:
+          error instanceof Error
+            ? `Browser-header retry failed: ${error.message}`
+            : "Browser-header retry failed",
+      };
+    }
+  }
+
+  if (
+    !recoveryProxy ||
+    (direct && ![403, 429, 503].includes(direct.status))
+  ) {
+    if (direct) return direct;
+    throw directError;
   }
 
   try {
-    const direct = await request(url);
+    const recovered = await request(url, recoveryProxy);
 
-    if (
-      !recoveryProxy ||
-      ![403, 429, 503].includes(direct.status)
-    ) {
-      return direct;
+    if (recovered.ok) {
+      return recovered;
     }
 
-    try {
-      const recovered = await request(url, recoveryProxy);
-      return recovered.ok ? recovered : direct;
-    } catch {
-      return direct;
+    if (direct) {
+      return {
+        ...direct,
+        recoveryDetail:
+          `Vultr recovery returned HTTP ${recovered.status}`,
+      };
     }
+
+    throw new Error(
+      `Direct fetch failed: ${String(directError)}; ` +
+      `Vultr recovery returned HTTP ${recovered.status}`,
+    );
   } catch (error) {
-    if (!recoveryProxy) {
-      throw error;
-    }
+    if (!direct) throw error;
 
-    return request(url, recoveryProxy);
+    return {
+      ...direct,
+      recoveryDetail:
+        error instanceof Error
+          ? `Vultr recovery failed: ${error.message}`
+          : "Vultr recovery failed",
+    };
   }
 }
 
@@ -1236,66 +1286,20 @@ export async function detectFirstPartySources(
 ): Promise<SiteDetectionResult> {
   const detections: SourceDetection[] = [];
 
-  const recoveryProxy =
-    process.env.TENDERFANS_TRANSPORT_RECOVERY_ENABLED === "true"
-      ? process.env.TENDERFANS_TRANSPORT_PROXY_URL
-      : undefined;
-
   let homepage: Awaited<ReturnType<typeof fetchHtml>>;
 
   try {
     homepage = await fetchHtml(websiteUrl);
   } catch (error) {
-    if (recoveryProxy) {
-      try {
-        const recovered = await fetchHtml(websiteUrl, recoveryProxy);
-
-        if (recovered.ok) {
-          homepage = recovered;
-        } else {
-          throw new Error("Transport recovery did not succeed.");
-        }
-      } catch {
-        return {
-          websiteUrl,
-          fetchedUrl: null,
-          status: "transport_failed",
-          pagesInspected: 0,
-          discoveredEventPages: [],
-          detections: [],
-          error: error instanceof Error ? error.message : String(error),
-        };
-      }
-    } else {
-      return {
-        websiteUrl,
-        fetchedUrl: null,
-        status: "transport_failed",
-        pagesInspected: 0,
-        discoveredEventPages: [],
-        detections: [],
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
-  if (!homepage.ok) {
-    const eligible =
-      homepage.status === 403 ||
-      homepage.status === 429 ||
-      homepage.status === 503;
-
-    if (eligible && recoveryProxy) {
-      try {
-        const recovered = await fetchHtml(websiteUrl, recoveryProxy);
-
-        if (recovered.ok) {
-          homepage = recovered;
-        }
-      } catch {
-        // Preserve the original transport result.
-      }
-    }
+    return {
+      websiteUrl,
+      fetchedUrl: null,
+      status: "transport_failed",
+      pagesInspected: 0,
+      discoveredEventPages: [],
+      detections: [],
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 
   if (!homepage.ok) {
@@ -1311,7 +1315,11 @@ export async function detectFirstPartySources(
       pagesInspected: 1,
       discoveredEventPages: [],
       detections: [],
-      error: `Homepage returned HTTP ${homepage.status}`,
+      error:
+        `Homepage returned HTTP ${homepage.status}` +
+        (homepage.recoveryDetail
+          ? `; ${homepage.recoveryDetail}`
+          : ""),
     };
   }
 

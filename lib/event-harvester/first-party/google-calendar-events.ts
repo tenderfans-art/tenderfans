@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type {
   FirstPartyHarvestEvent,
 } from "./types";
@@ -86,7 +87,7 @@ export async function fetchGoogleCalendarEvents(
   const icsUrl =
     googleCalendarIcsUrl(calendarId);
 
-  const response = await fetch(icsUrl, {
+  const response = await recoveryFetch(icsUrl, {
     headers: {
       Accept: "text/calendar,text/plain;q=0.9,*/*;q=0.8",
       "User-Agent": "TenderFans-Event-Harvester/1.0",

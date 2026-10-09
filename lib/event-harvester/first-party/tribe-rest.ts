@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type {
   FirstPartyHarvestEvent,
 } from "./types";
@@ -292,7 +293,7 @@ export async function fetchTribeRestEvents(
     const pageUrl = new URL(baseUrl.toString());
     pageUrl.searchParams.set("page", String(page));
 
-    const response = await fetch(pageUrl.toString(), {
+    const response = await recoveryFetch(pageUrl.toString(), {
       headers: {
         Accept: "application/json",
         "User-Agent": "TenderFans-Event-Harvester/1.0",

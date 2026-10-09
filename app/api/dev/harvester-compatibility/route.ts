@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -30,6 +32,9 @@ export async function GET(request: Request) {
 
   const detectOnly =
     searchParams.get("detectOnly") === "1";
+
+  const transportRecovery =
+    searchParams.get("transportRecovery") === "1";
 
   const start = Math.max(
     0,
@@ -64,7 +69,41 @@ export async function GET(request: Request) {
       .eq("status", "active")
       .not("website_url", "is", null);
 
-    if (venueId) {
+    if (transportRecovery) {
+      if (venueId) {
+        throw new Error(
+          "Transport recovery cannot be combined with venueId."
+        );
+      }
+
+      const { data: findings, error: findingsError } =
+        await supabase
+          .from("event_harvest_detector_findings")
+          .select("venue_id")
+          .eq("category", "transport")
+          .eq("detector_status", "transport_failed")
+          .is("resolved_at", null);
+
+      if (findingsError) {
+        throw new Error(findingsError.message);
+      }
+
+      const ids = [
+        ...new Set(
+          (findings ?? []).map((row) => row.venue_id)
+        ),
+      ];
+
+      if (ids.length === 0) {
+        return NextResponse.json({
+          spots: 0,
+          transportRecovery: true,
+          results: [],
+        });
+      }
+
+      venueQuery = venueQuery.in("id", ids);
+    } else if (venueId) {
       venueQuery = venueQuery.eq("id", venueId);
     } else {
       venueQuery = venueQuery
@@ -99,11 +138,39 @@ export async function GET(request: Request) {
      * We're probing third-party websites and don't need to
      * generate a 30-site request burst.
      */
+    let completed = 0;
+    const total = (venues ?? []).filter(
+      (venue) => Boolean(venue.website_url)
+    ).length;
+
+    const reportProgress = (
+      status: string,
+      spotName: string | null = null,
+    ) => {
+      if (!transportRecovery) return;
+
+      writeFileSync(
+        "/tmp/tenderfans-recovery-progress.json",
+        JSON.stringify({
+          status,
+          completed,
+          total,
+          currentSpot: spotName,
+          updatedAt: new Date().toISOString(),
+        }, null, 2),
+      );
+    };
+
+    reportProgress("starting");
+
     for (const venue of venues ?? []) {
       if (!venue.website_url) {
         continue;
       }
 
+      reportProgress("running", venue.name);
+
+      const probeVenue = async () => {
       const detection =
         await detectFirstPartySources(
           venue.website_url
@@ -195,7 +262,31 @@ export async function GET(request: Request) {
         ...detection,
         ratificationProbes,
       });
+      };
+
+      if (transportRecovery) {
+        const proxyUrl =
+          process.env.TENDERFANS_TRANSPORT_PROXY_URL;
+
+        if (!proxyUrl) {
+          throw new Error(
+            "Transport recovery proxy is not configured."
+          );
+        }
+
+        await runWithTransportRecovery(
+          proxyUrl,
+          probeVenue,
+        );
+      } else {
+        await probeVenue();
+      }
+
+      completed += 1;
+      reportProgress("running", null);
     }
+
+    reportProgress("complete");
 
     const summarize = (
       rows: typeof results

@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type {
   FirstPartyHarvestEvent,
 } from "./types";
@@ -606,7 +607,7 @@ export async function fetchCpMultiViewCalendarEvents(
     Math.min(options.weeksForward ?? 8, 16)
   );
 
-  const pageResponse = await fetch(
+  const pageResponse = await recoveryFetch(
     sourceUrl,
     {
       headers: {
@@ -735,7 +736,7 @@ export async function fetchCpMultiViewCalendarEvents(
     ),
   });
 
-  const feedResponse = await fetch(
+  const feedResponse = await recoveryFetch(
     endpoint,
     {
       method: "POST",

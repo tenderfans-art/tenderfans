@@ -1,3 +1,4 @@
+import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { FirstPartyHarvestEvent } from "./types";
 
 type ShopifyVariant = {
@@ -504,7 +505,7 @@ export async function fetchShopifyEvents(
 
   const weeksForward = Math.max(1, Math.min(options.weeksForward ?? 8, 16));
 
-  const response = await fetch(sourceUrl, {
+  const response = await recoveryFetch(sourceUrl, {
     headers: {
       Accept: "application/json",
       "User-Agent": "TenderFans-Event-Harvester/1.0",
