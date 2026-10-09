@@ -134,7 +134,15 @@ function formatAddress(
 }
 
 function evidenceLabel(evidence: Record<string, unknown> | null, key: string) {
-  return evidence?.[key] === true ? "Yes" : "No";
+  const nested = evidence?.match_evidence;
+  const comparisons =
+    nested && typeof nested === "object" && !Array.isArray(nested)
+      ? (nested as Record<string, unknown>)
+      : evidence;
+
+  const value = comparisons?.[key];
+
+  return value === true ? "Yes" : value === false ? "No" : "Unknown";
 }
 
 export default function AdminVenueMatchesPage() {
@@ -1202,6 +1210,30 @@ export default function AdminVenueMatchesPage() {
                         </span>
                       ))}
                     </div>
+
+                    {match.provider === "website_redirect" && (
+                      <div
+                        style={{
+                          marginTop: "14px",
+                          fontSize: "0.85rem",
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        <strong>Redirect identity evidence</strong>
+                        <div>
+                          Business identities: {String(match.evidence?.business_identity_count ?? "Unknown")}
+                          {" | "}
+                          Brand identities: {String(match.evidence?.brand_identity_count ?? "Unknown")}
+                        </div>
+                        <div>
+                          Brand-only: {evidenceLabel(match.evidence, "brand_identity_only")}
+                          {" | "}
+                          Auto-attach eligible: {evidenceLabel(match.evidence, "auto_attach_eligible")}
+                          {" | "}
+                          Admin review required: {evidenceLabel(match.evidence, "requires_admin_review")}
+                        </div>
+                      </div>
+                    )}
 
                     <div
                       style={{
