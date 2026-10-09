@@ -201,207 +201,162 @@ export default function AdminTendersPage() {
 
   if (loading) {
     return (
-      <main style={{ padding: "40px 24px" }}>
-        <p>Loading Tenders...</p>
+      <main className="flow-page">
+        <div className="shell">
+          <section className="flow-card">
+            <p>Loading Tenders...</p>
+          </section>
+        </div>
       </main>
     );
   }
 
   return (
-    <main
-      style={{
-        maxWidth: "1100px",
-        margin: "0 auto",
-        padding: "42px 24px 70px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "20px",
-          marginBottom: "26px",
-        }}
-      >
-        <div>
-          <div
+    <main className="flow-page">
+      <div className="shell">
+        <section
+          className="flow-card"
+          style={{ maxWidth: "1200px", margin: "0 auto" }}
+        >
+          <Link
+            href="/admin"
             style={{
-              fontSize: "0.76rem",
-              fontWeight: 800,
-              letterSpacing: "0.12em",
-              opacity: 0.55,
-              marginBottom: "5px",
+              display: "inline-block",
+              marginBottom: "22px",
+              color: "inherit",
             }}
           >
-            TENDERFANS ADMIN
+            ← Admin Dashboard
+          </Link>
+
+          <div className="eyebrow">TENDERFANS ADMIN</div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "14px",
+              marginBottom: "8px",
+            }}
+          >
+            <h1 style={{ margin: 0 }}>Manage Tenders</h1>
+
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              style={{
+                border: 0,
+                borderRadius: "999px",
+                padding: "12px 20px",
+                font: "inherit",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              + Add Tender
+            </button>
           </div>
 
-          <h1 style={{ margin: 0 }}>Manage Tenders</h1>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          style={{
-            border: 0,
-            borderRadius: "999px",
-            padding: "12px 20px",
-            font: "inherit",
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
-        >
-          + Add Tender
-        </button>
-      </div>
-
-      <input
-        type="search"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search by Tender name or Spot..."
-        style={{
-          width: "100%",
-          padding: "13px 15px",
-          borderRadius: "10px",
-          border: "1px solid rgba(0,0,0,0.15)",
-          background: "transparent",
-          color: "inherit",
-          font: "inherit",
-          marginBottom: "24px",
-        }}
-      />
-
-      {message && (
-        <p style={{ margin: "0 0 18px", opacity: 0.8 }}>
-          {message}
-        </p>
-      )}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "minmax(230px, 1.5fr) minmax(210px, 1.3fr) 120px 100px 110px",
-          gap: "18px",
-          padding: "0 10px 10px",
-          fontSize: "0.72rem",
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          opacity: 0.55,
-        }}
-      >
-        <div>TENDER</div>
-        <div>CURRENT SPOT</div>
-        <div>TYPE</div>
-        <div>STATUS</div>
-        <div />
-      </div>
-
-      <div style={{ borderTop: "1px solid rgba(0,0,0,0.12)" }}>
-        {visibleTenders.map((tender) => (
-          <div
-            key={tender.id}
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "minmax(230px, 1.5fr) minmax(210px, 1.3fr) 120px 100px 110px",
-              gap: "18px",
-              alignItems: "center",
-              padding: "15px 10px",
-              borderBottom: "1px solid rgba(0,0,0,0.12)",
-            }}
+          <p
+            className="lead-copy"
+            style={{ marginTop: 0, marginBottom: "24px" }}
           >
-            <div style={{ minWidth: 0 }}>
-              <Link
-                href={`/t/${tender.slug}`}
-                style={{
-                  display: "block",
-                  color: "inherit",
-                  fontWeight: 800,
-                  textDecoration: "none",
-                  lineHeight: 1.25,
-                }}
-              >
-                {tender.display_name}
-              </Link>
+            Search and manage Tender profiles across TenderFans.
+          </p>
 
-              <div
-                style={{
-                  marginTop: "3px",
-                  opacity: 0.55,
-                  fontSize: "0.78rem",
-                }}
-              >
-                {tender.is_claimed ? "Claimed" : "Unclaimed"}
-              </div>
-            </div>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by Tender name or Spot..."
+            aria-label="Search Tenders"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              marginBottom: "20px",
+              font: "inherit",
+              borderRadius: "10px",
+              border: "1px solid rgba(20,35,45,0.18)",
+            }}
+          />
 
-            <div style={{ minWidth: 0 }}>
-              {tender.current_venue_name || "No current Spot"}
-            </div>
-
+          {message && (
             <div
               style={{
-                fontSize: "0.82rem",
-                textTransform: "capitalize",
+                marginBottom: "20px",
+                padding: "14px 16px",
+                border: "1px solid rgba(20,35,45,0.12)",
+                borderRadius: "12px",
               }}
             >
-              {tender.tender_type}
+              {message}
+            </div>
+          )}
+
+          <div className="admin-tender-list">
+            <div className="admin-tender-head">
+              <span>Tender</span>
+              <span>Current Spot</span>
+              <span>Type</span>
+              <span>Status</span>
+              <span style={{ textAlign: "center" }}>Action</span>
             </div>
 
-            <div
-              style={{
-                fontSize: "0.82rem",
-                fontWeight: 800,
-                textTransform: "capitalize",
-              }}
-            >
-              {tender.status}
-            </div>
+            {visibleTenders.map((tender) => (
+              <div className="admin-tender-row" key={tender.id}>
+                <div className="admin-tender-name">
+                  <Link
+                    href={`/t/${tender.slug}`}
+                    title={tender.display_name}
+                  >
+                    {tender.display_name}
+                  </Link>
+                  <div className="admin-tender-claim">
+                    {tender.is_claimed ? "Claimed" : "Unclaimed"}
+                  </div>
+                </div>
 
-            {tender.status === "removed" ? (
-              <div
-                style={{
-                  justifySelf: "end",
-                  fontSize: "0.82rem",
-                  opacity: 0.55,
-                }}
-              >
-                Removed
+                <div
+                  className="admin-tender-spot"
+                  title={tender.current_venue_name || "No current Spot"}
+                >
+                  {tender.current_venue_name || "No current Spot"}
+                </div>
+
+                <div className="admin-tender-type">
+                  {tender.tender_type}
+                </div>
+
+                <div className="admin-tender-status">
+                  {tender.status}
+                </div>
+
+                {tender.status === "removed" ? (
+                  <div className="admin-tender-removed">
+                    Removed
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="admin-tender-remove"
+                    onClick={() => removeTender(tender)}
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => removeTender(tender)}
-                style={{
-                  justifySelf: "end",
-                  padding: "8px 15px",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(0,0,0,0.18)",
-                  background: "transparent",
-                  color: "inherit",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                Remove
-              </button>
+            ))}
+
+            {visibleTenders.length === 0 && (
+              <div className="admin-tender-empty">
+                No Tenders found.
+              </div>
             )}
           </div>
-        ))}
-
-        {visibleTenders.length === 0 && (
-          <div style={{ padding: "28px 10px", opacity: 0.65 }}>
-            No Tenders found.
-          </div>
-        )}
+        </section>
       </div>
-
-      <div style={{ marginTop: "30px" }}>
-        <Link href="/admin">← Back to Admin Dashboard</Link>
-      </div>
-
       {addOpen && (
         <div
           onClick={closeAddModal}

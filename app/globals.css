@@ -5851,3 +5851,135 @@
     align-self:center;
   }
 }
+
+
+/* Admin Tender Management — aligned with Event Management */
+
+.admin-tender-list{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+
+.admin-tender-head,
+.admin-tender-row{
+  display:grid;
+  grid-template-columns:
+    minmax(220px,2fr)
+    minmax(140px,1.1fr)
+    minmax(120px,1fr)
+    100px
+    82px;
+  gap:8px;
+  align-items:center;
+}
+
+.admin-tender-head{
+  padding:0 10px;
+  font-size:.66rem;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  opacity:.55;
+}
+
+.admin-tender-row{
+  padding:8px 10px;
+  border:1px solid rgba(20,35,45,.12);
+  border-radius:10px;
+  background:rgba(255,255,255,.9);
+  min-width:0;
+}
+
+.admin-tender-name,
+.admin-tender-spot{
+  min-width:0;
+  font-size:.88rem;
+}
+
+.admin-tender-name a{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:inherit;
+  font-weight:700;
+  text-decoration:underline;
+  text-decoration-thickness:1px;
+  text-underline-offset:3px;
+}
+
+.admin-tender-claim{
+  margin-top:3px;
+  font-size:.76rem;
+  opacity:.6;
+}
+
+.admin-tender-spot{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-tender-type{
+  font-size:.8rem;
+  text-transform:capitalize;
+}
+
+.admin-tender-status{
+  font-size:.76rem;
+  font-weight:800;
+  text-transform:capitalize;
+}
+
+.admin-tender-remove{
+  padding:7px 10px;
+  border:1px solid rgba(20,35,45,.2);
+  border-radius:8px;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  font-size:.8rem;
+  font-weight:700;
+}
+
+.admin-tender-removed{
+  font-size:.8rem;
+  opacity:.55;
+  text-align:center;
+}
+
+.admin-tender-empty{
+  padding:28px 12px;
+  opacity:.65;
+}
+
+@media(max-width:850px){
+  .admin-tender-head{
+    display:none;
+  }
+
+  .admin-tender-row{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:6px 12px;
+  }
+
+  .admin-tender-name,
+  .admin-tender-spot,
+  .admin-tender-type{
+    grid-column:1;
+  }
+
+  .admin-tender-status{
+    grid-column:2;
+    grid-row:1;
+    text-align:right;
+  }
+
+  .admin-tender-remove,
+  .admin-tender-removed{
+    grid-column:2;
+    grid-row:2 / span 2;
+    align-self:center;
+  }
+}
