@@ -5865,8 +5865,8 @@
 .admin-tender-row{
   display:grid;
   grid-template-columns:
-    minmax(220px,2fr)
-    minmax(140px,1.1fr)
+    minmax(150px,1.15fr)
+    minmax(260px,2fr)
     minmax(120px,1fr)
     100px
     82px;
