@@ -1134,8 +1134,9 @@ export default function AdminVenueMatchesPage() {
 
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
+                        display: "grid",
+                        gridTemplateColumns: "82px 82px",
+                        justifyContent: "end",
                         alignItems: "center",
                         gridColumn: 3,
                         gridRow: "1 / 3",
