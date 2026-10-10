@@ -1025,8 +1025,8 @@ export default function AdminVenueMatchesPage() {
                       gridTemplateRows: "auto auto",
                       alignItems: "center",
                       columnGap: "16px",
-                      rowGap: "2px",
-                      padding: "5px 12px",
+                      rowGap: "0px",
+                      padding: "4px 10px",
                       border: "1px solid rgba(20, 35, 45, 0.12)",
                       borderRadius: "10px",
                       background: "rgba(255,255,255,0.9)",
@@ -1092,8 +1092,6 @@ export default function AdminVenueMatchesPage() {
                       )}
                     </div>
 
-                    <div />
-
                     <div
                       title={formatAddress(
                         match.tenderfans_address,
@@ -1138,6 +1136,9 @@ export default function AdminVenueMatchesPage() {
                       style={{
                         display: "flex",
                         justifyContent: "flex-end",
+                        alignItems: "center",
+                        gridColumn: 3,
+                        gridRow: "1 / 3",
                         gap: "8px",
                       }}
                     >
