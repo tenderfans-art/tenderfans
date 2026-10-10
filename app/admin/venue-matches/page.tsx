@@ -1025,25 +1025,45 @@ export default function AdminVenueMatchesPage() {
                       gridTemplateRows: "auto auto",
                       alignItems: "center",
                       columnGap: "16px",
-                      rowGap: "5px",
-                      padding: "10px 12px",
+                      rowGap: "2px",
+                      padding: "5px 12px",
                       border: "1px solid rgba(20, 35, 45, 0.12)",
                       borderRadius: "10px",
                       background: "rgba(255,255,255,0.9)",
                       fontSize: "0.88rem",
                     }}
                   >
-                    <strong
-                      title={match.tenderfans_venue_name}
+                    <div
                       style={{
                         minWidth: 0,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "10px",
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {match.tenderfans_venue_name}
-                    </strong>
+                      <strong
+                        title={match.tenderfans_venue_name}
+                        style={{
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {match.tenderfans_venue_name}
+                      </strong>
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          fontSize: "0.72rem",
+                          opacity: 0.65,
+                        }}
+                      >
+                        {Math.round(Number(match.confidence_score) * 100)}%
+                        {" confidence"}
+                      </span>
+                    </div>
 
                     <div
                       style={{
@@ -1072,18 +1092,7 @@ export default function AdminVenueMatchesPage() {
                       )}
                     </div>
 
-                    <div
-                      style={{
-                        textAlign: "right",
-                        fontSize: "0.76rem",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      <strong>
-                        {Math.round(Number(match.confidence_score) * 100)}%
-                      </strong>
-                      <span style={{ opacity: 0.6 }}> confidence</span>
-                    </div>
+                    <div />
 
                     <div
                       title={formatAddress(
