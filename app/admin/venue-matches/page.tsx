@@ -1148,6 +1148,7 @@ export default function AdminVenueMatchesPage() {
                         onClick={() => reviewMatch(match.id, true)}
                         style={{
                           padding: "7px 11px",
+                          minWidth: "97px",
                           border: 0,
                           borderRadius: "8px",
                           cursor: busy ? "default" : "pointer",
@@ -1166,6 +1167,7 @@ export default function AdminVenueMatchesPage() {
                         onClick={() => reviewMatch(match.id, false)}
                         style={{
                           padding: "6px 10px",
+                          minWidth: "97px",
                           border: "1px solid rgba(20, 35, 45, 0.2)",
                           borderRadius: "8px",
                           background: "transparent",
