@@ -1006,241 +1006,130 @@ export default function AdminVenueMatchesPage() {
 
               {matches.map((match) => {
                 const busy = reviewingId === match.id;
+                const isRedirect = match.provider === "website_redirect";
+                const originalUrl =
+                  typeof match.evidence?.registered_website_url === "string"
+                    ? match.evidence.registered_website_url
+                    : null;
+                const verifiedUrl = isRedirect
+                  ? match.provider_place_id
+                  : null;
 
                 return (
                   <article
                     key={match.id}
                     style={{
-                      padding: "22px",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "minmax(280px, 2fr) minmax(280px, 1.5fr) minmax(185px, 1fr)",
+                      gridTemplateRows: "auto auto",
+                      alignItems: "center",
+                      columnGap: "16px",
+                      rowGap: "5px",
+                      padding: "10px 12px",
                       border: "1px solid rgba(20, 35, 45, 0.12)",
-                      borderRadius: "18px",
+                      borderRadius: "10px",
                       background: "rgba(255,255,255,0.9)",
+                      fontSize: "0.88rem",
                     }}
                   >
-                    <div
+                    <strong
+                      title={match.tenderfans_venue_name}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: "20px",
-                        alignItems: "flex-start",
-                        marginBottom: "20px",
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      <div>
-                        <div
-                          className="eyebrow"
-                          style={{
-                            marginBottom: "6px",
-                          }}
-                        >
-                          MATCH REVIEW
-                        </div>
+                      {match.tenderfans_venue_name}
+                    </strong>
 
-                        <h2
+                    <div
+                      style={{
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {verifiedUrl ? (
+                        <a
+                          href={verifiedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={verifiedUrl}
                           style={{
-                            margin: 0,
-                            fontSize: "1.35rem",
+                            fontWeight: 700,
+                            color: "inherit",
+                            textDecoration: "underline",
                           }}
                         >
-                          {match.tenderfans_venue_name}
-                        </h2>
-                      </div>
-
-                      <div
-                        style={{
-                          textAlign: "right",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <strong
-                          style={{
-                            fontSize: "1.25rem",
-                          }}
-                        >
-                          {Math.round(Number(match.confidence_score) * 100)}%
-                        </strong>
-
-                        <div
-                          style={{
-                            fontSize: "0.75rem",
-                            opacity: 0.6,
-                          }}
-                        >
-                          confidence
-                        </div>
-                      </div>
+                          {verifiedUrl}
+                        </a>
+                      ) : (
+                        <strong>{match.provider_venue_name}</strong>
+                      )}
                     </div>
 
                     <div
                       style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(auto-fit, minmax(260px, 1fr))",
-                        gap: "18px",
+                        textAlign: "right",
+                        fontSize: "0.76rem",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      <div
-                        style={{
-                          padding: "18px",
-                          borderRadius: "14px",
-                          background: "rgba(245,243,236,0.65)",
-                        }}
-                      >
-                        <strong>TenderFans Spot</strong>
+                      <strong>
+                        {Math.round(Number(match.confidence_score) * 100)}%
+                      </strong>
+                      <span style={{ opacity: 0.6 }}> confidence</span>
+                    </div>
 
-                        <h3
-                          style={{
-                            margin: "10px 0 8px",
-                          }}
-                        >
-                          {match.tenderfans_venue_name}
-                        </h3>
+                    <div
+                      title={formatAddress(
+                        match.tenderfans_address,
+                        match.tenderfans_city,
+                        match.tenderfans_state_region,
+                        match.tenderfans_postal_code,
+                      )}
+                      style={{
+                        minWidth: 0,
+                        fontSize: "0.76rem",
+                        opacity: 0.7,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {formatAddress(
+                        match.tenderfans_address,
+                        match.tenderfans_city,
+                        match.tenderfans_state_region,
+                        match.tenderfans_postal_code,
+                      ).replace(/\\n/g, ", ") || "No address available"}
+                    </div>
 
-                        <div
-                          style={{
-                            whiteSpace: "pre-line",
-                            lineHeight: 1.55,
-                            opacity: 0.75,
-                          }}
-                        >
-                          {formatAddress(
-                            match.tenderfans_address,
-                            match.tenderfans_city,
-                            match.tenderfans_state_region,
-                            match.tenderfans_postal_code,
-                          ) || "No address available"}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          padding: "18px",
-                          borderRadius: "14px",
-                          background: "rgba(245,243,236,0.65)",
-                        }}
-                      >
-                        <strong>
-                          {match.provider === "website_redirect"
-                            ? "Website Redirect — Identity Review"
-                            : match.provider === "ticketmaster"
-                              ? "Ticketmaster Venue"
-                              : "Provider Venue"}
-                        </strong>
-
-                        <h3
-                          style={{
-                            margin: "10px 0 8px",
-                          }}
-                        >
-                          {match.provider_venue_name}
-                        </h3>
-
-                        <div
-                          style={{
-                            whiteSpace: "pre-line",
-                            lineHeight: 1.55,
-                            opacity: 0.75,
-                          }}
-                        >
-                          {formatAddress(
-                            match.provider_address,
-                            match.provider_city,
-                            match.provider_state_region,
-                            match.provider_postal_code,
-                          ) || "No address available"}
-                        </div>
-
-                        <div
-                          style={{
-                            marginTop: "10px",
-                            fontSize: "0.78rem",
-                            opacity: 0.55,
-                          }}
-                        >
-                          {match.provider === "website_redirect"
-                            ? "Redirect destination: "
-                            : "ID: "}
-                          {match.provider === "website_redirect" ? (
-                            <a
-                              href={match.provider_place_id}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ overflowWrap: "anywhere" }}
-                            >
-                              {match.provider_place_id}
-                            </a>
-                          ) : (
-                            match.provider_place_id
-                          )}
-                          {match.provider === "website_redirect" &&
-                            typeof match.evidence?.registered_website_url === "string" && (
-                              <div style={{ marginTop: "8px", overflowWrap: "anywhere" }}>
-                                Registered website: {match.evidence.registered_website_url}
-                              </div>
-                            )}
-                        </div>
-                      </div>
+                    <div
+                      title={originalUrl ?? undefined}
+                      style={{
+                        minWidth: 0,
+                        fontSize: "0.76rem",
+                        opacity: 0.7,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {isRedirect
+                        ? `Original URL: ${originalUrl ?? "Unavailable"}`
+                        : `${match.provider}: ${match.provider_venue_name}`}
                     </div>
 
                     <div
                       style={{
                         display: "flex",
-                        flexWrap: "wrap",
+                        justifyContent: "flex-end",
                         gap: "8px",
-                        marginTop: "18px",
-                      }}
-                    >
-                      {[
-                        ["Name", "nameExact"],
-                        ["Address", "addressExact"],
-                        ["City", "cityExact"],
-                        ["State", "stateExact"],
-                        ["ZIP", "postalExact"],
-                      ].map(([label, key]) => (
-                        <span
-                          key={key}
-                          style={{
-                            padding: "7px 10px",
-                            borderRadius: "999px",
-                            border: "1px solid rgba(20, 35, 45, 0.12)",
-                            fontSize: "0.78rem",
-                          }}
-                        >
-                          {label}: {evidenceLabel(match.evidence, key)}
-                        </span>
-                      ))}
-                    </div>
-
-                    {match.provider === "website_redirect" && (
-                      <div
-                        style={{
-                          marginTop: "14px",
-                          fontSize: "0.85rem",
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        <strong>Redirect identity evidence</strong>
-                        <div>
-                          Business identities: {String(match.evidence?.business_identity_count ?? "Unknown")}
-                          {" | "}
-                          Brand identities: {String(match.evidence?.brand_identity_count ?? "Unknown")}
-                        </div>
-                        <div>
-                          Brand-only: {evidenceLabel(match.evidence, "brand_identity_only")}
-                          {" | "}
-                          Auto-attach eligible: {evidenceLabel(match.evidence, "auto_attach_eligible")}
-                          {" | "}
-                          Admin review required: {evidenceLabel(match.evidence, "requires_admin_review")}
-                        </div>
-                      </div>
-                    )}
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        marginTop: "22px",
-                        flexWrap: "wrap",
                       }}
                     >
                       <button
@@ -1248,14 +1137,17 @@ export default function AdminVenueMatchesPage() {
                         disabled={busy}
                         onClick={() => reviewMatch(match.id, true)}
                         style={{
-                          padding: "11px 18px",
+                          padding: "7px 11px",
                           border: 0,
-                          borderRadius: "10px",
+                          borderRadius: "8px",
                           cursor: busy ? "default" : "pointer",
                           fontWeight: 700,
+                          fontSize: "0.8rem",
+                          whiteSpace: "nowrap",
+                          opacity: busy ? 0.55 : 1,
                         }}
                       >
-                        {busy ? "Working..." : "Approve Match"}
+                        {busy ? "Working..." : "Approve"}
                       </button>
 
                       <button
@@ -1263,15 +1155,17 @@ export default function AdminVenueMatchesPage() {
                         disabled={busy}
                         onClick={() => reviewMatch(match.id, false)}
                         style={{
-                          padding: "11px 18px",
+                          padding: "6px 10px",
                           border: "1px solid rgba(20, 35, 45, 0.2)",
-                          borderRadius: "10px",
+                          borderRadius: "8px",
                           background: "transparent",
                           cursor: busy ? "default" : "pointer",
                           fontWeight: 700,
+                          fontSize: "0.8rem",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        Reject
+                        Deny
                       </button>
                     </div>
                   </article>
