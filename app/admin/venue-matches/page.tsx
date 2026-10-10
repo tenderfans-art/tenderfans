@@ -1175,7 +1175,7 @@ export default function AdminVenueMatchesPage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        Deny
+                        Reject
                       </button>
                     </div>
                   </article>
