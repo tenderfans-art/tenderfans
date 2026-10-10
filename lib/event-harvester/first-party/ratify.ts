@@ -1,4 +1,5 @@
 import { fetchEventbriteEventIdentity } from "./eventbrite-organizer";
+import { venueIdentityMatch } from "../venue-identity";
 
 import type { SourceDetection } from "./source-detector";
 
@@ -216,6 +217,49 @@ async function ratifyEventbrite(
           `Eventbrite venue is ${miles.toFixed(2)} miles from the TenderFans Spot`,
         ],
         error: "Eventbrite venue proximity is inconclusive.",
+      };
+    }
+
+    /*
+     * Coordinates establish proximity, not identity.
+     *
+     * Multiple Spots can legitimately share a building, organizer,
+     * or event infrastructure. A nearby but differently named
+     * Eventbrite venue therefore requires attribution review
+     * rather than automatic registration or permanent rejection.
+     */
+    const venueMatch = venueIdentityMatch({
+      spot: {
+        name: venue.name,
+        streetAddress: venue.streetAddress,
+        city: venue.city,
+        stateRegion: venue.region,
+        postalCode: venue.postalCode,
+      },
+      candidate: {
+        name: external.name ?? "",
+        streetAddress: external.streetAddress,
+        city: external.city,
+        stateRegion: external.region,
+        postalCode: external.postalCode,
+      },
+    });
+
+    if (!venueMatch.autoAttach) {
+      return {
+        status: "ratification_failed",
+        source: null,
+        evidence: [
+          ...detection.evidence,
+          `Eventbrite physical venue: "${external.name ?? "unknown"}"`,
+          `TenderFans Spot: "${venue.name}"`,
+          `Physical separation: ${miles.toFixed(3)} miles`,
+          `Venue identity score: ${venueMatch.score}`,
+          `Venue identity evidence: ${JSON.stringify(venueMatch.evidence)}`,
+          "Nearby venue requires explicit Eventbrite attribution review",
+        ],
+        error:
+          "Eventbrite physical venue identity is not sufficiently established for automatic Spot attribution.",
       };
     }
 
