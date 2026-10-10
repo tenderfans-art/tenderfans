@@ -1013,7 +1013,9 @@ export default function AdminVenueMatchesPage() {
                     : null;
                 const verifiedUrl = isRedirect
                   ? match.provider_place_id
-                  : null;
+                  : match.provider === "ticketmaster"
+                    ? `https://www.ticketmaster.com/venue/${encodeURIComponent(match.provider_place_id)}`
+                    : null;
 
                 return (
                   <article
