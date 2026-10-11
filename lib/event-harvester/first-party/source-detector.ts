@@ -1957,6 +1957,37 @@ export async function detectFirstPartySources(
     });
   }
 
+  /*
+   * A static HTTP response may look normal while an interactive browser
+   * receives an access challenge. Verify unresolved No Source results
+   * once, without treating browser failures as challenge evidence.
+   *
+   * External redirects have already been handled earlier in this
+   * function; this does not authorize or follow a new Spot identity.
+   */
+  if (detections.length === 0 && encounteredChallenges.length === 0) {
+    try {
+      const browserEvidence = await fetchBrowserEvidence(homepage.url);
+
+      pagesInspected += 1;
+
+      const browserChallenge = identifyAccessChallenge(
+        browserEvidence.finalUrl,
+        browserEvidence.html,
+        browserEvidence.status,
+      );
+
+      if (
+        browserChallenge.length > 0 &&
+        sameSite(homepage.url, browserEvidence.finalUrl)
+      ) {
+        encounteredChallenges.push(...browserChallenge);
+      }
+    } catch {
+      // Browser verification failure does not establish a challenge.
+    }
+  }
+
   const challengeOnly =
     encounteredChallenges.length > 0 &&
     !detections.some(
