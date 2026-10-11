@@ -425,39 +425,16 @@ export async function GET(request: Request) {
           );
         }
 
-        if (
-          canAutoApprove &&
-          existingMatch?.status !== "rejected"
-        ) {
-          const { error: approveError } = await supabase.rpc(
-            "auto_approve_event_harvest_venue_match",
-            { p_match_id: matchId },
-          );
-
-          if (approveError) {
-            throw new Error(
-              `Could not auto-approve website redirect: ${approveError.message}`,
-            );
-          }
-
-          // Continue the same scan with the newly approved identity.
-          detection = await detectFirstPartySources(
-            venue.website_url,
-            {
-              name: venue.name,
-              city: venue.city,
-              stateRegion: venue.state_region,
-              streetAddress: venue.street_address,
-              postalCode: venue.postal_code,
-            },
-            [
-              ...(approvedRedirectRefs ?? []).map(
-                (ref) => ref.provider_place_id,
-              ),
-              destination.href,
-            ],
-          );
-        }
+        /*
+         * Cross-domain website redirects require explicit Admin approval
+         * through the existing Venue Matches workflow.
+         *
+         * Do not auto-approve a redirect based on JSON-LD identity,
+         * even when its venue identity is a strong match.
+         *
+         * Approved redirects are already loaded from venue_external_refs
+         * and passed to detectFirstPartySources at the start of each scan.
+         */
       }
 
       const calendarImageCandidate =
