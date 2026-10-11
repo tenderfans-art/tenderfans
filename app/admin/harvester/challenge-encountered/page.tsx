@@ -9,10 +9,6 @@ type Finding = {
   venue_name: string;
   website_url: string;
   fetched_url: string | null;
-  detector_status: string;
-  evidence: string[] | null;
-  error: string | null;
-  last_seen_at: string;
 };
 
 export default function ChallengeEncounteredPage() {
@@ -83,37 +79,25 @@ export default function ChallengeEncounteredPage() {
                 <div
                   key={row.id}
                   style={{
-                    padding: "14px",
+                    padding: "14px 18px",
                     border: "1px solid rgba(20,35,45,.12)",
                     borderRadius: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "12px",
                   }}
                 >
                   <strong>{row.venue_name}</strong>
 
-                  <p style={{ margin: "6px 0" }}>
-                    {row.evidence?.join(" · ") ||
-                      row.error ||
-                      row.detector_status}
-                  </p>
-
                   <a
-                    href={row.website_url}
+                    href={row.fetched_url || row.website_url}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Open Website
+                    Open Challenged Page ↗
                   </a>
-
-                  <span
-                    style={{
-                      marginLeft: "16px",
-                      opacity: 0.65,
-                    }}
-                  >
-                    {new Date(
-                      row.last_seen_at,
-                    ).toLocaleString()}
-                  </span>
                 </div>
               ))}
             </div>
