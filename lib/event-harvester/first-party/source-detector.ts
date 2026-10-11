@@ -1778,7 +1778,8 @@ export async function detectFirstPartySources(
               detection.sourceType ===
                 "sociablekit_facebook_events" ||
               detection.sourceType ===
-                "google_calendar",
+                "google_calendar" ||
+                "ticket_spot_events",
           )
         ) {
           break;
@@ -1805,7 +1806,8 @@ export async function detectFirstPartySources(
           detection.sourceType ===
             "sociablekit_facebook_events" ||
           detection.sourceType ===
-            "google_calendar",
+            "google_calendar" ||
+            "ticket_spot_events",
       )
     ) {
       for (
