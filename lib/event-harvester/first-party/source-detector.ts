@@ -74,11 +74,13 @@ export type RedirectDestinationIdentity = {
 };
 
 export type SiteDetectionResult = {
+  challengeEvidence?: string[];
   redirectIdentities?: RedirectDestinationIdentity[];
   websiteUrl: string;
   fetchedUrl: string | null;
   status:
     | "detected"
+    | "challenge_encountered"
     | "transport_blocked"
     | "transport_failed"
     | "external_redirect"
@@ -88,6 +90,58 @@ export type SiteDetectionResult = {
   detections: SourceDetection[];
   error: string | null;
 };
+
+/** Positive access-challenge signatures only; HTTP 403 alone is insufficient. */
+function identifyAccessChallenge(
+  finalUrl: string,
+  html: string,
+  status: number | null,
+): string[] {
+  const evidence: string[] = [];
+  let path = "";
+  let host = "";
+
+  try {
+    const parsed = new URL(finalUrl);
+    path = parsed.pathname.toLowerCase();
+    host = parsed.hostname.toLowerCase();
+  } catch {
+    // HTML evidence can still identify a challenge.
+  }
+
+  if (
+    path.includes("/.well-known/sgcaptcha/") ||
+    (/<title[^>]*>\s*robot challenge screen\s*<\/title>/i.test(html) &&
+      /sgcaptcha|siteground/i.test(html))
+  ) {
+    evidence.push("Provider: SiteGround; robot challenge / sgcaptcha");
+  }
+
+  if (
+    path.startsWith("/cdn-cgi/challenge-platform/") ||
+    /<script[^>]+cdn-cgi\/challenge-platform\//i.test(html) ||
+    (/cf-chl-(?:opt|widget|token)/i.test(html) &&
+      /cloudflare|challenge-platform/i.test(html))
+  ) {
+    evidence.push("Provider: Cloudflare; challenge-platform signature");
+  }
+
+  if (
+    host === "geo.captcha-delivery.com" ||
+    host === "captcha-delivery.com" ||
+    (/datadome/i.test(html) &&
+      /captcha-delivery\.com|datadome\.co\/captcha|dd\.captcha/i.test(html))
+  ) {
+    evidence.push("Provider: DataDome; challenge delivery signature");
+  }
+
+  if (evidence.length > 0) {
+    evidence.push(`HTTP status: ${status ?? "unknown"}`);
+    evidence.push(`Final URL: ${finalUrl}`);
+  }
+
+  return evidence;
+}
 
 const USER_AGENT = "TenderFans Event Harvester/1.0";
 const RECOVERY_USER_AGENT =
@@ -1513,6 +1567,23 @@ export async function detectFirstPartySources(
     };
   }
 
+  const homepageChallenge = identifyAccessChallenge(
+    homepage.url, homepage.html, homepage.status,
+  );
+
+  if (homepageChallenge.length > 0) {
+    return {
+      websiteUrl,
+      fetchedUrl: homepage.url,
+      status: "challenge_encountered",
+      challengeEvidence: homepageChallenge,
+      pagesInspected: 1,
+      discoveredEventPages: [],
+      detections: [],
+      error: homepageChallenge[0],
+    };
+  }
+
   if (!homepage.ok) {
     return {
       websiteUrl,
@@ -1635,6 +1706,7 @@ export async function detectFirstPartySources(
   );
 
   let pagesInspected = 1;
+  const encounteredChallenges: string[] = [];
 
   for (const link of candidateLinks) {
     const discovered = discoveredEventPages.find(
@@ -1704,6 +1776,15 @@ export async function detectFirstPartySources(
         discovered.htmlBytes = page.html.length;
       }
 
+      const pageChallenge = identifyAccessChallenge(
+        page.url, page.html, page.status,
+      );
+
+      if (pageChallenge.length > 0) {
+        encounteredChallenges.push(...pageChallenge);
+        continue;
+      }
+
       if (!page.ok) {
         continue;
       }
@@ -1754,6 +1835,15 @@ export async function detectFirstPartySources(
 
         pagesInspected += 1;
 
+        const browserChallenge = identifyAccessChallenge(
+          evidence.finalUrl, evidence.html, null,
+        );
+
+        if (browserChallenge.length > 0) {
+          encounteredChallenges.push(...browserChallenge);
+          continue;
+        }
+
         inspectPage(
           evidence.html,
           evidence.finalUrl,
@@ -1779,7 +1869,7 @@ export async function detectFirstPartySources(
                 "sociablekit_facebook_events" ||
               detection.sourceType ===
                 "google_calendar" ||
-                "ticket_spot_events",
+                detection.sourceType === "ticket_spot_events",
           )
         ) {
           break;
@@ -1807,7 +1897,7 @@ export async function detectFirstPartySources(
             "sociablekit_facebook_events" ||
           detection.sourceType ===
             "google_calendar" ||
-            "ticket_spot_events",
+            detection.sourceType === "ticket_spot_events",
       )
     ) {
       for (
@@ -1867,13 +1957,28 @@ export async function detectFirstPartySources(
     });
   }
 
+  const challengeOnly =
+    encounteredChallenges.length > 0 &&
+    !detections.some(
+      (candidate) => candidate.sourceType !== "browser_required",
+    );
+
   return {
     websiteUrl,
     fetchedUrl: homepage.url,
-    status: detections.length > 0 ? "detected" : "no_event_source",
+    status: challengeOnly
+      ? "challenge_encountered"
+      : detections.length > 0
+        ? "detected"
+        : "no_event_source",
+    challengeEvidence: challengeOnly
+      ? [...new Set(encounteredChallenges)]
+      : undefined,
     pagesInspected,
     discoveredEventPages,
-    detections,
-    error: null,
+    detections: challengeOnly ? [] : detections,
+    error: challengeOnly
+      ? "Event-source inspection encountered an access challenge"
+      : null,
   };
 }

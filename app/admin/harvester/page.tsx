@@ -29,6 +29,13 @@ const tools = [
     status: "OPEN",
   },
   {
+    title: "Challenge Encountered",
+    description:
+      "Review websites presenting verified CAPTCHA or automated-access challenges.",
+    href: "/admin/harvester/challenge-encountered",
+    status: "OPEN",
+  },
+  {
     title: "Transport Errors",
     description:
       "Review event sources blocked by transport or website-access failures.",

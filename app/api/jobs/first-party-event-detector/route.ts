@@ -218,6 +218,7 @@ export async function GET(request: Request) {
     calendar_image: 0,
     facebook: 0,
     browser_required: 0,
+    challenge_encountered: 0,
     transport: 0,
     no_source: 0,
   };
@@ -947,12 +948,13 @@ export async function GET(request: Request) {
        *
        * Precedence:
        * Validated -> Calendar Image -> Facebook ->
-       * Browser Required -> Transport Error -> No Sources.
+       * Browser Required -> Challenge Encountered -> Transport Error -> No Sources.
        */
       const actionableCategories = [
         "calendar_image",
         "facebook",
         "browser_required",
+        "challenge_encountered",
         "transport",
         "no_source",
       ] as const;
@@ -1068,6 +1070,31 @@ export async function GET(request: Request) {
         }
 
         bucketCounts.browser_required += 1;
+      } else if (detection.status === "challenge_encountered") {
+        const { error: findingError } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "challenge_encountered",
+            p_finding_key: "challenge_encountered",
+            p_detector_status: detection.status,
+            p_source_type: null,
+            p_website_url: detection.websiteUrl,
+            p_source_url: null,
+            p_fetched_url: detection.fetchedUrl,
+            p_confidence: "high",
+            p_evidence: detection.challengeEvidence ?? [],
+            p_error: detection.error,
+          },
+        );
+
+        if (findingError) {
+          throw new Error(
+            `Could not persist challenge finding: ${findingError.message}`,
+          );
+        }
+
+        bucketCounts.challenge_encountered += 1;
       } else if (
         detection.status === "transport_blocked" ||
         detection.status === "transport_failed"
@@ -1181,6 +1208,7 @@ export async function GET(request: Request) {
     bucketCounts.calendar_image +
     bucketCounts.facebook +
     bucketCounts.browser_required +
+    bucketCounts.challenge_encountered +
     bucketCounts.transport +
     bucketCounts.no_source;
 
@@ -1200,6 +1228,7 @@ export async function GET(request: Request) {
       calendarImage: bucketCounts.calendar_image,
       facebook: bucketCounts.facebook,
       browserRequired: bucketCounts.browser_required,
+      challengeEncountered: bucketCounts.challenge_encountered,
       transportError: bucketCounts.transport,
       noSources: bucketCounts.no_source,
       total: bucketTotal,
