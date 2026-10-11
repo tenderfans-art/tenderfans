@@ -26,6 +26,7 @@ export type DetectedSourceType =
   | "ics"
   | "wordpress_ajax_events"
   | "eventer_events"
+  | "ticket_spot_events"
   | "wordpress_event_feed"
   | "timely"
   | "facebook"
@@ -584,6 +585,31 @@ function inspectPage(
   detections: SourceDetection[],
 ) {
   const lower = html.toLowerCase();
+
+  /*
+   * Ticket Spot embeds its Wix event viewer on first-party pages.
+   * The widget loads event inventory through its authenticated
+   * runtime API. Preserve the first-party page as the source URL;
+   * the adapter obtains the session through browser execution.
+   */
+  const ticketSpotIframe =
+    /<iframe\b[^>]*\b(?:title|aria-label)\s*=\s*["']Ticket Spot["'][^>]*>/i.test(
+      html,
+    );
+
+  if (ticketSpotIframe) {
+    pushDetection(detections, {
+      sourceType: "ticket_spot_events",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Ticket Spot event viewer embedded on first-party website",
+        "Ticket Spot browser-backed events adapter available",
+      ],
+    });
+  }
 
   /*
    * EventsCalendar.co can be installed as a Wix runtime widget whose

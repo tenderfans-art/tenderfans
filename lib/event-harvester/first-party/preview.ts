@@ -21,6 +21,7 @@ import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
 import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
 import { fetchEventerEvents } from "./eventer-events";
+import { fetchTicketSpotEvents } from "./ticket-spot-events";
 import { fetchSpotHopperEvents } from "./spothopper-events";
 import { fetchFacebookEvents } from "./facebook-events";
 import { fetchCalendarImageEvents } from "./calendar-image-events";
@@ -113,7 +114,9 @@ export async function previewFirstPartySource(
 
   let events;
 
-  if (source.source_type === "google_calendar") {
+  if (source.source_type === "ticket_spot_events") {
+    events = await fetchTicketSpotEvents(source.source_url);
+  } else if (source.source_type === "google_calendar") {
     events = await fetchGoogleCalendarEvents(
       source.source_url,
     );

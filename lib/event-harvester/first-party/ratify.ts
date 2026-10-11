@@ -328,6 +328,7 @@ const directlyRatifiableSourceTypes = new Set([
   "tribe_rest",
   "next_rsc_events",
   "eventer_events",
+  "ticket_spot_events",
   "wordpress_event_feed",
   "calendar_image",
 ]);
