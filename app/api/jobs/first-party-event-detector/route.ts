@@ -443,6 +443,12 @@ export async function GET(request: Request) {
           (candidate) => candidate.sourceType === "calendar_image",
         ) ?? null;
 
+      let calendarImageOwnershipConflict: {
+        sourceUrl: string;
+        ownerId: string;
+        ownerName: string | null;
+      } | null = null;
+
       const facebookCandidate =
         detection.detections.find(
           (candidate) => candidate.sourceType === "facebook",
@@ -774,35 +780,52 @@ export async function GET(request: Request) {
            * not automatically attach an already-owned UVTix identity to
            * a different TenderFans Spot.
            */
-          if (ratification.source.sourceType === "uvtix_events") {
-            const {
-              data: existingUvTixOwners,
-              error: existingUvTixOwnerError,
-            } = await supabase
-              .from("event_harvest_sources")
-              .select("id,venue_id,name")
-              .eq("provider", "first_party")
-              .eq("external_source_id", ratification.source.externalSourceId)
-              .eq("is_enabled", true)
-              .neq("venue_id", venue.id)
-              .limit(1);
+          if (
+            ratification.source.sourceType === "uvtix_events" ||
+            ratification.source.sourceType === "calendar_image"
+          ) {
+            const sourceType = ratification.source.sourceType;
 
-            if (existingUvTixOwnerError) {
+            const { data: existingOwners, error: ownerError } =
+              await supabase
+                .from("event_harvest_sources")
+                .select("id,venue_id,name")
+                .eq("provider", "first_party")
+                .eq(
+                  "external_source_id",
+                  ratification.source.externalSourceId,
+                )
+                .eq("is_enabled", true)
+                .neq("venue_id", venue.id)
+                .limit(1);
+
+            if (ownerError) {
               throw new Error(
-                `Could not verify UVTix source ownership: ${existingUvTixOwnerError.message}`,
+                `Could not verify ${sourceType} source ownership: ${ownerError.message}`,
               );
             }
 
-            const existingUvTixOwner = existingUvTixOwners?.[0];
+            const existingOwner = existingOwners?.[0];
 
-            if (existingUvTixOwner) {
-              failed += 1;
-              failures.push({
-                venueId: venue.id,
-                name: venue.name,
-                stage: "attribution",
-                error: `UVTix source ${ratification.source.sourceUrl} is already registered to another Spot (${existingUvTixOwner.name ?? existingUvTixOwner.venue_id}).`,
-              });
+            if (existingOwner) {
+              if (sourceType === "calendar_image") {
+                calendarImageOwnershipConflict = {
+                  sourceUrl: ratification.source.sourceUrl,
+                  ownerId: existingOwner.venue_id ?? "",
+                  ownerName: existingOwner.name ?? null,
+                };
+              } else {
+                failed += 1;
+                failures.push({
+                  venueId: venue.id,
+                  name: venue.name,
+                  stage: "attribution",
+                  error: `UVTix source ${ratification.source.sourceUrl} is already registered to another Spot (${existingOwner.name ?? existingOwner.venue_id}).`,
+                });
+              }
+
+              // Never validate or register a source already owned
+              // by another Spot.
               continue;
             }
           }
@@ -997,7 +1020,39 @@ export async function GET(request: Request) {
         }
       }
 
-      if (successfullyRegistered || hasPreviouslyValidatedSource) {
+      if (calendarImageOwnershipConflict) {
+        const conflict = calendarImageOwnershipConflict;
+
+        const { error: findingError } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "calendar_image",
+            p_finding_key: "calendar_image",
+            p_detector_status: detection.status,
+            p_source_type: "calendar_image",
+            p_website_url: detection.websiteUrl,
+            p_source_url: conflict.sourceUrl,
+            p_fetched_url: detection.fetchedUrl,
+            p_confidence: calendarImageCandidate?.confidence ?? "medium",
+            p_evidence: [
+              "Calendar source ownership conflict",
+              `Registered owner: ${conflict.ownerName ?? conflict.ownerId}`,
+              `Registered owner ID: ${conflict.ownerId}`,
+              `Discovered by: ${venue.name}`,
+            ],
+            p_error: "Calendar is registered to another Spot; ownership review required.",
+          },
+        );
+
+        if (findingError) {
+          throw new Error(
+            `Could not preserve calendar ownership conflict: ${findingError.message}`,
+          );
+        }
+
+        bucketCounts.calendar_image += 1;
+      } else if (successfullyRegistered || hasPreviouslyValidatedSource) {
         bucketCounts.validated += 1;
       } else if (calendarImageCandidate) {
         const { error: findingError } = await supabase.rpc(
