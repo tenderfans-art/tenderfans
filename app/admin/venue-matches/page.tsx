@@ -288,6 +288,14 @@ export default function AdminVenueMatchesPage() {
     id: string,
     approve: boolean,
   ) {
+    const event = calendarEvents.find((item) => item.id === id);
+    const venueId = selectedSpot[id] || event?.venue_id || "";
+
+    if (approve && !venueId) {
+      setMessage("Select a Spot before approving this event.");
+      return;
+    }
+
     setReviewingId(id);
     setMessage("");
 
@@ -296,6 +304,7 @@ export default function AdminVenueMatchesPage() {
       {
         p_candidate_id: id,
         p_approve: approve,
+        p_venue_id: approve ? venueId : null,
       },
     );
 
@@ -349,7 +358,7 @@ export default function AdminVenueMatchesPage() {
   const spotChoices = useMemo(() => {
     const result: Record<string, Spot[]> = {};
 
-    for (const item of unresolved) {
+    for (const item of [...unresolved, ...calendarEvents]) {
       const term = (spotSearch[item.id] || "").trim().toLowerCase();
 
       const filtered = term
@@ -362,11 +371,22 @@ export default function AdminVenueMatchesPage() {
           )
         : spots;
 
-      result[item.id] = filtered.slice(0, 5);
+      const selectedId =
+        selectedSpot[item.id] ||
+        ("venue_id" in item ? item.venue_id : null);
+
+      const selected = selectedId
+        ? spots.find((spot) => spot.id === selectedId)
+        : null;
+
+      result[item.id] = [
+        ...(selected ? [selected] : []),
+        ...filtered.filter((spot) => spot.id !== selectedId).slice(0, 5),
+      ];
     }
 
     return result;
-  }, [spots, unresolved, spotSearch]);
+  }, [spots, unresolved, calendarEvents, spotSearch, selectedSpot]);
 
   useEffect(() => {
     loadMatches();
@@ -804,6 +824,9 @@ export default function AdminVenueMatchesPage() {
 
               {calendarEvents.map((item) => {
                 const busy = reviewingId === item.id;
+                const choices = spotChoices[item.id] || [];
+                const chosenVenueId =
+                  selectedSpot[item.id] || item.venue_id || "";
                 const evidence = item.raw_payload?.eventEvidence;
                 const imageUrl = item.raw_payload?.imageUrl;
 
@@ -910,6 +933,8 @@ export default function AdminVenueMatchesPage() {
                       </strong>
                     </div>
 
+
+
                     <div
                       style={{
                         fontSize: "0.82rem",
@@ -1000,6 +1025,69 @@ export default function AdminVenueMatchesPage() {
                     >
                       Reject
                     </button>
+
+                    <div
+                      style={{
+                        gridColumn: "1 / -1",
+                        gridRow: "2",
+                        display: "flex",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: "10px",
+                        padding: "4px 0",
+                      }}
+                    >
+                      <label
+                        htmlFor={`calendar-spot-search-${item.id}`}
+                        style={{ fontSize: "0.82rem", fontWeight: 700 }}
+                      >
+                        Assign event to Spot
+                      </label>
+
+                      <input
+                        id={`calendar-spot-search-${item.id}`}
+                        type="search"
+                        value={spotSearch[item.id] || ""}
+                        onChange={(event) =>
+                          setSpotSearch((current) => ({
+                            ...current,
+                            [item.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="Search Spots..."
+                        aria-label={`Search Spots for ${item.raw_title}`}
+                        style={{
+                          width: "180px",
+                          padding: "7px 9px",
+                          fontSize: "0.82rem",
+                        }}
+                      />
+
+                      <select
+                        value={chosenVenueId}
+                        onChange={(event) =>
+                          setSelectedSpot((current) => ({
+                            ...current,
+                            [item.id]: event.target.value,
+                          }))
+                        }
+                        aria-label={`Selected Spot for ${item.raw_title}`}
+                        style={{
+                          width: "240px",
+                          maxWidth: "100%",
+                          padding: "7px 9px",
+                          fontSize: "0.82rem",
+                        }}
+                      >
+                        <option value="">Select Spot...</option>
+                        {choices.map((spot) => (
+                          <option key={spot.id} value={spot.id}>
+                            {spot.name}
+                            {spot.city ? ` — ${spot.city}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 );
               })}

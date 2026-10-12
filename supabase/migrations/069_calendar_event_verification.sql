@@ -75,6 +75,7 @@ begin
   join public.venues v
     on v.id = c.venue_id
   where c.status = 'needs_review'
+    and c.canonical_event_id is null
     and s.provider = 'first_party'
     and s.source_type = 'calendar_image'
     and s.is_enabled = true
@@ -113,7 +114,8 @@ to authenticated;
 
 create or replace function public.admin_review_calendar_event_verification(
   p_candidate_id uuid,
-  p_approve boolean
+  p_approve boolean,
+  p_venue_id uuid
 )
 returns uuid
 language plpgsql
@@ -157,6 +159,10 @@ begin
     raise exception 'Enabled calendar-image first-party source not found';
   end if;
 
+  if candidate_record.canonical_event_id is not null then
+    raise exception 'Calendar event already has a canonical event';
+  end if;
+
   if candidate_record.status <> 'needs_review' then
     raise exception
       'Calendar event candidate cannot be reviewed from status %',
@@ -171,6 +177,20 @@ begin
     raise exception 'Candidate does not require calendar-event verification';
   end if;
 
+  if p_approve then
+    if p_venue_id is null then
+      raise exception 'Select a Spot before approving this event';
+    end if;
+
+    if not exists (
+      select 1
+      from public.venues v
+      where v.id = p_venue_id
+    ) then
+      raise exception 'Selected Spot is not active';
+    end if;
+  end if;
+
   if not p_approve then
     update public.event_harvest_candidates
     set
@@ -182,6 +202,12 @@ begin
 
     return null;
   end if;
+
+  update public.event_harvest_candidates
+  set
+    venue_id = p_venue_id,
+    updated_at = now()
+  where id = p_candidate_id;
 
   canonical_event_id :=
     public.graduate_harvest_candidate(
@@ -228,6 +254,36 @@ begin
 
   return canonical_event_id;
 end;
+$$;
+
+revoke all
+on function public.admin_review_calendar_event_verification(uuid, boolean, uuid)
+from public;
+
+grant execute
+on function public.admin_review_calendar_event_verification(uuid, boolean, uuid)
+to authenticated;
+
+
+-- Preserve existing two-argument callers.
+create or replace function public.admin_review_calendar_event_verification(
+  p_candidate_id uuid,
+  p_approve boolean
+)
+returns uuid
+language sql
+security definer
+set search_path = public
+as $$
+  select public.admin_review_calendar_event_verification(
+    p_candidate_id,
+    p_approve,
+    (
+      select c.venue_id
+      from public.event_harvest_candidates c
+      where c.id = p_candidate_id
+    )
+  );
 $$;
 
 revoke all
