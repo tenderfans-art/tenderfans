@@ -837,10 +837,16 @@ export async function GET(request: Request) {
           validated += 1;
 
           const registration =
-            ratification.source.sourceType === "facebook_events"
+            (
+              ratification.source.sourceType === "facebook_events" ||
+              ratification.source.sourceType === "woocommerce_events"
+            )
               ? await supabase.rpc("upsert_global_first_party_event_source", {
                   p_source_type: ratification.source.sourceType,
-                  p_name: `${venue.name} Facebook events`,
+                  p_name:
+                    ratification.source.sourceType === "woocommerce_events"
+                      ? `${new URL(ratification.source.sourceUrl).hostname} events`
+                      : `${venue.name} Facebook events`,
                   p_source_url: ratification.source.sourceUrl,
                   p_external_source_id: ratification.source.externalSourceId,
                   p_config: ratification.source.config,

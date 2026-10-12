@@ -278,7 +278,10 @@ export async function resolveFirstPartyAttribution(
       };
     }
 
-    if (event.sourceType === "facebook_events") {
+    if (
+      event.sourceType === "facebook_events" ||
+      event.sourceType === "woocommerce_events"
+    ) {
       return {
         status: "unresolved",
         rawVenueName: event.venueName?.trim() || null,

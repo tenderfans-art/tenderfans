@@ -32,7 +32,10 @@ begin
   normalized_source_url := trim(p_source_url);
   normalized_external_source_id := trim(p_external_source_id);
 
-  if normalized_source_type <> 'facebook_events' then
+  if normalized_source_type not in (
+    'facebook_events',
+    'woocommerce_events'
+  ) then
     raise exception
       'Global first-party source type is not supported: %',
       normalized_source_type;

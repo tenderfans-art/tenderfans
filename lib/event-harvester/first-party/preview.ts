@@ -19,6 +19,7 @@ import { fetchUvTixEvents } from "./uvtix-events";
 import { fetchSchemaOrgEvents } from "./schema-org-events";
 import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
 import { fetchShopifyEvents } from "./shopify-events";
+import { fetchWooCommerceEvents } from "./woocommerce-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
 import { fetchEventerEvents } from "./eventer-events";
 import { fetchTicketSpotEvents } from "./ticket-spot-events";
@@ -94,7 +95,10 @@ export async function loadFirstPartySource(
     throw new Error("Enabled first-party event source was not found.");
   }
 
-  if (!data.venue_id && data.source_type !== "facebook_events") {
+  if (
+    !data.venue_id &&
+    !["facebook_events", "woocommerce_events"].includes(data.source_type)
+  ) {
     throw new Error("First-party source is not attached to a TenderFans Spot.");
   }
 
@@ -239,6 +243,15 @@ export async function previewFirstPartySource(
     events = await fetchShopifyEvents(source.source_url, {
       timeZone,
       weeksForward,
+    });
+  } else if (source.source_type === "woocommerce_events") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    events = await fetchWooCommerceEvents(source.source_url, {
+      timeZone,
     });
   } else if (source.source_type === "uvtix_events") {
     const timeZone =

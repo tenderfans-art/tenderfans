@@ -11,6 +11,7 @@ export type DetectedSourceType =
   | "schema_org_events"
   | "pwpc_events_calendar"
   | "shopify_events"
+  | "woocommerce_events"
   | "calendar_image"
   | "eventscalendar_events"
   | "sociablekit_facebook_events"
@@ -890,6 +891,44 @@ function inspectPage(
       }
     } catch {
       // Preserve other detector evidence if URL parsing fails.
+    }
+  }
+
+  /*
+   * WooCommerce event publishers expose products through the
+   * public Store API. Require both a WooCommerce signature and
+   * an event-oriented product/category surface.
+   *
+   * A generic WooCommerce shop is not an event source.
+   */
+  if (
+    /woocommerce|wc-block-|wp-json\/wc\/store/i.test(html) &&
+    (
+      /\/product-category\/[^"'<>?\s]*(?:event|dinner|comedy|music|show|concert|ticket)/i.test(pageUrl) ||
+      /\/[^/?#]*(?:event|reservation|ticket)[^/?#]*\/?$/i.test(pageUrl)
+    )
+  ) {
+    try {
+      const page = new URL(pageUrl);
+      const feed = new URL(
+        "/wp-json/wc/store/v1/products",
+        page.origin,
+      );
+
+      pushDetection(detections, {
+        sourceType: "woocommerce_events",
+        url: feed.toString(),
+        confidence: "high",
+        adapterAvailable: true,
+        supported: true,
+        evidence: [
+          "WooCommerce storefront signature",
+          "Event-oriented product surface",
+          "Public WooCommerce Store API",
+        ],
+      });
+    } catch {
+      // Preserve other detection evidence.
     }
   }
 
