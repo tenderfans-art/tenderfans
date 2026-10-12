@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type Finding = {
@@ -15,52 +15,116 @@ type Finding = {
   last_seen_at: string;
 };
 
+type Spot = {
+  id: string;
+  name: string;
+};
+
 export default function CalendarImagesPage() {
   const [rows, setRows] = useState<Finding[]>([]);
+  const [spots, setSpots] = useState<Spot[]>([]);
+  const [selectedSpot, setSelectedSpot] = useState<Record<string, string>>({});
+  const [spotSearch, setSpotSearch] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const load = useCallback(async () => {
+    const [findingsResult, spotsResult] = await Promise.all([
+      supabase.rpc("admin_event_harvest_calendar_image_findings"),
+      supabase.rpc("admin_list_spots"),
+    ]);
 
-    async function load() {
-      const { data, error: rpcError } = await supabase.rpc(
-        "admin_event_harvest_calendar_image_findings",
+    if (findingsResult.error || spotsResult.error) {
+      setError(
+        findingsResult.error?.message ??
+          spotsResult.error?.message ??
+          "Unable to load calendar source review."
       );
-
-      if (!active) return;
-
-      if (rpcError) {
-        setError(rpcError.message);
-      } else {
-        setRows((data ?? []) as Finding[]);
-      }
-
       setLoading(false);
+      return;
     }
 
-    void load();
+    const findings = (findingsResult.data ?? []) as Finding[];
+    setRows(findings);
+    setSpots((spotsResult.data ?? []) as Spot[]);
+    setError(null);
 
-    return () => {
-      active = false;
-    };
+    setSelectedSpot((current) => {
+      const next = { ...current };
+      for (const finding of findings) {
+        if (!(finding.id in next)) {
+          next[finding.id] = finding.venue_id;
+        }
+      }
+      return next;
+    });
+
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function review(finding: Finding, approve: boolean) {
+    const venueId = selectedSpot[finding.id] ?? finding.venue_id;
+
+    if (approve && !venueId) {
+      setError("Select a Spot before approval.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        approve
+          ? `Approve this calendar for the selected Spot?`
+          : `Reject this calendar source?`
+      )
+    ) {
+      return;
+    }
+
+    setBusyId(finding.id);
+    setError(null);
+    setMessage("");
+
+    const { error: reviewError } = await supabase.rpc(
+      "admin_review_calendar_image_source",
+      {
+        p_finding_id: finding.id,
+        p_approve: approve,
+        p_venue_id: approve ? venueId : null,
+      }
+    );
+
+    if (reviewError) {
+      setError(reviewError.message);
+    } else {
+      setMessage(
+        approve
+          ? "Calendar source approved and registered."
+          : "Calendar source rejected."
+      );
+      await load();
+    }
+
+    setBusyId(null);
+  }
 
   return (
     <main className="flow-page">
       <div className="shell">
         <section
           className="flow-card"
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-          }}
+          style={{ maxWidth: 1200, margin: "0 auto" }}
         >
           <Link
             href="/admin/harvester"
             style={{
               display: "inline-block",
-              marginBottom: "22px",
+              marginBottom: 22,
               color: "inherit",
             }}
           >
@@ -69,82 +133,182 @@ export default function CalendarImagesPage() {
 
           <div className="eyebrow">EVENT HARVESTER</div>
 
-          <h1 style={{ marginBottom: "8px" }}>Calendar Image Adapter</h1>
+          <h1 style={{ marginBottom: 8 }}>
+            Calendar Image Source Review
+          </h1>
 
-          <p
-            className="lead-copy"
-            style={{
-              marginTop: 0,
-              marginBottom: "28px",
-            }}
-          >
-            Calendar-image sources detected automatically and awaiting adapter
-            support.
+          <p className="lead-copy" style={{ marginBottom: 28 }}>
+            Review each discovered calendar independently. Select the
+            correct Spot before approving its source. Calendar parsing
+            begins only after source registration.
           </p>
+
+          {error && (
+            <p role="alert" style={{ color: "#a22" }}>
+              {error}
+            </p>
+          )}
+
+          {message && <p role="status">{message}</p>}
 
           {loading ? (
             <p>Loading findings...</p>
-          ) : error ? (
-            <p>Unable to load calendar-image findings: {error}</p>
           ) : rows.length === 0 ? (
-            <p>No active calendar-image findings.</p>
+            <p>No pending calendar-image sources.</p>
           ) : (
-            <div style={{ display: "grid", gap: "5px" }}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "minmax(260px,2fr) 110px 140px 190px",
-                  gap: "10px",
-                  padding: "0 10px",
-                  fontSize: ".66rem",
-                  fontWeight: 800,
-                  letterSpacing: ".08em",
-                  textTransform: "uppercase",
-                  opacity: 0.55,
-                }}
-              >
-                <span>Spot</span>
-                <span>Confidence</span>
-                <span>Source</span>
-                <span>Last Seen</span>
-              </div>
-              {rows.map((row) => (
-                <div
-                  key={row.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "minmax(260px,2fr) 110px 140px 190px",
-                    gap: "10px",
-                    alignItems: "center",
-                    padding: "7px 10px",
-                    border: "1px solid rgba(20,35,45,.12)",
-                    borderRadius: "9px",
-                    background: "rgba(255,255,255,.9)",
-                    fontSize: ".84rem",
-                  }}
-                >
-                  <strong
+            <div style={{ display: "grid", gap: 14 }}>
+              {rows.map((finding) => {
+                const search = (
+                  spotSearch[finding.id] ?? ""
+                ).toLowerCase().trim();
+
+                const choices = spots.filter((spot) =>
+                  spot.name.toLowerCase().includes(search)
+                );
+
+                const currentSpot =
+                  selectedSpot[finding.id] ?? finding.venue_id;
+
+                const busy = busyId !== null;
+
+                return (
+                  <div
+                    key={finding.id}
                     style={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      border: "1px solid rgba(20,35,45,.14)",
+                      borderRadius: 12,
+                      padding: 18,
+                      background: "rgba(255,255,255,.9)",
                     }}
                   >
-                    {row.venue_name}
-                  </strong>
-                  <span>{row.confidence ?? "unknown"}</span>
-                  <a
-                    href={row.source_url ?? row.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open Calendar
-                  </a>
-                  <span style={{ opacity: 0.65 }}>
-                    {new Date(row.last_seen_at).toLocaleString()}
-                  </span>
-                </div>
-              ))}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div>
+                        <strong>{finding.venue_name}</strong>
+                        <p style={{ margin: "5px 0", fontSize: ".85rem" }}>
+                          Detected for this Spot
+                        </p>
+                      </div>
+                      <div style={{ fontSize: ".85rem" }}>
+                        Confidence: {finding.confidence ?? "unknown"}
+                      </div>
+                    </div>
+
+                    <p style={{ overflowWrap: "anywhere" }}>
+                      <a
+                        href={finding.source_url ?? finding.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {finding.source_url ?? finding.website_url}
+                      </a>
+                    </p>
+
+                    <p style={{ fontSize: ".8rem", opacity: 0.65 }}>
+                      Last seen:{" "}
+                      {new Date(finding.last_seen_at).toLocaleString()}
+                    </p>
+
+                    <label
+                      htmlFor={`search-${finding.id}`}
+                      style={{ display: "block", marginTop: 14 }}
+                    >
+                      Search Spots
+                    </label>
+
+                    <input
+                      id={`search-${finding.id}`}
+                      type="search"
+                      value={spotSearch[finding.id] ?? ""}
+                      onChange={(event) =>
+                        setSpotSearch((current) => ({
+                          ...current,
+                          [finding.id]: event.target.value,
+                        }))
+                      }
+                      placeholder="Search by Spot name"
+                      disabled={busy}
+                      style={{
+                        width: "100%",
+                        padding: 10,
+                        marginTop: 6,
+                        marginBottom: 10,
+                      }}
+                    />
+
+                    <label
+                      htmlFor={`spot-${finding.id}`}
+                      style={{ display: "block" }}
+                    >
+                      Assign source to Spot
+                    </label>
+
+                    <select
+                      id={`spot-${finding.id}`}
+                      value={currentSpot}
+                      onChange={(event) =>
+                        setSelectedSpot((current) => ({
+                          ...current,
+                          [finding.id]: event.target.value,
+                        }))
+                      }
+                      disabled={busy}
+                      style={{
+                        width: "100%",
+                        padding: 10,
+                        marginTop: 6,
+                        marginBottom: 14,
+                      }}
+                    >
+                      {!choices.some((spot) => spot.id === currentSpot) &&
+                        currentSpot && (
+                          <option value={currentSpot}>
+                            {spots.find((spot) => spot.id === currentSpot)
+                              ?.name ?? finding.venue_name}
+                          </option>
+                        )}
+
+                      {choices.map((spot) => (
+                        <option key={spot.id} value={spot.id}>
+                          {spot.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        disabled={busy || !currentSpot}
+                        onClick={() => void review(finding, true)}
+                      >
+                        {busyId === finding.id
+                          ? "Processing..."
+                          : "Approve Source"}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void review(finding, false)}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>

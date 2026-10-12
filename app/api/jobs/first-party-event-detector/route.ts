@@ -740,6 +740,33 @@ export async function GET(request: Request) {
           }
         }
 
+        if (candidate.sourceType === "calendar_image") {
+          const { error: calendarFindingError } = await supabase.rpc(
+            "upsert_event_harvest_detector_finding",
+            {
+              p_venue_id: venue.id,
+              p_category: "calendar_image",
+              p_finding_key: `calendar_image:${candidate.url}`,
+              p_detector_status: detection.status,
+              p_source_type: candidate.sourceType,
+              p_website_url: detection.websiteUrl,
+              p_source_url: candidate.url,
+              p_fetched_url: detection.fetchedUrl,
+              p_confidence: candidate.confidence,
+              p_evidence: candidate.evidence,
+              p_error: detection.error,
+            },
+          );
+
+          if (calendarFindingError) {
+            throw new Error(
+              `Could not persist calendar-image finding: ${calendarFindingError.message}`,
+            );
+          }
+
+          continue;
+        }
+
         if (!candidate.adapterAvailable) {
           unsupported += 1;
           continue;
@@ -921,27 +948,6 @@ export async function GET(request: Request) {
            * independent first-party source even when the same Spot
            * also has structured event sources.
            */
-          if (candidate.sourceType === "calendar_image") {
-            const { error: calendarImageResolutionError } = await supabase.rpc(
-              "resolve_event_harvest_detector_findings",
-              {
-                p_venue_id: venue.id,
-                p_category: "calendar_image",
-              },
-            );
-
-            if (calendarImageResolutionError) {
-              throw new Error(
-                `Could not resolve calendar-image findings after source registration: ${calendarImageResolutionError.message}`,
-              );
-            }
-          }
-
-          /*
-           * A successfully registered Facebook adapter is no longer
-           * actionable discovery work. Resolve the Facebook finding
-           * after registration succeeds.
-           */
           if (candidate.sourceType === "facebook") {
             const { error: facebookResolutionError } = await supabase.rpc(
               "resolve_event_harvest_detector_findings",
@@ -980,7 +986,6 @@ export async function GET(request: Request) {
        * Browser Required -> Challenge Encountered -> Transport Error -> No Sources.
        */
       const actionableCategories = [
-        "calendar_image",
         "facebook",
         "browser_required",
         "challenge_encountered",
@@ -1020,65 +1025,8 @@ export async function GET(request: Request) {
         }
       }
 
-      if (calendarImageOwnershipConflict) {
-        const conflict = calendarImageOwnershipConflict;
-
-        const { error: findingError } = await supabase.rpc(
-          "upsert_event_harvest_detector_finding",
-          {
-            p_venue_id: venue.id,
-            p_category: "calendar_image",
-            p_finding_key: "calendar_image",
-            p_detector_status: detection.status,
-            p_source_type: "calendar_image",
-            p_website_url: detection.websiteUrl,
-            p_source_url: conflict.sourceUrl,
-            p_fetched_url: detection.fetchedUrl,
-            p_confidence: calendarImageCandidate?.confidence ?? "medium",
-            p_evidence: [
-              "Calendar source ownership conflict",
-              `Registered owner: ${conflict.ownerName ?? conflict.ownerId}`,
-              `Registered owner ID: ${conflict.ownerId}`,
-              `Discovered by: ${venue.name}`,
-            ],
-            p_error: "Calendar is registered to another Spot; ownership review required.",
-          },
-        );
-
-        if (findingError) {
-          throw new Error(
-            `Could not preserve calendar ownership conflict: ${findingError.message}`,
-          );
-        }
-
-        bucketCounts.calendar_image += 1;
-      } else if (successfullyRegistered || hasPreviouslyValidatedSource) {
+      if (successfullyRegistered || hasPreviouslyValidatedSource) {
         bucketCounts.validated += 1;
-      } else if (calendarImageCandidate) {
-        const { error: findingError } = await supabase.rpc(
-          "upsert_event_harvest_detector_finding",
-          {
-            p_venue_id: venue.id,
-            p_category: "calendar_image",
-            p_finding_key: "calendar_image",
-            p_detector_status: detection.status,
-            p_source_type: calendarImageCandidate.sourceType,
-            p_website_url: detection.websiteUrl,
-            p_source_url: calendarImageCandidate.url,
-            p_fetched_url: detection.fetchedUrl,
-            p_confidence: calendarImageCandidate.confidence,
-            p_evidence: calendarImageCandidate.evidence,
-            p_error: detection.error,
-          },
-        );
-
-        if (findingError) {
-          throw new Error(
-            `Could not persist final calendar-image finding: ${findingError.message}`,
-          );
-        }
-
-        bucketCounts.calendar_image += 1;
       } else if (facebookCandidate) {
         const { error: findingError } = await supabase.rpc(
           "upsert_event_harvest_detector_finding",
