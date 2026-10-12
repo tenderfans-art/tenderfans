@@ -1196,14 +1196,37 @@ export async function GET(request: Request) {
     }
     };
 
-    if (recoveryMode) {
-      const proxyUrl = process.env.TENDERFANS_TRANSPORT_PROXY_URL;
+    /*
+     * Approved cross-domain redirects may require the existing
+     * transport-recovery proxy on every scan, not only while a
+     * transport finding remains unresolved.
+     *
+     * Preserve venue-scoped redirect approval and the existing
+     * transport-recovery queue eligibility rules.
+     */
+    const { data: approvedTransportRedirects, error: approvedTransportError } =
+      await supabase
+        .from("venue_external_refs")
+        .select("provider_place_id")
+        .eq("venue_id", venue.id)
+        .eq("provider", "website_redirect")
+        .limit(1);
 
-      if (!proxyUrl) {
-        throw new Error("Transport recovery proxy is not configured.");
-      }
+    if (approvedTransportError) {
+      throw new Error(
+        `Could not inspect approved website redirects: ${approvedTransportError.message}`,
+      );
+    }
 
+    const needsRecoveryTransport =
+      recoveryMode || (approvedTransportRedirects?.length ?? 0) > 0;
+
+    const proxyUrl = process.env.TENDERFANS_TRANSPORT_PROXY_URL;
+
+    if (needsRecoveryTransport && proxyUrl) {
       await runWithTransportRecovery(proxyUrl, processVenue);
+    } else if (recoveryMode) {
+      throw new Error("Transport recovery proxy is not configured.");
     } else {
       await processVenue();
     }
