@@ -3,7 +3,10 @@ import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recove
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-import { detectFirstPartySources } from "@/lib/event-harvester/first-party/source-detector";
+import {
+  detectFirstPartySources,
+  runWithPreferredFirstPartyProxy,
+} from "@/lib/event-harvester/first-party/source-detector";
 
 import { ratifyDetectedSource } from "@/lib/event-harvester/first-party/ratify";
 
@@ -298,6 +301,33 @@ export async function GET(request: Request) {
         );
       }
 
+      const venueIdentity = {
+        name: venue.name,
+        streetAddress: venue.street_address,
+        city: venue.city,
+        region: venue.state_region,
+        postalCode: venue.postal_code,
+        country: venue.country_code,
+        latitude: venue.latitude,
+        longitude: venue.longitude,
+      };
+
+      const approvedRedirectUrls =
+        (approvedRedirectRefs ?? []).map(
+          (ref) => ref.provider_place_id,
+        );
+
+      const validatedProbes = new Map<
+        string,
+        {
+          ratification: Awaited<ReturnType<typeof ratifyDetectedSource>>;
+          validation: Awaited<ReturnType<typeof validateFirstPartySource>>;
+        }
+      >();
+
+      const candidateKey = (sourceType: string, url: string) =>
+        JSON.stringify([sourceType, url]);
+
       let detection = await detectFirstPartySources(
         venue.website_url,
         {
@@ -311,6 +341,170 @@ export async function GET(request: Request) {
           (ref) => ref.provider_place_id,
         ),
       );
+
+      /*
+       * Complete direct source validation before writing findings.
+       *
+       * Only a genuinely validated, safely attributable source prevents
+       * Vultr fallback. Empty event inventory still counts as validated.
+       * No source is registered during this preliminary evaluation.
+       */
+      let directSourceValidated = false;
+
+      if (detection.status !== "external_redirect") {
+        for (const candidate of detection.detections) {
+          if (
+            !candidate.adapterAvailable ||
+            candidate.sourceType === "calendar_image" ||
+            candidate.sourceType === "html_error" ||
+            candidate.sourceType === "browser_required"
+          ) {
+            continue;
+          }
+
+          try {
+            const ratification = await ratifyDetectedSource(
+              candidate,
+              venueIdentity,
+            );
+
+            if (
+              ratification.status !== "ratified" ||
+              !ratification.source
+            ) {
+              continue;
+            }
+
+            /*
+             * Preserve the existing cross-Spot UVTix ownership rule
+             * before allowing a direct source to suppress recovery.
+             */
+            if (ratification.source.sourceType === "uvtix_events") {
+              const { data: owners, error: ownerError } = await supabase
+                .from("event_harvest_sources")
+                .select("id")
+                .eq("provider", "first_party")
+                .eq(
+                  "external_source_id",
+                  ratification.source.externalSourceId,
+                )
+                .eq("is_enabled", true)
+                .neq("venue_id", venue.id)
+                .limit(1);
+
+              if (ownerError) throw new Error(ownerError.message);
+              if ((owners?.length ?? 0) > 0) continue;
+            }
+
+            const probe: FirstPartySource = {
+              id: `probe:${venue.id}`,
+              provider: "first_party",
+              source_type: ratification.source.sourceType,
+              name: `${venue.name} official events`,
+              source_url: ratification.source.sourceUrl,
+              external_source_id: ratification.source.externalSourceId,
+              venue_id: venue.id,
+              is_enabled: true,
+              trust_level: "trusted",
+              config: ratification.source.config,
+              bootstrapped_at: null,
+            };
+
+            const validation = await validateFirstPartySource(probe);
+
+            validatedProbes.set(
+              candidateKey(candidate.sourceType, candidate.url),
+              { ratification, validation },
+            );
+
+            if (validation.status === "validated") {
+              directSourceValidated = true;
+            }
+          } catch {
+            // The normal source loop records candidate-level failures.
+            // An unsuccessful direct probe must not suppress fallback.
+          }
+        }
+      }
+
+      /*
+       * One immediate Vultr discovery attempt, within this Spot's
+       * processing cycle. Never bypass unapproved redirect review.
+       */
+      if (
+        !directSourceValidated &&
+        detection.status !== "external_redirect"
+      ) {
+        const proxyUrl = process.env.TENDERFANS_TRANSPORT_PROXY_URL;
+
+        if (proxyUrl) {
+          const recovered = await runWithTransportRecovery(
+            proxyUrl,
+            () => runWithPreferredFirstPartyProxy(
+              () => detectFirstPartySources(
+                venue.website_url,
+                {
+                  name: venue.name,
+                  city: venue.city,
+                  stateRegion: venue.state_region,
+                  streetAddress: venue.street_address,
+                  postalCode: venue.postal_code,
+                },
+                approvedRedirectUrls,
+              ),
+            ),
+          );
+
+          /*
+           * A newly observed unapproved redirect must still enter
+           * the existing Venue Matches review workflow.
+           */
+          if (recovered.status === "external_redirect") {
+            detection = recovered;
+          } else {
+            const original = detection;
+            const merged = new Map(
+              original.detections.map((candidate) => [
+                candidateKey(candidate.sourceType, candidate.url),
+                candidate,
+              ]),
+            );
+
+            for (const candidate of recovered.detections) {
+              merged.set(
+                candidateKey(candidate.sourceType, candidate.url),
+                candidate,
+              );
+            }
+
+            const combined = [...merged.values()];
+
+            const preferred =
+              recovered.status === "detected" ||
+              (
+                original.status !== "detected" &&
+                recovered.status === "no_event_source"
+              )
+                ? recovered
+                : original;
+
+            detection = {
+              ...preferred,
+              detections: combined,
+              status: combined.length > 0
+                ? "detected"
+                : preferred.status,
+            };
+          }
+        } else {
+          failures.push({
+            venueId: venue.id,
+            name: venue.name,
+            stage: "transport_recovery",
+            error: "TENDERFANS_TRANSPORT_PROXY_URL is not configured.",
+          });
+        }
+      }
 
       /*
        * An unverified cross-domain redirect is an identity question,
@@ -835,7 +1029,12 @@ export async function GET(request: Request) {
         }
 
         try {
-          const ratification = await ratifyDetectedSource(candidate, {
+          const cachedProbe = validatedProbes.get(
+            candidateKey(candidate.sourceType, candidate.url),
+          );
+
+          const ratification = cachedProbe?.ratification ??
+            await ratifyDetectedSource(candidate, {
             name: venue.name,
             streetAddress: venue.street_address,
             city: venue.city,
@@ -933,7 +1132,9 @@ export async function GET(request: Request) {
             bootstrapped_at: null,
           };
 
-          const validation = await validateFirstPartySource(source);
+          const validation =
+            cachedProbe?.validation ??
+            await validateFirstPartySource(source);
 
           if (validation.status !== "validated") {
             failed += 1;

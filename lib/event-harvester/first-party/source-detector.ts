@@ -1,4 +1,13 @@
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+const preferredProxyContext = new AsyncLocalStorage<boolean>();
+
+export function runWithPreferredFirstPartyProxy<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  return preferredProxyContext.run(true, operation);
+}
 import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
 import { fetchBrowserEvidence } from "./browser-transport";
 import { discoverCalendarImageAssets } from "./calendar-image-assets";
@@ -1423,6 +1432,8 @@ export async function fetchHtml(
   recoveryDetail?: string;
 }> {
   const recoveryProxy = getTransportRecoveryProxy();
+  const preferProxy =
+    preferredProxyContext.getStore() === true && Boolean(recoveryProxy);
 
   async function request(
     targetUrl: string,
@@ -1460,6 +1471,45 @@ export async function fetchHtml(
       url: response.url || normalizedUrl.toString(),
       html: await response.text(),
     };
+  }
+
+  /*
+   * Source-validation fallback explicitly prefers Vultr.
+   * Ordinary detector calls retain the original direct-first path.
+   */
+  if (preferProxy && recoveryProxy) {
+    try {
+      const proxied = await request(url, recoveryProxy);
+
+      if (
+        proxied.ok &&
+        !(
+          proxied.status === 202 &&
+          (
+            proxied.html.length < 2048 ||
+            /captcha|sgcaptcha|verify you are human|checking your browser/i
+              .test(proxied.html)
+          )
+        )
+      ) {
+        return proxied;
+      }
+
+      // Keep the proxy response when direct transport cannot improve it.
+      try {
+        const directFallback = await request(url);
+        return directFallback.ok ? directFallback : {
+          ...proxied,
+          recoveryDetail:
+            `Direct fallback returned HTTP ${directFallback.status}`,
+        };
+      } catch {
+        return proxied;
+      }
+    } catch {
+      // An unavailable proxy must not discard usable direct HTML.
+      return request(url);
+    }
   }
 
   let direct: Awaited<ReturnType<typeof request>> | undefined;
