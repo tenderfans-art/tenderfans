@@ -88,8 +88,16 @@ export async function GET(request: Request) {
     const { data: findings, error: findingsError } = await supabase
       .from("event_harvest_detector_findings")
       .select("venue_id")
-      .eq("category", "transport")
-      .in("detector_status", ["transport_failed", "transport_blocked"])
+      .in("category", [
+        "calendar_image",
+        "facebook",
+        "browser_required",
+        "challenge_encountered",
+        "transport",
+        "no_source",
+        "html_error",
+      ])
+      .eq("status", "active")
       .is("resolved_at", null);
 
     if (findingsError) {
@@ -136,7 +144,7 @@ export async function GET(request: Request) {
       if (ineligibleIds.length > 0) {
         return NextResponse.json(
           {
-            error: "Some Spots are no longer in the unresolved transport recovery queue.",
+            error: "Some Spots are no longer in the unresolved detector recovery queue.",
             ineligibleIds,
           },
           { status: 409 },
