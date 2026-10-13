@@ -226,12 +226,10 @@ async function ingestEvent(
     const eventEvidence =
       event.rawPayload?.eventEvidence;
 
-    const requiresCalendarImageReview =
-      event.rawPayload?.adapter ===
-        "calendar_image" &&
-      eventEvidence &&
-      typeof eventEvidence ===
-        "object" &&
+    const requiresEvidenceReview =
+      eventEvidence !== null &&
+      typeof eventEvidence === "object" &&
+      !Array.isArray(eventEvidence) &&
       (
         eventEvidence as {
           requiresReview?: unknown;
@@ -244,7 +242,7 @@ async function ingestEvent(
       event.rawPayload?.yearRequiresConfirmation === true;
 
     const requiresEventReview =
-      Boolean(requiresCalendarImageReview) ||
+      requiresEvidenceReview ||
       requiresHtmlAnnouncementReview;
 
     if (requiresEventReview) {

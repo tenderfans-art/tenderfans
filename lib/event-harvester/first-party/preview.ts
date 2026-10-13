@@ -22,6 +22,7 @@ import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
 import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWooCommerceEvents } from "./woocommerce-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
+import { fetchWordPressCategoryEvents } from "./wordpress-category-events";
 import { fetchEventerEvents } from "./eventer-events";
 import { fetchTicketSpotEvents } from "./ticket-spot-events";
 import { fetchSpotHopperEvents } from "./spothopper-events";
@@ -302,6 +303,16 @@ export async function previewFirstPartySource(
     const timeZone = typeof source.config?.timezone === "string"
       ? source.config.timezone : "America/New_York";
     events = await fetchEventerEvents(source.source_url, { timeZone });
+  } else if (source.source_type === "wordpress_category_events") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : undefined;
+
+    events = await fetchWordPressCategoryEvents(
+      source.source_url,
+      { timeZone },
+    );
   } else if (source.source_type === "wordpress_event_feed") {
     const timeZone =
       typeof source.config?.timezone === "string"

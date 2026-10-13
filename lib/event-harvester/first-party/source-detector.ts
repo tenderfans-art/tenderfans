@@ -31,6 +31,7 @@ export type DetectedSourceType =
   | "wordpress_ajax_events"
   | "eventer_events"
   | "ticket_spot_events"
+  | "wordpress_category_events"
   | "wordpress_event_feed"
   | "timely"
   | "facebook"
