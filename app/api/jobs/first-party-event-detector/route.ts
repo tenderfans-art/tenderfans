@@ -247,7 +247,9 @@ export async function GET(request: Request) {
     processedSpots += 1;
 
     try {
-      let successfullyRegistered = false;
+      let successfullyRegisteredVenueSource = false;
+
+
       let hasPersistedBrowserRequired = false;
 
       /*
@@ -945,31 +947,15 @@ export async function GET(request: Request) {
 
           validated += 1;
 
-          const registration =
-            (
-              ratification.source.sourceType === "facebook_events" ||
-              ratification.source.sourceType === "woocommerce_events"
-            )
-              ? await supabase.rpc("upsert_global_first_party_event_source", {
-                  p_source_type: ratification.source.sourceType,
-                  p_name:
-                    ratification.source.sourceType === "woocommerce_events"
-                      ? `${new URL(ratification.source.sourceUrl).hostname} events`
-                      : `${venue.name} Facebook events`,
-                  p_source_url: ratification.source.sourceUrl,
-                  p_external_source_id: ratification.source.externalSourceId,
-                  p_config: ratification.source.config,
-                })
-              : await supabase.rpc("upsert_first_party_event_source", {
-                  p_venue_id: venue.id,
-                  p_source_type: ratification.source.sourceType,
-                  p_name: `${venue.name} official events`,
-                  p_source_url: ratification.source.sourceUrl,
-                  p_external_source_id: ratification.source.externalSourceId,
-                  p_config: ratification.source.config,
-                });
-
-          const { data: sourceId, error: registrationError } = registration;
+          const { data: sourceId, error: registrationError } =
+            await supabase.rpc("upsert_first_party_event_source", {
+              p_venue_id: venue.id,
+              p_source_type: ratification.source.sourceType,
+              p_name: `${venue.name} official events`,
+              p_source_url: ratification.source.sourceUrl,
+              p_external_source_id: ratification.source.externalSourceId,
+              p_config: ratification.source.config,
+            });
 
           if (registrationError || !sourceId) {
             throw new Error(
@@ -979,8 +965,8 @@ export async function GET(request: Request) {
           }
 
           registered += 1;
+          successfullyRegisteredVenueSource = true;
 
-          successfullyRegistered = true;
           /*
            * A successfully registered structured first-party source
            * also makes any browser-required discovery finding
@@ -1084,7 +1070,7 @@ export async function GET(request: Request) {
         }
       }
 
-      if (successfullyRegistered || hasPreviouslyValidatedSource) {
+      if (successfullyRegisteredVenueSource || hasPreviouslyValidatedSource) {
         bucketCounts.validated += 1;
       } else if (facebookCandidate) {
         const { error: findingError } = await supabase.rpc(
@@ -1221,7 +1207,7 @@ export async function GET(request: Request) {
       if (
         recoveryMode &&
         (
-          successfullyRegistered ||
+          successfullyRegisteredVenueSource ||
           hasPreviouslyValidatedSource ||
           calendarImageCandidate ||
           facebookCandidate ||

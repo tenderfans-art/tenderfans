@@ -13,6 +13,7 @@ export type FacebookEvent = {
   location: string | null;
   venueName: string | null;
   venueAddress: string | null;
+  allowSourceDefaultAttribution: boolean;
   rawPayload: Record<string, unknown>;
 };
 
@@ -484,8 +485,10 @@ async function fetchEventDetail(
       location: venueAddress,
       venueName: eventPlace?.name ?? null,
       venueAddress,
+      allowSourceDefaultAttribution: false,
       rawPayload: {
         platform: "facebook_events",
+        allowSourceDefaultAttribution: false,
         eventId: stub.id,
         pageTitle: stub.title,
         startTimestamp,

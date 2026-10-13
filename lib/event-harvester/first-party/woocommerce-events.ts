@@ -245,6 +245,7 @@ export async function fetchWooCommerceEvents(
       venueAddress: null,
       rawPayload: {
         platform: "woocommerce",
+        allowSourceDefaultAttribution: false,
         productId: id,
         dateEvidence: "explicit_year_in_product",
         venueEvidence: venueName ? "publisher_text" : "none",

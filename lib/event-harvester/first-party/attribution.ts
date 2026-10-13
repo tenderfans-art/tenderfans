@@ -278,10 +278,7 @@ export async function resolveFirstPartyAttribution(
       };
     }
 
-    if (
-      event.sourceType === "facebook_events" ||
-      event.sourceType === "woocommerce_events"
-    ) {
+    if (!event.allowSourceDefaultAttribution) {
       return {
         status: "unresolved",
         rawVenueName: event.venueName?.trim() || null,
@@ -437,10 +434,40 @@ export async function resolveFirstPartyAttribution(
       }
     }
 
+    if (!event.allowSourceDefaultAttribution) {
+      return {
+        status: "unresolved",
+        rawVenueName: event.venueName?.trim() || null,
+        rawAddress:
+          event.venueAddress?.trim() ||
+          event.location?.trim() ||
+          null,
+        publisherEvidence: null,
+        suggestedVenueId: null,
+        confidenceScore: null,
+        evidence: {
+          reason: "source_default_attribution_disallowed",
+          sourceType: event.sourceType,
+        },
+      };
+    }
+
     if (!event.venueId) {
-      throw new Error(
-        `First-party source ${event.sourceId} has no Spot for source-default attribution.`,
-      );
+      return {
+        status: "unresolved",
+        rawVenueName: event.venueName?.trim() || null,
+        rawAddress:
+          event.venueAddress?.trim() ||
+          event.location?.trim() ||
+          null,
+        publisherEvidence: null,
+        suggestedVenueId: null,
+        confidenceScore: null,
+        evidence: {
+          reason: "source_has_no_default_venue",
+          sourceType: event.sourceType,
+        },
+      };
     }
 
     return {

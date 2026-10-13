@@ -46,6 +46,7 @@ export type FirstPartyEventPreview = {
   sourceId: string;
   sourceType: string;
   venueId: string | null;
+  allowSourceDefaultAttribution: boolean;
   externalEventId: string;
   sourceUrl: string | null;
   title: string;
@@ -94,13 +95,6 @@ export async function loadFirstPartySource(
 
   if (!data) {
     throw new Error("Enabled first-party event source was not found.");
-  }
-
-  if (
-    !data.venue_id &&
-    !["facebook_events", "woocommerce_events"].includes(data.source_type)
-  ) {
-    throw new Error("First-party source is not attached to a TenderFans Spot.");
   }
 
   if (!data.source_url) {
@@ -328,6 +322,8 @@ export async function previewFirstPartySource(
     sourceId: source.id,
     sourceType: source.source_type,
     venueId: source.venue_id,
+    allowSourceDefaultAttribution:
+      event.rawPayload?.allowSourceDefaultAttribution !== false,
     externalEventId: event.externalEventId,
     sourceUrl: event.sourceUrl ?? source.source_url,
     title: event.title,
