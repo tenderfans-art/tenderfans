@@ -11,6 +11,7 @@ alter table public.event_harvest_detector_findings
       'transport',
       'facebook',
       'browser_required',
+      'challenge_encountered',
       'no_source',
       'html_error'
     )
@@ -50,7 +51,8 @@ begin
 
   if p_category not in (
     'calendar_image', 'transport', 'facebook',
-    'browser_required', 'no_source', 'html_error'
+    'browser_required', 'challenge_encountered',
+    'no_source', 'html_error'
   ) then
     raise exception 'Unsupported detector finding category';
   end if;
