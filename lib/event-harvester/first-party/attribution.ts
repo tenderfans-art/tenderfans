@@ -119,7 +119,7 @@ function publisherEvidence(
    * unresolved instead of guessing.
    */
   const match = address.match(
-    /^(.*?),\s*([^,]+),\s*([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/,
+    /^(.*?),\s*([^,]+),\s*([A-Za-z]{2})(?:\s+(\d{5}(?:-\d{4})?))?$/,
   );
 
   if (!match) {
@@ -131,7 +131,7 @@ function publisherEvidence(
     streetAddress: match[1].trim(),
     city: match[2].trim(),
     stateRegion: match[3].trim(),
-    postalCode: match[4].trim(),
+    postalCode: match[4]?.trim() ?? null,
   };
 }
 
@@ -299,6 +299,144 @@ export async function resolveFirstPartyAttribution(
       };
     }
 
+    /*
+     * An explicitly named event venue is independent of the
+     * publishing Spot, even when its postal address is missing.
+     * Preserve it for event-level venue review rather than
+     * silently assigning the publisher's source venue.
+     */
+    const namedEventVenue = event.venueName?.trim() ?? "";
+
+    if (namedEventVenue) {
+      const { data: sourceVenue, error: sourceVenueError } =
+        event.venueId
+          ? await supabase
+              .from("venues")
+              .select("name,street_address,city,state_region,postal_code")
+              .eq("id", event.venueId)
+              .maybeSingle()
+          : { data: null, error: null };
+
+      if (sourceVenueError) {
+        throw new Error(
+          `Could not inspect source Spot identity: ${sourceVenueError.message}`,
+        );
+      }
+
+      const sameNameAsSource =
+        sourceVenue?.name &&
+        normalizeVenueMatchText(sourceVenue.name) ===
+          normalizeVenueMatchText(namedEventVenue);
+
+      const suppliedLocation =
+        event.venueAddress?.trim() ||
+        event.location?.trim() ||
+        "";
+
+      const sourceAddress =
+        normalizeVenueMatchText(sourceVenue?.street_address);
+
+      const normalizedLocation =
+        normalizeVenueMatchText(suppliedLocation);
+
+      const locationAgreesWithSource =
+        !suppliedLocation ||
+        normalizedLocation ===
+          normalizeVenueMatchText(namedEventVenue) ||
+        (
+          sourceAddress !== "" &&
+          normalizedLocation.includes(sourceAddress)
+        );
+
+      const sameAsSource =
+        Boolean(sameNameAsSource) &&
+        locationAgreesWithSource;
+
+      if (!sameAsSource) {
+        const { data: candidateVenues, error: candidateError } =
+          await supabase
+            .from("venues")
+            .select("id,name,street_address,city,state_region,postal_code")
+            .eq("status", "active");
+
+        if (candidateError) {
+          throw new Error(
+            `Could not inspect candidate event Spots: ${candidateError.message}`,
+          );
+        }
+
+        const namedEvidence: VenueIdentity = {
+          name: namedEventVenue,
+          streetAddress: null,
+          city: null,
+          stateRegion: null,
+          postalCode: null,
+        };
+
+        const candidates = (candidateVenues ?? [])
+          .map((venue) => ({
+            venue,
+            match: venueIdentityMatch({
+              spot: namedEvidence,
+              candidate: {
+                name: venue.name,
+                streetAddress: venue.street_address,
+                city: venue.city,
+                stateRegion: venue.state_region,
+                postalCode: venue.postal_code,
+              },
+            }),
+          }))
+          .sort((a, b) => b.match.score - a.match.score);
+
+        const exactNameCandidates = candidates.filter(
+          ({ match }) => match.evidence.nameExact === true,
+        );
+
+        const best =
+          exactNameCandidates.length === 1
+            ? exactNameCandidates[0]
+            : null;
+
+        const google = await searchGoogleVenue(
+          namedEvidence,
+          { allowReviewCandidate: true },
+        );
+
+        return {
+          status: "unresolved",
+          rawVenueName: namedEventVenue,
+          rawAddress:
+            event.venueAddress?.trim() ||
+            event.location?.trim() ||
+            null,
+          publisherEvidence: namedEvidence,
+          suggestedVenueId:
+            best?.match.evidence.nameExact === true
+              ? best.venue.id
+              : null,
+          confidenceScore:
+            best?.match.evidence.nameExact === true
+              ? best.match.score
+              : null,
+          evidence: {
+            reason: "named_event_venue_requires_location_resolution",
+            sourceType: event.sourceType,
+            venueName: namedEventVenue,
+            candidateName: best?.venue.name ?? null,
+            candidateScore: best?.match.score ?? null,
+            exactNameCandidateCount: exactNameCandidates.length,
+            needsReview: true,
+            googlePlaceId: google?.place.id ?? null,
+            googlePlaceName: google?.place.name ?? null,
+            googlePlaceAddress: google?.place.formattedAddress ?? null,
+            googlePlaceScore: google?.score ?? null,
+            googleReviewOnly: google?.evidence.reviewOnly ?? null,
+          },
+        };
+      }
+    }
+
     if (!event.venueId) {
       throw new Error(
         `First-party source ${event.sourceId} has no Spot for source-default attribution.`,
@@ -409,7 +547,25 @@ export async function resolveFirstPartyAttribution(
 
   const google = await searchGoogleVenue(evidence);
 
-  if (google) {
+  if (google && google.evidence.reviewOnly === true) {
+    return {
+      status: "unresolved",
+      rawVenueName: evidence.name,
+      rawAddress: event.venueAddress ?? null,
+      publisherEvidence: evidence,
+      suggestedVenueId: best?.venue.id ?? null,
+      confidenceScore: google.score,
+      evidence: {
+        ...google.evidence,
+        googlePlaceId: google.place.id,
+        googlePlaceName: google.place.name,
+        googleFormattedAddress: google.place.formattedAddress,
+        reason: "google_address_candidate_requires_review",
+      },
+    };
+  }
+
+  if (google && google.evidence.googleQualified === true) {
     const venueId = await upsertGoogleVenue(supabase, google.place);
 
     return {

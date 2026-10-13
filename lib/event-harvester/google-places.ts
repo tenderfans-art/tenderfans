@@ -14,6 +14,7 @@ type GooglePlace = VenueIdentity & {
   websiteUrl: string;
   regularHours: string[];
   formattedAddress: string;
+  types: string[];
 };
 
 function googleKey() {
@@ -80,6 +81,7 @@ function parsePlace(place: any): GooglePlace | null {
       place.regularOpeningHours?.weekdayDescriptions ?? [],
     formattedAddress:
       place.formattedAddress ?? "",
+    types: Array.isArray(place.types) ? place.types : [],
   };
 }
 
@@ -87,6 +89,7 @@ const FIELD_MASK = [
   "places.id",
   "places.displayName",
   "places.formattedAddress",
+  "places.types",
   "places.location",
   "places.addressComponents",
   "places.nationalPhoneNumber",
@@ -95,7 +98,8 @@ const FIELD_MASK = [
 ].join(",");
 
 export async function searchGoogleVenue(
-  evidence: VenueIdentity
+  evidence: VenueIdentity,
+  options: { allowReviewCandidate?: boolean } = {},
 ): Promise<{
   place: GooglePlace;
   score: number;
@@ -153,6 +157,116 @@ export async function searchGoogleVenue(
         place !== null
     );
 
+  /*
+   * Address-first discovery:
+   * Publisher location labels may describe a neighborhood, district,
+   * festival site, or geographic area rather than a business.
+   *
+   * Search the address independently, preserving the existing
+   * name-based search and qualification rules.
+   */
+  if (evidence.streetAddress && evidence.city && evidence.stateRegion) {
+    const addressQuery = [
+      evidence.streetAddress,
+      evidence.city,
+      evidence.stateRegion,
+      evidence.postalCode,
+    ].filter(Boolean).join(", ");
+
+    const addressResponse = await fetch(
+      "https://places.googleapis.com/v1/places:searchText",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": googleKey(),
+          "X-Goog-FieldMask": FIELD_MASK,
+        },
+        body: JSON.stringify({
+          textQuery: addressQuery,
+          pageSize: 10,
+        }),
+        cache: "no-store",
+      },
+    );
+
+    if (addressResponse.ok) {
+      const addressPayload = await addressResponse.json();
+
+      const existingIds = new Set(places.map((place) => place.id));
+
+      for (const rawPlace of Array.isArray(addressPayload?.places)
+        ? addressPayload.places
+        : []) {
+        const place = parsePlace(rawPlace);
+        if (place && !existingIds.has(place.id)) {
+          places.push(place);
+          existingIds.add(place.id);
+        }
+      }
+    }
+  }
+
+  /*
+   * Discover businesses near a verified street address.
+   * Nearby results supplement, rather than replace, Text Search.
+   */
+  if (evidence.streetAddress && evidence.city && evidence.stateRegion) {
+    const addressPlace = places.find((place) =>
+      normalizeVenueMatchText(place.name) ===
+        normalizeVenueMatchText(evidence.streetAddress) &&
+      place.latitude !== null &&
+      place.longitude !== null
+    );
+
+    if (addressPlace) {
+      const nearbyResponse = await fetch(
+        "https://places.googleapis.com/v1/places:searchNearby",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": googleKey(),
+            "X-Goog-FieldMask": FIELD_MASK,
+          },
+          body: JSON.stringify({
+            locationRestriction: {
+              circle: {
+                center: {
+                  latitude: addressPlace.latitude,
+                  longitude: addressPlace.longitude,
+                },
+                radius: 100,
+              },
+            },
+            maxResultCount: 20,
+          }),
+          cache: "no-store",
+        },
+      );
+
+      if (!nearbyResponse.ok) {
+        throw new Error(
+          `Google Places Nearby Search failed: ${nearbyResponse.status}`
+        );
+      }
+
+      const nearbyPayload = await nearbyResponse.json();
+      const knownIds = new Set(places.map((place) => place.id));
+
+      for (const rawPlace of Array.isArray(nearbyPayload?.places)
+        ? nearbyPayload.places
+        : []) {
+        const place = parsePlace(rawPlace);
+
+        if (place && !knownIds.has(place.id)) {
+          places.push(place);
+          knownIds.add(place.id);
+        }
+      }
+    }
+  }
+
   const scored = places
     .map((place: GooglePlace) => ({
       place,
@@ -174,11 +288,50 @@ export async function searchGoogleVenue(
       ) => b.match.score - a.match.score
     );
 
-  const best = scored[0];
+  const bestNameMatch = scored.find(({ match }) =>
+    match.autoAttach === true
+  ) ?? scored[0];
 
-  if (!best) {
+  if (!bestNameMatch) {
     return null;
   }
+
+  /*
+   * Address-only candidates are review suggestions, never
+   * automatic venue identities.
+   *
+   * Require exact street/city/state and, when supplied,
+   * exact postal code. Shared addresses remain ambiguous.
+   */
+  const addressMatches = scored.filter(({ match }) =>
+    match.evidence.addressExact === true &&
+    match.evidence.cityExact === true &&
+    match.evidence.stateExact === true &&
+    (
+      !evidence.postalCode ||
+      match.evidence.postalExact === true
+    )
+  );
+
+  const businessAddressMatches = addressMatches.filter(
+    ({ place }) =>
+      !place.types.includes("street_address") &&
+      !place.types.includes("route") &&
+      !place.types.includes("premise") &&
+      normalizeVenueMatchText(place.name) !==
+        normalizeVenueMatchText(place.streetAddress) &&
+      normalizeVenueMatchText(place.name) !==
+        normalizeVenueMatchText(evidence.streetAddress)
+  );
+
+  const uniqueAddressCandidate =
+    businessAddressMatches.length === 1
+      ? businessAddressMatches[0]
+      : null;
+
+  const best = bestNameMatch.match.autoAttach
+    ? bestNameMatch
+    : uniqueAddressCandidate ?? bestNameMatch;
 
   /*
    * Google may append an official brand/collection qualifier to a
@@ -222,8 +375,54 @@ export async function searchGoogleVenue(
     best.match.autoAttach ||
     (nameBaseMatch && exactLocationIdentity);
 
-  if (!googleQualified) {
-    return null;
+  /*
+   * A uniquely identified business at the exact published
+   * address may qualify independently of publisher naming.
+   *
+   * Multiple matching businesses must go to Admin review.
+   */
+  const addressQualified =
+    uniqueAddressCandidate !== null &&
+    uniqueAddressCandidate.place.id === best.place.id &&
+    businessAddressMatches.length === 1 &&
+    normalizeVenueMatchText(best.place.name) !==
+      normalizeVenueMatchText(best.place.streetAddress) &&
+    normalizeVenueMatchText(best.place.name) !==
+      normalizeVenueMatchText(evidence.streetAddress) &&
+    best.match.evidence.addressExact === true &&
+    best.match.evidence.cityExact === true &&
+    best.match.evidence.stateExact === true &&
+    (
+      !evidence.postalCode ||
+      best.match.evidence.postalExact === true
+    );
+
+  const autoQualified =
+    googleQualified || addressQualified;
+
+  const reviewCandidateQualified =
+    options.allowReviewCandidate === true &&
+    best.match.evidence.nameExact === true &&
+    (!evidence.city || best.match.evidence.cityExact === true) &&
+    (!evidence.stateRegion || best.match.evidence.stateExact === true) &&
+    (!evidence.postalCode || best.match.evidence.postalExact === true) &&
+    (!evidence.streetAddress || best.match.evidence.addressExact === true);
+
+  if (!autoQualified && !reviewCandidateQualified) {
+    if (!uniqueAddressCandidate) {
+      return null;
+    }
+
+    return {
+      place: uniqueAddressCandidate.place,
+      score: uniqueAddressCandidate.match.score,
+      evidence: {
+        ...uniqueAddressCandidate.match.evidence,
+        googleQualified: false,
+        reviewOnly: true,
+        addressOnlyCandidate: true,
+      },
+    };
   }
 
   return {
@@ -235,7 +434,9 @@ export async function searchGoogleVenue(
       ...best.match.evidence,
       nameBaseMatch,
       exactLocationIdentity,
-      googleQualified,
+      googleQualified: autoQualified,
+      addressQualified,
+      reviewOnly: !autoQualified,
     },
   };
 }

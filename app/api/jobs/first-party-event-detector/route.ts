@@ -583,6 +583,29 @@ export async function GET(request: Request) {
         detected += 1;
       }
 
+      /*
+       * Refresh HTML parsing exceptions on successful scans.
+       * Current failures are reactivated in the loop below.
+       */
+      if (
+        detection.status === "detected" ||
+        detection.status === "no_event_source"
+      ) {
+        const { error: htmlResolutionError } = await supabase.rpc(
+          "resolve_event_harvest_detector_findings",
+          {
+            p_venue_id: venue.id,
+            p_category: "html_error",
+          },
+        );
+
+        if (htmlResolutionError) {
+          throw new Error(
+            `Could not resolve previous HTML errors: ${htmlResolutionError.message}`,
+          );
+        }
+      }
+
       for (const candidate of detection.detections) {
         if (candidate.sourceType === "browser_required") {
           /*
@@ -738,6 +761,34 @@ export async function GET(request: Request) {
               );
             }
           }
+        }
+
+        if (candidate.sourceType === "html_error") {
+          const { error: htmlFindingError } = await supabase.rpc(
+            "upsert_event_harvest_detector_finding",
+            {
+              p_venue_id: venue.id,
+              p_category: "html_error",
+              p_finding_key: `html_error:${candidate.url}`,
+              p_detector_status: detection.status,
+              p_source_type: candidate.sourceType,
+              p_website_url: detection.websiteUrl,
+              p_source_url: candidate.url,
+              p_fetched_url: detection.fetchedUrl,
+              p_confidence: candidate.confidence,
+              p_evidence: candidate.evidence,
+              p_error: "HTML schedule detected but extraction failed",
+            },
+          );
+
+          if (htmlFindingError) {
+            throw new Error(
+              `Could not persist HTML extraction error: ${htmlFindingError.message}`,
+            );
+          }
+
+          // Review-only: never ratify an HTML error as a source.
+          continue;
         }
 
         if (candidate.sourceType === "calendar_image") {

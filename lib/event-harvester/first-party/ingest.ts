@@ -226,7 +226,7 @@ async function ingestEvent(
     const eventEvidence =
       event.rawPayload?.eventEvidence;
 
-    const requiresEventReview =
+    const requiresCalendarImageReview =
       event.rawPayload?.adapter ===
         "calendar_image" &&
       eventEvidence &&
@@ -237,6 +237,15 @@ async function ingestEvent(
           requiresReview?: unknown;
         }
       ).requiresReview === true;
+
+    const requiresHtmlAnnouncementReview =
+      event.rawPayload?.extraction ===
+        "html_multiday_announcement" &&
+      event.rawPayload?.yearRequiresConfirmation === true;
+
+    const requiresEventReview =
+      Boolean(requiresCalendarImageReview) ||
+      requiresHtmlAnnouncementReview;
 
     if (requiresEventReview) {
       const {

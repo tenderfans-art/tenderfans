@@ -30,6 +30,9 @@ export async function GET(request: Request) {
   const venueId =
     searchParams.get("venueId")?.trim() || null;
 
+  const websiteUrl =
+    searchParams.get("websiteUrl")?.trim() || null;
+
   const detectOnly =
     searchParams.get("detectOnly") === "1";
 
@@ -56,6 +59,65 @@ export async function GET(request: Request) {
   }
 
   try {
+    if (websiteUrl) {
+      if (venueId) {
+        return NextResponse.json(
+          { error: "websiteUrl cannot be combined with venueId." },
+          { status: 400 },
+        );
+      }
+
+      let parsedUrl: URL;
+
+      try {
+        parsedUrl = new URL(websiteUrl);
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid websiteUrl." },
+          { status: 400 },
+        );
+      }
+
+      if (
+        !["http:", "https:"].includes(parsedUrl.protocol) ||
+        !parsedUrl.hostname
+      ) {
+        return NextResponse.json(
+          { error: "websiteUrl must be an HTTP(S) URL." },
+          { status: 400 },
+        );
+      }
+
+      const probe = () =>
+        detectFirstPartySources(parsedUrl.toString());
+
+      if (transportRecovery) {
+        const proxyUrl =
+          process.env.TENDERFANS_TRANSPORT_PROXY_URL;
+
+        if (!proxyUrl) {
+          throw new Error(
+            "Transport recovery proxy is not configured."
+          );
+        }
+
+        return NextResponse.json({
+          mode: "website_detection",
+          transportRecovery: true,
+          result: await runWithTransportRecovery(
+            proxyUrl,
+            probe,
+          ),
+        });
+      }
+
+      return NextResponse.json({
+        mode: "website_detection",
+        transportRecovery: false,
+        result: await probe(),
+      });
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SECRET_KEY!

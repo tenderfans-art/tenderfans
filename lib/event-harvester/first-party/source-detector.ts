@@ -2,6 +2,7 @@ import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recov
 import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
 import { fetchBrowserEvidence } from "./browser-transport";
 import { discoverCalendarImageAssets } from "./calendar-image-assets";
+import { extractHtmlEventsWithDiagnostics } from "./html-events";
 
 export type DetectedSourceType =
   | "eventbrite_organizer"
@@ -9,6 +10,8 @@ export type DetectedSourceType =
   | "cp_multi_view_calendar"
   | "uvtix_events"
   | "schema_org_events"
+  | "html_events"
+  | "html_error"
   | "pwpc_events_calendar"
   | "shopify_events"
   | "woocommerce_events"
@@ -237,6 +240,79 @@ function discoverLinks(
     if (EVENT_HINT.test(text) || EVENT_HINT.test(url) || knownEventProvider) {
       links.set(url, { url, text });
     }
+  }
+
+  /*
+   * Event titles may lack generic keywords. Include direct children
+   * of navigation items labeled Events, but not deeper descendants.
+   * Track HTML nesting instead of matching nested lists with regex.
+   */
+  const tags = /<\/?(?:li|ul|a)\b[^>]*>/gi;
+  const stack: Array<{
+    tag: string;
+    start: number;
+    eventMenu: boolean;
+    eventList: boolean;
+    directItem: boolean;
+    href: string | null;
+  }> = [];
+
+  let tagMatch: RegExpExecArray | null;
+
+  while ((tagMatch = tags.exec(html))) {
+    const token = tagMatch[0];
+    const tag = /^<\/?([a-z]+)/i.exec(token)?.[1]?.toLowerCase();
+
+    if (!tag) continue;
+
+    const closing = /^<\//.test(token);
+
+    if (closing) {
+      const node = stack.pop();
+      if (!node || node.tag !== tag) continue;
+
+      if (tag === "a" && node.href) {
+        const label = stripTags(
+          html.slice(node.start, tagMatch.index),
+        ).trim();
+
+        const parent = stack[stack.length - 1];
+
+        if (parent?.tag === "li" && EVENT_HINT.test(label) &&
+            /^events?$/i.test(label)) {
+          parent.eventMenu = true;
+        }
+
+        if (parent?.directItem) {
+          const url = normalizeUrl(node.href, pageUrl);
+          if (url && !links.has(url)) {
+            links.set(url, { url, text: label });
+          }
+        }
+      }
+
+      continue;
+    }
+
+    const parent = stack[stack.length - 1];
+
+    const href =
+      tag === "a"
+        ? /\bhref\s*=\s*(["'])(.*?)\1/i.exec(token)?.[2] ?? null
+        : null;
+
+    stack.push({
+      tag,
+      start: tags.lastIndex,
+      eventMenu: false,
+      eventList:
+        tag === "ul" && parent?.tag === "li" &&
+        parent.eventMenu === true,
+      directItem:
+        tag === "li" && parent?.tag === "ul" &&
+        parent.eventList === true,
+      href,
+    });
   }
 
   return [...links.values()];
@@ -520,7 +596,9 @@ function pushDetection(
   detection: SourceDetection,
 ) {
   const existing = detections.find(
-    (item) => item.sourceType === detection.sourceType,
+    (item) =>
+      item.sourceType === detection.sourceType &&
+      item.url === detection.url,
   );
 
   if (!existing) {
@@ -1202,6 +1280,55 @@ function inspectPage(
     });
   }
 
+  const {
+    events: htmlEvents,
+    diagnostics: htmlDiagnostics,
+  } = extractHtmlEventsWithDiagnostics(html, pageUrl);
+
+  /*
+   * Detect recognizable dated performance schedules independently
+   * of successful event normalization.
+   */
+  const htmlScheduleEvidence =
+    /LIVE\s*MUSIC/i.test(html) &&
+    /(?:Friday|Saturday|Sunday|Monday|Tuesday|Wednesday|Thursday)/i.test(html) &&
+    /\d{1,2}(?::\d{2})?\s*(?:&ndash;|&#8211;|–|—|-)\s*\d{1,2}(?::\d{2})?/i.test(html);
+
+  if (
+    (htmlDiagnostics.recognizedSchedule &&
+      htmlDiagnostics.extractedPerformances <
+        htmlDiagnostics.expectedPerformances) ||
+    (htmlScheduleEvidence && htmlEvents.length === 0)
+  ) {
+    pushDetection(detections, {
+      sourceType: "html_error",
+      url: pageUrl,
+      confidence: "medium",
+      adapterAvailable: false,
+      supported: false,
+      evidence: [
+        "Recognizable dated HTML performance schedule",
+        `Expected performances: ${htmlDiagnostics.expectedPerformances}`,
+        `Extracted performances: ${htmlDiagnostics.extractedPerformances}`,
+        ...htmlDiagnostics.errors.slice(0, 12),
+      ],
+    });
+  }
+
+  if (htmlEvents.length > 0) {
+    pushDetection(detections, {
+      sourceType: "html_events",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Dated event inventory extracted from first-party HTML",
+        `${htmlEvents.length} normalized HTML event record(s)`,
+      ],
+    });
+  }
+
   const calendarImageAssets =
     discoverCalendarImageAssets(html, pageUrl);
 
@@ -1285,7 +1412,7 @@ async function inspectProviderHandoffs(
   return inspected;
 }
 
-async function fetchHtml(
+export async function fetchHtml(
   url: string,
 ): Promise<{
   ok: boolean;
@@ -1370,9 +1497,38 @@ async function fetchHtml(
     }
   }
 
+  /*
+   * Some protected sites return HTTP 202 with a short holding
+   * response rather than the requested HTML document.
+   * Treat that as a recoverable transport condition only when
+   * no HTML document is present.
+   */
+  function isChallengeResponse(
+    response: Awaited<ReturnType<typeof request>>,
+  ): boolean {
+    return (
+      response.status === 202 &&
+      (
+        response.html.length < 2048 ||
+        /captcha|sgcaptcha|verify you are human|checking your browser/i.test(
+          response.html,
+        )
+      )
+    );
+  }
+
+  const incompleteAcceptedResponse =
+    direct?.status === 202 &&
+    (
+      !/<html\b|<!doctype\s+html\b/i.test(direct.html) ||
+      isChallengeResponse(direct)
+    );
+
   if (
     !recoveryProxy ||
-    (direct && ![403, 429, 503].includes(direct.status))
+    (direct &&
+      ![403, 429, 503].includes(direct.status) &&
+      !incompleteAcceptedResponse)
   ) {
     if (direct) return direct;
     throw directError;
@@ -1381,7 +1537,7 @@ async function fetchHtml(
   try {
     const recovered = await request(url, recoveryProxy);
 
-    if (recovered.ok) {
+    if (recovered.ok && !isChallengeResponse(recovered)) {
       return recovered;
     }
 

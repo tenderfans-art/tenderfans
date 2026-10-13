@@ -9,6 +9,13 @@ const tools = [
     status: "OPEN",
   },
   {
+    title: "HTML Error",
+    description:
+      "Review HTML event sources with failed or incomplete event extraction.",
+    href: "/admin/harvester/html-errors",
+    status: "OPEN",
+  },
+  {
     title: "Calendar Image Adapter",
     description: "Manage event sources that require calendar-image extraction.",
     href: "/admin/harvester/calendar-images",

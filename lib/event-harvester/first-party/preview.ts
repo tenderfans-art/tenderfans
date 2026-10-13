@@ -17,6 +17,7 @@ import { fetchSquarespaceEvents } from "./squarespace-events";
 import { fetchTribeRestEvents } from "./tribe-rest";
 import { fetchUvTixEvents } from "./uvtix-events";
 import { fetchSchemaOrgEvents } from "./schema-org-events";
+import { fetchHtmlEvents } from "./html-events";
 import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
 import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWooCommerceEvents } from "./woocommerce-events";
@@ -264,6 +265,8 @@ export async function previewFirstPartySource(
     });
   } else if (source.source_type === "schema_org_events") {
     events = await fetchSchemaOrgEvents(source.source_url);
+  } else if (source.source_type === "html_events") {
+    events = await fetchHtmlEvents(source.source_url);
   } else if (source.source_type === "pwpc_events_calendar") {
     const timeZone =
       typeof source.config?.timezone === "string"
