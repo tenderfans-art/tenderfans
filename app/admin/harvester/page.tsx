@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CoverageTally from "./CoverageTally";
 
 const tools = [
   {
@@ -80,7 +81,7 @@ export default function AdminHarvesterPage() {
             ← Admin Dashboard
           </Link>
 
-          <div className="eyebrow">TENDERFANS ADMIN</div>
+          <div className="eyebrow">TENDERFANS ADMIN</div>\n          <CoverageTally />
 
           <h1 style={{ marginBottom: "8px" }}>Harvester Management</h1>
 
