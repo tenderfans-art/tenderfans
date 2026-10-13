@@ -1132,9 +1132,24 @@ export async function GET(request: Request) {
             bootstrapped_at: null,
           };
 
+          /*
+           * Direct validation may have failed before Vultr discovery.
+           * Retry failed probes and validate newly discovered sources
+           * through the recovery transport within this same Spot cycle.
+           * A successful direct probe is reused without another fetch.
+           */
           const validation =
-            cachedProbe?.validation ??
-            await validateFirstPartySource(source);
+            cachedProbe?.validation.status === "validated"
+              ? cachedProbe.validation
+              : !directSourceValidated &&
+                  detection.status !== "external_redirect" &&
+                  process.env.TENDERFANS_TRANSPORT_PROXY_URL
+                ? await runWithTransportRecovery(
+                    process.env.TENDERFANS_TRANSPORT_PROXY_URL,
+                    () => validateFirstPartySource(source),
+                  )
+                : cachedProbe?.validation ??
+                  await validateFirstPartySource(source);
 
           if (validation.status !== "validated") {
             failed += 1;
