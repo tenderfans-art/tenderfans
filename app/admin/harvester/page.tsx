@@ -81,9 +81,21 @@ export default function AdminHarvesterPage() {
             ← Admin Dashboard
           </Link>
 
-          <div className="eyebrow">TENDERFANS ADMIN</div>\n          <CoverageTally />
+          <div className="eyebrow">TENDERFANS ADMIN</div>
 
-          <h1 style={{ marginBottom: "8px" }}>Harvester Management</h1>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "16px",
+              flexWrap: "wrap",
+              marginBottom: "8px",
+            }}
+          >
+            <h1 style={{ margin: 0 }}>Harvester Management</h1>
+            <CoverageTally />
+          </div>
 
           <p
             className="lead-copy"
