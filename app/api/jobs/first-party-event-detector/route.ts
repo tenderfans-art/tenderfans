@@ -704,31 +704,6 @@ export async function GET(request: Request) {
         );
       }
 
-      if (detection.status === "no_event_source") {
-        const { error: noSourceFindingError } = await supabase.rpc(
-          "upsert_event_harvest_detector_finding",
-          {
-            p_venue_id: venue.id,
-            p_category: "no_source",
-            p_finding_key: "no_source",
-            p_detector_status: detection.status,
-            p_source_type: null,
-            p_website_url: detection.websiteUrl,
-            p_source_url: null,
-            p_fetched_url: detection.fetchedUrl,
-            p_confidence: null,
-            p_evidence: [],
-            p_error: null,
-          },
-        );
-
-        if (noSourceFindingError) {
-          throw new Error(
-            `Could not persist no-source finding: ${noSourceFindingError.message}`,
-          );
-        }
-      }
-
       if (
         detection.status === "transport_blocked" ||
         detection.status === "transport_failed"
@@ -1291,14 +1266,10 @@ export async function GET(request: Request) {
         (candidate) => candidate.sourceType === "html_error",
       );
 
-      // HTML extraction failures remain actionable even when another
-      // source for this Spot is already validated.
-      if (htmlErrorCandidate) {
-        bucketCounts.html_error += 1;
-      }
-
       if (successfullyRegisteredVenueSource || hasPreviouslyValidatedSource) {
         bucketCounts.validated += 1;
+      } else if (calendarImageCandidate) {
+        bucketCounts.calendar_image += 1;
       } else if (facebookCandidate) {
         const { error: findingError } = await supabase.rpc(
           "upsert_event_harvest_detector_finding",
@@ -1351,6 +1322,8 @@ export async function GET(request: Request) {
         }
 
         bucketCounts.browser_required += 1;
+      } else if (htmlErrorCandidate) {
+        bucketCounts.html_error += 1;
       } else if (detection.status === "challenge_encountered") {
         const { error: findingError } = await supabase.rpc(
           "upsert_event_harvest_detector_finding",
@@ -1429,6 +1402,55 @@ export async function GET(request: Request) {
         }
 
         bucketCounts.no_source += 1;
+      }
+
+      /*
+       * Admin buckets are mutually exclusive for primary triage.
+       * Preserve source evidence, but resolve competing active
+       * exception findings after final classification.
+       */
+      const primaryCategory =
+        successfullyRegisteredVenueSource || hasPreviouslyValidatedSource
+          ? null
+          : calendarImageCandidate
+            ? "calendar_image"
+            : facebookCandidate
+              ? "facebook"
+              : browserRequiredCandidate || hasPersistedBrowserRequired
+                ? "browser_required"
+                : htmlErrorCandidate
+                  ? "html_error"
+                  : detection.status === "challenge_encountered"
+                    ? "challenge_encountered"
+                    : detection.status === "transport_blocked" ||
+                        detection.status === "transport_failed"
+                      ? "transport"
+                      : "no_source";
+
+      for (const category of [
+        "calendar_image",
+        "facebook",
+        "browser_required",
+        "html_error",
+        "challenge_encountered",
+        "transport",
+        "no_source",
+      ]) {
+        if (category === primaryCategory) continue;
+
+        const { error: primaryResolutionError } = await supabase.rpc(
+          "resolve_event_harvest_detector_findings",
+          {
+            p_venue_id: venue.id,
+            p_category: category,
+          },
+        );
+
+        if (primaryResolutionError) {
+          throw new Error(
+            `Could not resolve competing ${category} finding: ${primaryResolutionError.message}`,
+          );
+        }
       }
 
       if (
