@@ -226,6 +226,7 @@ export async function GET(request: Request) {
     calendar_image: 0,
     facebook: 0,
     browser_required: 0,
+    html_error: 0,
     challenge_encountered: 0,
     transport: 0,
     no_source: 0,
@@ -1070,6 +1071,16 @@ export async function GET(request: Request) {
         }
       }
 
+      const htmlErrorCandidate = detection.detections.find(
+        (candidate) => candidate.sourceType === "html_error",
+      );
+
+      // HTML extraction failures remain actionable even when another
+      // source for this Spot is already validated.
+      if (htmlErrorCandidate) {
+        bucketCounts.html_error += 1;
+      }
+
       if (successfullyRegisteredVenueSource || hasPreviouslyValidatedSource) {
         bucketCounts.validated += 1;
       } else if (facebookCandidate) {
@@ -1280,11 +1291,36 @@ export async function GET(request: Request) {
     }
   }
 
+  // Persist execution failures separately from source classification.
+  // Only completed requests reach this reconciliation step.
+  for (const venue of venues ?? []) {
+    const executionErrors = failures.filter(
+      (entry) =>
+        entry.venueId === venue.id &&
+        (entry.stage === "detection" || entry.stage === "source")
+    );
+
+    const { error: trackingError } = await supabase.rpc(
+      "record_event_harvest_execution_result",
+      {
+        p_venue_id: venue.id,
+        p_errors: executionErrors,
+      }
+    );
+
+    if (trackingError) {
+      throw new Error(
+        `Could not record execution result for ${venue.id}: ${trackingError.message}`
+      );
+    }
+  }
+
   const bucketTotal =
     bucketCounts.validated +
     bucketCounts.calendar_image +
     bucketCounts.facebook +
     bucketCounts.browser_required +
+    bucketCounts.html_error +
     bucketCounts.challenge_encountered +
     bucketCounts.transport +
     bucketCounts.no_source;
@@ -1305,6 +1341,7 @@ export async function GET(request: Request) {
       calendarImage: bucketCounts.calendar_image,
       facebook: bucketCounts.facebook,
       browserRequired: bucketCounts.browser_required,
+      htmlError: bucketCounts.html_error,
       challengeEncountered: bucketCounts.challenge_encountered,
       transportError: bucketCounts.transport,
       noSources: bucketCounts.no_source,

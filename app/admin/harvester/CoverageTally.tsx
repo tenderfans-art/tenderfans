@@ -9,6 +9,7 @@ type Tally = {
   validated_spots: number;
   non_validated_spots: number;
   missing_from_buckets: number;
+  active_errors: number;
 };
 
 export default function CoverageTally() {
@@ -84,6 +85,19 @@ export default function CoverageTally() {
               title="View non-validated Spots missing from exception buckets"
             >
               {tally.missing_from_buckets}
+            </Link>
+          </span>
+          <span>
+            Errors:{" "}
+            <Link
+              href="/admin/harvester/errors"
+              style={{
+                fontWeight: 800,
+                textDecoration: "underline",
+              }}
+              title="Review active detector execution errors"
+            >
+              {tally.active_errors}
             </Link>
           </span>
         </>
