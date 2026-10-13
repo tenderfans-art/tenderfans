@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-10-13T01:02:05.154Z",
+  "label": "baseline",
+  "gitCommit": "f6d2a8454f7173290445c87af4b2afa953a9ce1c",
+  "allSpots": 316,
+  "detectorEligibleSpots": 291,
+  "findingsTotal": 392,
+  "activeFindings": 113,
+  "registeredSources": 233,
+  "eligibleWithEnabledFirstPartySource": 86,
+  "eligibleWithNoActiveFindings": 178,
+  "categorySpotCounts": {
+    "calendar_image": 13,
+    "facebook": 19,
+    "browser_required": 2,
+    "challenge_encountered": 0,
+    "transport": 32,
+    "no_source": 47,
+    "html_error": 0
+  },
+  "otherCategories": []
+}
