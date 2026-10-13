@@ -1,0 +1,5264 @@
+[
+  {
+    "venueId": "00576c20-83ca-42e7-89c3-ab5e9d894e01",
+    "name": "Frenchy's Outpost Bar and Grill",
+    "websiteUrl": "http://frenchysonline.com/locations/frenchys-outpost/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "00ae7daf-72b0-4b68-94e0-50a9fbcf98c0",
+    "name": "Broke N Bored Grill Madeira",
+    "websiteUrl": "http://www.brokenboredbarandgrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "02604dde-b581-41d5-be7c-4db7e24144ff",
+    "name": "Hurricane Eddie's Indian Rocks Beach",
+    "websiteUrl": "https://www.hurricaneeddies.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "031e6a96-650b-48df-88a6-2e98dae76c0c",
+    "name": "Whiskey Exchange",
+    "websiteUrl": "http://www.whiskeyexchangestpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "053b51b3-c384-4bdc-8c2e-c6a7347e6a49",
+    "name": "Middle Grounds Grill",
+    "websiteUrl": "http://www.middlegroundsgrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "06a2ec01-3992-43a6-98ed-0514a63c0222",
+    "name": "Mad Pub",
+    "websiteUrl": "http://www.madpubjohnspass.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "07f00561-2f80-425f-8432-8319b1877809",
+    "name": "Enigma",
+    "websiteUrl": "http://www.enigmastpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "0857507e-503e-4e82-a8f8-80e350a93ca5",
+    "name": "Sculley's Seafood Restaurant",
+    "websiteUrl": "https://www.sculleysrestaurant.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "08665062-ea7b-4948-8f35-6e288efb5d73",
+    "name": "Noble Crust of St. Petersburg",
+    "websiteUrl": "https://www.noble-crust.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "090ae164-33c6-45a1-ae2e-c17b4c4ce748",
+    "name": "The Burg Bar & Grill",
+    "websiteUrl": "https://theburgbar.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "09b723cd-b0ce-44df-888f-47f3bb797df6",
+    "name": "Jimmy's On The Edge",
+    "websiteUrl": "http://jimmysontheedge.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "0a2a7284-a2bb-4916-abe1-24760488f4bf",
+    "name": "Clear Sky on Park",
+    "websiteUrl": "http://clearskyonpark.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "0b7c2b12-a4f1-465e-817b-0cd2ab38cd43",
+    "name": "Ricky T's Bar & Grille",
+    "websiteUrl": "https://www.rickytsbarandgrille.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "0c38c4c9-aaba-4756-8c18-2d72859dc812",
+    "name": "Right Around the Corner Arcade Bar",
+    "websiteUrl": "https://stpetearcadebar.square.site/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "0c3fa790-1539-4ebf-98ef-aacb179eab79",
+    "name": "R Bar",
+    "websiteUrl": "http://www.myrbar.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "0cadbfda-b6ad-4fb5-a7c9-cc1d5746e550",
+    "name": "Mary Margaret's Olde Irish Tavern",
+    "websiteUrl": "http://marymargarets.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "0cb1eee4-f691-42ef-8fa5-3c162a8b88d9",
+    "name": "Alesia Restaurant",
+    "websiteUrl": "http://alesiarestaurant.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "0ce464d7-f4fd-4be0-8463-802455648756",
+    "name": "The Sandbar & Grille",
+    "websiteUrl": "https://sandbargrilleftmyers.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "0e32e351-6561-494b-a8c5-43a2f85bcae7",
+    "name": "Fat Daddy's Watering Hole",
+    "websiteUrl": "http://fat-hole.edan.io/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "0f97c0ec-8e66-4e72-9bea-2a65d3ee9d2a",
+    "name": "Noble Tavern",
+    "websiteUrl": "https://www.nobletavern.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "0ffabfce-35b9-441d-bd02-744f0d00c1d8",
+    "name": "Category 36 Taphouse",
+    "websiteUrl": "http://www.category36taphouse.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "102549fd-72d7-49b8-bec7-c384796d6a5b",
+    "name": "The Green Room",
+    "websiteUrl": "https://tchotchkecafe.com/page/the-green-room",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "11ec9f6d-b0e8-4578-a42e-74077520a011",
+    "name": "The Wheelhouse",
+    "websiteUrl": "http://thewheelhousestpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "134f6e6a-6fb0-4b03-afcd-9dd71767a87a",
+    "name": "Carrabba's Italian Grill",
+    "websiteUrl": "https://locations.carrabbas.com/florida/st.-petersburg/3530-tyrone-blvd?y_source=1_MTU1MDMwNDYtNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "153f22bf-5a23-41b9-b05e-6adf33a734a0",
+    "name": "Billy's Stone Crab",
+    "websiteUrl": "http://www.billysstonecrab.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "156a2d86-51a6-422f-b04e-8c4fcd2ebb9b",
+    "name": "Mastry's Bar & Grill",
+    "websiteUrl": "https://facebook.com/mastrys.bar.1/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "18f07eb7-7e95-4918-aed5-813ec39971d4",
+    "name": "Bamboo Beach Bar",
+    "websiteUrl": "http://bamboobeachbarandgrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "19ee3662-fc01-44db-aa67-a9439c5b53b7",
+    "name": "Welcome To The Farm",
+    "websiteUrl": "https://welcometothefarm.com/stpete",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "19ff38ce-620a-4170-baea-1ad485b78c94",
+    "name": "The Tavern at Bayboro",
+    "websiteUrl": "http://www.thetavernatbayboro.com/",
+    "enabledSourceCount": 7,
+    "enabledFirstPartyCount": 7,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "google_calendar"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "1a793a1c-3eb6-458a-9d8d-40b6f017358d",
+    "name": "Dog Pub Social",
+    "websiteUrl": "https://dogpubsocial.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "1b886e5b-0181-46bc-ad5a-8a838bb09f9a",
+    "name": "Banana Hammock",
+    "websiteUrl": "https://bananahammockstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "1bcd8667-e03f-4dfc-872d-8c480d0f8386",
+    "name": "Salty's Island Bar & Grille",
+    "websiteUrl": "https://saltysisland.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "1ce786ea-74c4-4c5f-8e47-a5d98eb25aac",
+    "name": "The Reef Bar and Grill",
+    "websiteUrl": "http://reefonmadbeach.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "1d9de323-950a-401d-a243-310ce5afffd9",
+    "name": "Bacchus Wine Bistro",
+    "websiteUrl": "https://www.bacchusstpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "1de74c61-db89-42a1-a11d-f732b9b2b674",
+    "name": "Friendly Fisherman Restaurant",
+    "websiteUrl": "https://friendlyfisherman.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "1e7f5b61-1fa6-4ef7-91d5-c88f8dcb5835",
+    "name": "Mastry'S Brewing Co",
+    "websiteUrl": "http://www.mastrysbrewingco.com/?y_source=1_MjA1NjA2NzctNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "200f276c-9ce6-48e6-be7e-b4619fea8e75",
+    "name": "The Irons Club",
+    "websiteUrl": "https://www.theironsclub.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "212338be-565a-4953-a8bd-71a832606a56",
+    "name": "Dead Bob's Bar",
+    "websiteUrl": "http://deadbobsstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "2127d65a-a0bd-4fc7-a965-a40772dac667",
+    "name": "St. Petersburg Distillery",
+    "websiteUrl": "https://www.stpetersburgdistillery.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "2138dfe4-5af8-4a64-bd07-26930f4f9df7",
+    "name": "Salty's Beach Lounge",
+    "websiteUrl": "https://tradewindsresort.com/island-grand-beach-resort/eat-drink/saltys-tiki-bar-beach-lounge",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "21a1cbaa-294e-437e-9b0c-c14f880f95eb",
+    "name": "Sandbar Bill's Bar and Grille",
+    "websiteUrl": "https://www.bonaireresort.com/sandbar-bills/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "21f365c5-58b8-4cd9-b03f-b3189c94dbcd",
+    "name": "Outback Steakhouse",
+    "websiteUrl": "https://locations.outback.com/florida/st.-petersburg/1900-4th-street-north?utm_source=gmb&utm_medium=local_search&utm_campaign=website_cta&y_source=1_MTU1MDIwNTctNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "22ce7002-210a-4222-b532-5be6a0d7a772",
+    "name": "The Conch Republic Grill",
+    "websiteUrl": "https://conchrepublicgrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "24b3ec36-450a-48b5-8d03-e2e0a4de5934",
+    "name": "4 Play Gentlemens Lounge",
+    "websiteUrl": "http://www.4playvip.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "26260f76-4350-46c3-a1ac-4e7df78e9c04",
+    "name": "Hurricane Eddie's",
+    "websiteUrl": "http://hurricaneeddies.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "27663c32-a6e8-4d0f-b453-aa7df21cb0d9",
+    "name": "Black Leaf Cigar and Wine Lounge",
+    "websiteUrl": "https://www.blackleaflounge.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "27a17c3a-798c-4fb5-b5bc-346948493fd8",
+    "name": "The Dog Bar",
+    "websiteUrl": "http://dogbarstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "27c39339-b3ee-460d-b132-f64ea1bc1708",
+    "name": "Bar Mastiff",
+    "websiteUrl": "http://barmastiff.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "28a86215-970b-4b11-91e5-96b7748edef5",
+    "name": "Grand Central Brewhouse",
+    "websiteUrl": "https://www.grandcentralbrew.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "28bb06ea-2f43-4497-b053-a12846a8d14b",
+    "name": "Bonefish Grill",
+    "websiteUrl": "https://locations.bonefishgrill.com/florida/st.-petersburg/2408-tyrone-boulevard?y_source=1_MTU1MDI3ODItNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "29249e44-a984-4b54-b050-8a3e2891dc70",
+    "name": "The Toasted Monkey",
+    "websiteUrl": "http://thetoastedmonkey.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "2963e116-44d7-4daa-8e5d-15f7a99f698f",
+    "name": "Cycle Brewing",
+    "websiteUrl": "https://www.instagram.com/cyclebrewing/?hl=en",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "2992c575-7908-4349-9aa6-0088a382b0d6",
+    "name": "Eddie's Bar & Grill",
+    "websiteUrl": "http://www.eddiesbarandgrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "2a3ac585-cd1c-4af3-ba0f-5adac3813f29",
+    "name": "Sielo Rooftop",
+    "websiteUrl": "https://linktr.ee/sieloclearwater",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "2b0c1063-4cd7-4f5c-a3e2-ab68974272d0",
+    "name": "Ferg's Sports Bar & Grill",
+    "websiteUrl": "https://fergssportsbar.com/",
+    "enabledSourceCount": 3,
+    "enabledFirstPartyCount": 3,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image",
+      "ics",
+      "schema_org_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "2bd09c0b-c51f-468f-85ed-23b4614d30c7",
+    "name": "Harvey's 4th Street Grill",
+    "websiteUrl": "http://harveys4thstreet.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "2cabb17a-ec90-4821-b40c-6c683e036d4a",
+    "name": "Olde Bay Cafe",
+    "websiteUrl": "https://www.oldebaycafe.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "2ccabdbb-12bc-4fa2-ad1f-c28571ecba5f",
+    "name": "Sandbar - Opal Sands",
+    "websiteUrl": "https://www.opalcollection.com/opal-sands/restaurants/sandbar?utm_source=google&utm_medium=listing",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "2d7f87ac-935c-45a4-84be-c301f2fa7e7f",
+    "name": "Jimmy's Sports Bar",
+    "websiteUrl": "http://jimmysstpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "2eb04e72-aad7-46b6-9676-5cc2867c1c8e",
+    "name": "Pelican Pub",
+    "websiteUrl": "http://www.jannuslive.com/pelican-pub",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "2ef10cf4-2036-4735-8563-8181760378be",
+    "name": "Coco's Crush Bar Original",
+    "websiteUrl": "https://cocoscrushbar.com/og",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "2f7951a5-79d5-4af1-875f-66dfe65e0ba7",
+    "name": "Mad Beach Cantina",
+    "websiteUrl": "http://madbeachcantina.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "301b4792-f543-4660-9982-8ab152b31917",
+    "name": "Baba Restaurant",
+    "websiteUrl": "http://eatatbaba.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "3023da63-682d-4434-9447-220bd27ebf0f",
+    "name": "Cowboys Dance Hall",
+    "websiteUrl": "http://cowboysdancehallfl.com/",
+    "enabledSourceCount": 3,
+    "enabledFirstPartyCount": 3,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer",
+      "godaddy_menu_recurring"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "30fce35a-822f-43a2-a25c-8a3f47adb163",
+    "name": "Stillwaters Tavern",
+    "websiteUrl": "https://stillwaterstavern.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "31725bd1-b02d-468f-96ac-c9c528ff3d41",
+    "name": "Clear Sky Draught Haus",
+    "websiteUrl": "http://www.clearskydraughthaus.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "challenge_encountered",
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "3275fcfa-f361-4052-8755-7bd3737dc7c6",
+    "name": "The Irish Pub on 4th",
+    "websiteUrl": "https://www.irishpubstpete.com/",
+    "enabledSourceCount": 3,
+    "enabledFirstPartyCount": 3,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "36335924-ede3-4db0-9b9f-6aca02d4973c",
+    "name": "Bonefish Grill",
+    "websiteUrl": "https://locations.bonefishgrill.com/florida/st.-petersburg/5062-4th-street-north?y_source=1_MTU1MDI3NTYtNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "364d5c57-80f6-41c2-8357-5f389b79bee7",
+    "name": "Bayboro Brewing Co.",
+    "websiteUrl": "http://bayborobrewing.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "370e8242-d4fc-414d-a19f-947f09d65de8",
+    "name": "RumFish Beach at TradeWinds",
+    "websiteUrl": "https://www.tradewindsresort.com/rumfish?NCK=8002491667&utm_source=gmb&utm_medium=organic&utm_campaign=LST_gmb_rbr",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "377044f0-6d56-4452-8d78-afd4f6eff420",
+    "name": "Pia's Trattoria",
+    "websiteUrl": "http://www.piastrattoria.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "37c1f604-80a8-4a14-ba3e-2a2181b4ad8f",
+    "name": "Dracula's Legacy Wine Bar & Bistro",
+    "websiteUrl": "http://www.draculaslegacywinebar.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "37f6d580-716b-4f16-9305-2b0232d9a0fb",
+    "name": "Flanagan's Irish Pub",
+    "websiteUrl": "https://flanagansirishpub.net/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "38202cb7-f1bd-4ad2-b28f-d0747465b3ae",
+    "name": "Bar Tiki Clearwater Beach",
+    "websiteUrl": "http://www.bartiki.com/",
+    "enabledSourceCount": 3,
+    "enabledFirstPartyCount": 3,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "3a74aa53-09b2-4a42-aa08-780d79292df7",
+    "name": "Caddy's Madeira Beach",
+    "websiteUrl": "https://caddys.com/caddys-madeira-beach/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "3b5ad7a1-ceab-4079-90c6-18de1cf51a33",
+    "name": "Localz Sports Bar & Grill St Pete",
+    "websiteUrl": "http://localzsportsbar.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "3b6b3337-a1e0-4818-8793-5bea4916f95c",
+    "name": "Xmas Bar",
+    "websiteUrl": "https://www.xmasbar.com/st-pete",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "3cc50be3-739c-4ea9-b459-31bd971466ff",
+    "name": "Courtside Grille",
+    "websiteUrl": "https://courtsidegrillestpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "3d407df6-4fdc-4782-ab7a-5898c74992be",
+    "name": "Salty J's",
+    "websiteUrl": "http://www.saltyjstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "3dd2f98c-27d7-456c-a048-435222a142a3",
+    "name": "Ocean Seven Restaurant",
+    "websiteUrl": "https://www.oceansevenclearwater.com/",
+    "enabledSourceCount": 3,
+    "enabledFirstPartyCount": 3,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "3dfc441e-1216-46fd-990c-749fd11676d8",
+    "name": "Crown and Bull",
+    "websiteUrl": "http://www.crownandbull.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "3e778b5c-9bf3-40d6-97d3-ae955fd50505",
+    "name": "Frenchy's Rockaway Grill",
+    "websiteUrl": "http://frenchysonline.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image",
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "3e7cd80f-ffd3-4f0d-b6dc-db1385cb9051",
+    "name": "Bon Appétit Restaurant & Marina Bar",
+    "websiteUrl": "https://www.bonappetitrestaurant.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "40ac67a2-a812-4574-bfb0-0ac7f9f1db4e",
+    "name": "Sully's Tavern",
+    "websiteUrl": "https://www.facebook.com/weedsbar",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "4179166e-eff9-43ce-8bdc-5aebf20221b9",
+    "name": "Flute & Dram",
+    "websiteUrl": "https://flutendram.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "439744f3-0952-4cf4-b5ff-3a55366c8921",
+    "name": "The Bier Boutique",
+    "websiteUrl": "https://www.thebierboutiquestpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "43b4cc01-b52b-4696-9ea2-177b62fa8d43",
+    "name": "Prohibition Dunedin",
+    "websiteUrl": "http://www.prohibitiondunedin.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "45029066-7adf-4e65-8f85-941580122d2b",
+    "name": "Saltwater Hippie",
+    "websiteUrl": "https://saltwaterhippie.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "451a4b7b-f2c3-453f-9ba9-cc284f832be0",
+    "name": "Bar Chica",
+    "websiteUrl": "https://www.instagram.com/thebarchica/?hl=en",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "45323ddb-bc48-4f1c-b654-cefb2e1ad275",
+    "name": "Caretta on the Gulf",
+    "websiteUrl": "https://www.opalcollection.com/sandpearl/restaurants/caretta-on-the-gulf?utm_source=google&utm_medium=listing",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "46645597-75ef-49d8-836f-e237929d464d",
+    "name": "Ka'Tiki",
+    "websiteUrl": "http://www.katikisunsetbeach.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "47275685-874e-46c3-b7c8-366c4ca4b614",
+    "name": "Daiquiri Shak Raw Bar & Grille",
+    "websiteUrl": "https://www.daiquirishak.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "475b37e1-0132-41bd-8eaf-b78d578693e3",
+    "name": "The Oyster Bar",
+    "websiteUrl": "https://oysterbarstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "47c6f4e2-2607-42ac-8b20-54957015aef3",
+    "name": "Sunset Grille",
+    "websiteUrl": "https://www.facebook.com/pages/Sunset-Grill/120528214624904",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "4865793a-c62e-494a-97fe-a28caf0327a7",
+    "name": "Vue 360 Rooftop Bar",
+    "websiteUrl": "https://www.marriott.com/en-us/hotels/tpach-courtyard-clearwater-beach/dining/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "48a29772-f0ff-43a2-8726-16c9fb342e2b",
+    "name": "Jungle Prada Tavern",
+    "websiteUrl": "https://www.facebook.com/JunglePradaTavern/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "48e2b78b-19c3-4abe-ae0a-3af6a1e6695d",
+    "name": "The Ball",
+    "websiteUrl": "https://theballstpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "4a2019e4-600a-4487-b2ce-8aeefbd53941",
+    "name": "Simon's Pub",
+    "websiteUrl": "https://www.simonspub.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "4aa7c8fa-e32a-4c5a-ab02-b40fb159db01",
+    "name": "Rewind St Pete",
+    "websiteUrl": "http://www.rewindstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "4cd9d8ef-a79b-4213-8f3c-938ab3133cbc",
+    "name": "Dirty Laundry",
+    "websiteUrl": "http://dirtylaundrystpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "4ddb7afe-ee7e-4b6f-b027-f0906e305f82",
+    "name": "HEW Parlor & Chophouse",
+    "websiteUrl": "http://www.fenwayhotel.com/taste/hew-parlor-chophouse/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "wordpress_event_feed"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "4e787c01-ff28-4d4f-ad23-435c4c295f37",
+    "name": "Reefers Social Club",
+    "websiteUrl": "http://www.reeferssocialclub.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "4e85205b-6820-43fc-908e-78bea008c275",
+    "name": "Linking Heights",
+    "websiteUrl": "https://linkingheights.weebly.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "4fedb132-0e06-40af-9fc9-42bc4af8a38d",
+    "name": "Brass Monkey",
+    "websiteUrl": "https://brassmonkeyspb.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "50f5194b-34b7-4964-bf85-6b6ccf0adaea",
+    "name": "Hawthorne Bottle Shoppe",
+    "websiteUrl": "http://www.hbsforlife.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "53da7c5e-e4d9-4271-8d37-71e41095d830",
+    "name": "Engine No. 9",
+    "websiteUrl": "http://www.no9burgers.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "543cfe8a-108e-422e-b521-e5244af94032",
+    "name": "Saigon Blonde",
+    "websiteUrl": "http://www.saigonblonde.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "5487545e-d82a-4d16-8e91-b801aa3f6671",
+    "name": "Intermezzo Coffee & Cocktails",
+    "websiteUrl": "http://intermezzo.co/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "54bd9488-d952-49c9-9fda-d967d19deddb",
+    "name": "Crafty Squirrel",
+    "websiteUrl": "https://craftysquirrel.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "55338086-cbc8-4a54-a8b2-6e2423ec3116",
+    "name": "Beef 'O' Brady's",
+    "websiteUrl": "https://www.beefobradys.com/stpete-66thstreetn",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "55901faf-1f87-47b5-808d-0c1532f6986f",
+    "name": "Coco's Crush Bar North Beach - Clearwater",
+    "websiteUrl": "https://cocoscrushbar.com/north",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "55903466-c78f-4712-ab33-51dd9f004c4f",
+    "name": "Sea Worthy Fish Bar",
+    "websiteUrl": "http://seaworthyfishbar.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "58f67302-a7bb-4967-9689-ebc7e93b8d82",
+    "name": "Rum Runners",
+    "websiteUrl": "https://www.stpeteshoreshotel.com/restaurants/rum-runners-bar-grille?utm_source=GOOGLE&utm_medium=URL",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "5a8bf9aa-1937-48fc-9853-33bf3d9f4411",
+    "name": "Wild Child",
+    "websiteUrl": "https://www.wildchildstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "5b19d0a9-8e3c-4ff7-946d-0c511e46a1d7",
+    "name": "Chill Restaurant & Bar",
+    "websiteUrl": "http://www.chillstpetebeach.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "5c75c655-cb6c-43a3-af15-45668be75b68",
+    "name": "Hawkers Asian Street Food",
+    "websiteUrl": "https://eathawkers.com/?olonwp=JjBtp_vMLk25gkYh_bnoiQ",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "5d2fd31c-35cd-4752-8a62-f77c21576019",
+    "name": "Coastal Creative",
+    "websiteUrl": "http://coastalcreativetv.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "tribe_rest"
+    ],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "60ef9f6b-7d84-486d-b2dd-c9b8d22418cf",
+    "name": "Toucans Bar & Grill",
+    "websiteUrl": "https://toucansbarandgrill.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "61a04971-b94e-4e0e-8ca6-b8a67c34a255",
+    "name": "The Drunken Clam",
+    "websiteUrl": "http://drunkenclambar.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "google_calendar"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "621ad1d8-8a76-43d8-aaf2-9068d816b34f",
+    "name": "Island Way Grill",
+    "websiteUrl": "http://www.islandwaygrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "facebook",
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 4
+  },
+  {
+    "venueId": "627e4709-32fa-48a4-a893-1ea22de11024",
+    "name": "Dublin Drop",
+    "websiteUrl": "https://www.dublindropstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "6288b338-2d77-4f95-a265-c1b593cb525f",
+    "name": "Three Birds Tavern",
+    "websiteUrl": "http://www.threebirdstavern.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "63e532d7-78ce-4c1a-8fc0-5d466b42ac7c",
+    "name": "Tryst Gastro Lounge",
+    "websiteUrl": "http://dinetryst.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "641d3d5f-1902-4e43-895b-7f214bf05639",
+    "name": "Mutts and Martinis",
+    "websiteUrl": "http://www.muttsandmartinisoncentral.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "657977c3-92e2-4018-93eb-0bdf17d094ae",
+    "name": "Hooters",
+    "websiteUrl": "https://originalhooters.com/locations/tampa-bay/johns-pass/?utm_source=google&utm_medium=organic&utm_campaign=gmb-website-cta-johns-pass",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "65ed7bd0-cf00-4667-bfa4-86b451dde112",
+    "name": "Good Night John Boy",
+    "websiteUrl": "https://goodnightjb.com/st-pete",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "beatgig_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "663a8867-0850-472b-8929-1d20ed0acb78",
+    "name": "Tequila Daisy",
+    "websiteUrl": "http://tequiladaisystpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "6661826a-f031-4fac-aeec-ab0ac733117b",
+    "name": "Neptune Grill",
+    "websiteUrl": "http://neptunegrillgulfport.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "671ea44a-f85d-4a48-8f23-c89533ddece0",
+    "name": "The Dunedin Smokehouse",
+    "websiteUrl": "http://www.thedunedinsmokehouse.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "67cbc480-8847-4d60-9f33-82dfee4b9082",
+    "name": "Ember Rooftop Lounge at the Cambria Madeira Beach",
+    "websiteUrl": "http://cambriamadeirabeach.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "683f19d5-eb98-4ef9-be7d-b1172752469e",
+    "name": "HOB Brewing Co.",
+    "websiteUrl": "http://www.hob.beer/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer",
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "6901cedb-3cd4-45e9-afdd-b4486625a1fe",
+    "name": "Paradise Grille",
+    "websiteUrl": "https://paradisegrille.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "69e52eec-81e8-41e0-8110-44cfb43a3546",
+    "name": "Cricketers British Pub & Restaurant Dunedin",
+    "websiteUrl": "http://cricketerspub.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "6aa3fb9d-13b3-433c-8033-4b7492027db8",
+    "name": "Eddie's Bar & Grill",
+    "websiteUrl": "http://www.eddiesbarandgrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "6ac87451-d051-4f3d-a9c3-4c096fbe7405",
+    "name": "BRGR Kitchen & Bar - Treasure Island Beach Resort",
+    "websiteUrl": "https://www.opalcollection.com/treasure-island/restaurants/brgr/?utm_source=google&utm_medium=listing&utm_campaign=opal+treasure+island+beach+resort+brgr",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "6bc2dd0a-c365-4cd1-b716-35dd270838b6",
+    "name": "The Ale and the Witch",
+    "websiteUrl": "http://www.thealeandthewitch.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "6c02138b-5f44-4e2a-affe-57fc02764c06",
+    "name": "Caddy's Treasure Island",
+    "websiteUrl": "https://caddys.com/caddys-treasure-island/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "6d5db65b-87ff-48f2-aa51-d887a0e79b91",
+    "name": "Ceviche Tapas Bar and Restaurant",
+    "websiteUrl": "http://ceviche.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "6db268df-5cba-4500-bc55-ce86badaff3f",
+    "name": "Dick's Last Resort - Madeira Beach",
+    "websiteUrl": "https://www.dickslastresort.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image",
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "6dff0d54-b98d-404d-8c8b-e617f07dcfc7",
+    "name": "Doc Ford's Rum Bar and Grille St Pete Pier",
+    "websiteUrl": "https://www.docfords.com/st-pete-pier/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "6f709d66-6b05-4495-bc8c-b701aa4cc2cc",
+    "name": "Miller's Ale House",
+    "websiteUrl": "https://millersalehouse.com/locations/st-pete/?utm_source=gmb&utm_medium=organic",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "6fd85c08-ad39-4ae8-a756-e920be091836",
+    "name": "Vista at the Top",
+    "websiteUrl": "https://www.vistaatthetop.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "70a975e0-c67e-44fc-882d-3a98afac48ad",
+    "name": "Jimmy's Fish House & Iguana Bar",
+    "websiteUrl": "https://www.jimmysfishhouse.net/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "717cabf0-258c-4251-9d87-fb2f7c704d42",
+    "name": "Hurricane Eddie's Clearwater Beach",
+    "websiteUrl": "http://www.hurricaneeddies.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "73773169-6632-445c-8046-733ee19d8d11",
+    "name": "The Zoo Sports Club",
+    "websiteUrl": "https://www.thezooclubfl.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "sociablekit_facebook_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "browser_required"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "74498052-8933-46c4-b8fb-6eb8e8f9d3d1",
+    "name": "Sea Dog Brewing Co.",
+    "websiteUrl": "https://www.seadogbrewing.com/location/treasure-island/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "74607999-38f3-42a9-bc05-c62b991c9607",
+    "name": "Mad Beach Craft Brewing Company",
+    "websiteUrl": "http://www.madbeachbrewing.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "74fe4b98-efd0-41a9-95f8-a8d67574dfa1",
+    "name": "Outcast Brewing Company",
+    "websiteUrl": "https://www.outcastbrewingcompany.com/",
+    "enabledSourceCount": 4,
+    "enabledFirstPartyCount": 4,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "77cc71ff-8db3-474a-9894-eb3688e9fae2",
+    "name": "Angry Pepper",
+    "websiteUrl": "http://www.angrypepper.net/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "78330757-5e78-4fda-b5d4-a2b4a5a9c199",
+    "name": "Tampa Bay Drinkery",
+    "websiteUrl": "https://www.instagram.com/tbdstpete/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "788e302d-c5ca-45ef-ac6a-561f9592d288",
+    "name": "Mandarin Hide",
+    "websiteUrl": "http://www.mandarinhide.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "798609a2-f193-418e-a959-f765c889dc0d",
+    "name": "Mangosteen",
+    "websiteUrl": "http://mangosteenfl.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "79a0e260-6817-4d20-9ec5-4cbf4aa2821a",
+    "name": "Azura Rooftop",
+    "websiteUrl": "https://www.azuracoastalkitchenandbar.com/rooftop/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer",
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "7ac6e397-96e9-4389-90f2-1795a3879b06",
+    "name": "7venth Sun Brewing Company",
+    "websiteUrl": "http://www.7venthsun.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "7add9c3e-f16a-41f0-9148-52c932f04e75",
+    "name": "Dockside Dave's",
+    "websiteUrl": "http://docksidedavesfl.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "7c01f8e5-2a8a-4050-9b61-b7cdd7d86e51",
+    "name": "Undertow Beach Bar",
+    "websiteUrl": "https://www.facebook.com/undertowbeachbar/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "7e8026f0-ce9b-48f3-a596-833adbff1883",
+    "name": "The One Night Stand",
+    "websiteUrl": "https://www.facebook.com/OneNightStandDTSP?mibextid=wwXIfr&mibextid=wwXIfr",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "82430be7-90be-466a-82af-32d0c23f8b90",
+    "name": "The Potion Portal",
+    "websiteUrl": "http://www.thepotionportal.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "82e3e6d8-de6a-4769-997c-55ddc4c3b642",
+    "name": "The Spotted Donkey Cantina",
+    "websiteUrl": "https://www.facebook.com/SpottedDonkeyCantinaClearwaterBeach?SEO_id=GMB--R-PIECBHF-1",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "833b1aaa-133c-4e76-ab89-aa68df6a2128",
+    "name": "The Blu Halo St Pete",
+    "websiteUrl": "https://www.thebluhalostpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "83c22326-c38c-4b2a-b4c7-bd9dd38295b9",
+    "name": "Roam Restaurant & Bar",
+    "websiteUrl": "http://roamsteakhouse.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "83e9b0a6-73f7-4075-9051-97827652f013",
+    "name": "The Urban Stillhouse",
+    "websiteUrl": "https://www.theurbanstillhouse.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer",
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "84a04aa9-ca2b-4efa-9ed5-5edb9df937bc",
+    "name": "Casual Clam Seafood Bar & Grill",
+    "websiteUrl": "http://www.casualclam.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "85a2fb08-4697-4dd3-963f-efdb3df0c2c3",
+    "name": "Carrabba's Italian Grill",
+    "websiteUrl": "https://locations.carrabbas.com/florida/st.-petersburg/1951-4th-street-north?y_source=1_MTU1MDI5ODEtNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "86d39919-a537-464d-bcbd-772d14279025",
+    "name": "The Estate",
+    "websiteUrl": "https://www.theestatestpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "87084971-58e0-4f46-bbb6-baebf9981ba2",
+    "name": "Paisano's Pizza N Pasta",
+    "websiteUrl": "http://www.paisanospnp.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "888017a7-ac55-479b-818a-307eed11c40d",
+    "name": "Crabby's Beachside Pavilion",
+    "websiteUrl": "https://crabbysbeachsidepavilion.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "8c2d669d-1ce9-4199-bacf-26fcdf5486f8",
+    "name": "Luna Lux Restaurant & Lounge",
+    "websiteUrl": "https://www.lunastpete.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp_listing",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "8cde50dd-56d9-4123-a91b-9f788e28feb1",
+    "name": "Surfside Taphouse",
+    "websiteUrl": "https://surfsidetaphouse.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image",
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "8da8d43c-d2ad-41bc-8a6b-7267d9cb7c42",
+    "name": "Hog Island Fish Camp",
+    "websiteUrl": "https://www.hogislandfishcamp.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "8e5d126f-9dc5-4503-aa6c-839294ed2bc0",
+    "name": "Lucky Lizard Tap House",
+    "websiteUrl": "https://luckylizardtaphouse.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "91312245-01b6-4a50-9f37-7346488fe145",
+    "name": "Calida Kitchen & Wine",
+    "websiteUrl": "https://calidastpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "922010b6-4194-4f01-a0e3-b5e473d22747",
+    "name": "COPA",
+    "websiteUrl": "https://www.copadtsp.com/",
+    "enabledSourceCount": 3,
+    "enabledFirstPartyCount": 3,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "94a38209-54d9-4337-9e7c-73e9406a301b",
+    "name": "My Rich Uncle",
+    "websiteUrl": "http://myrichuncle.bar/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "beatgig_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "94db6692-12f6-4f84-84f0-bd7374daa46a",
+    "name": "Twisted Tiki Bar & Grill",
+    "websiteUrl": "http://twistedtikistpetebeach.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "989dc27b-1143-460f-871d-39d74befcec1",
+    "name": "Cage Brewing",
+    "websiteUrl": "http://www.cagebrewing.com/",
+    "enabledSourceCount": 5,
+    "enabledFirstPartyCount": 5,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer",
+      "next_rsc_events",
+      "schema_org_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "9974146e-8e4d-4264-a342-3ae48e00937f",
+    "name": "Beacon Pool Bar & Lookout",
+    "websiteUrl": "https://www.doncesar.com/dining/beacon-pool-bar-lookout?utm_source=google-gbp&utm_medium=organic&utm_campaign=gbp",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "997b1cb1-c8e7-487d-908b-995b706aacfb",
+    "name": "Tiki Tim’s Pub and Grill",
+    "websiteUrl": "http://tikitimspubandgrill.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "99e0283c-b867-4a49-ae27-65773aaa70cc",
+    "name": "Swigwam Beach Bar",
+    "websiteUrl": "https://swigwambeachbar.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "9b0a1977-f420-41f5-ae79-2918c379128a",
+    "name": "Emerald Bar",
+    "websiteUrl": "http://emerald-bar.poi.place/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "9cb009f8-ac22-43ec-979b-8a91cb34861b",
+    "name": "Chris' Beachside Bar",
+    "websiteUrl": "https://www.facebook.com/pages/Chriss-Beachside-Bar/836659226420682",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "9d8c5af5-6a00-4acf-a6ec-04454cc27770",
+    "name": "Stix Billiards Dunedin",
+    "websiteUrl": "https://www.facebook.com/stixdunedin/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "9d9ce9cf-7628-44ad-8e0c-1e65d4b674f8",
+    "name": "Tap Room at the Hollander Hotel",
+    "websiteUrl": "http://www.hollanderhotel.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "9e18dbee-b687-457a-aa9e-23facd3cd6b0",
+    "name": "Wicked Cantina St Pete",
+    "websiteUrl": "https://www.wickedcantina.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "9eba0265-9eb7-4b1f-9362-f118e6fa0ffd",
+    "name": "Sloppy Joe's on the Beach",
+    "websiteUrl": "https://www.sloppyjoesonthebeach.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "9ed1ccd5-4304-4525-b5d3-a8747a924e7f",
+    "name": "Topgolf Saint Petersburg",
+    "websiteUrl": "https://topgolf.com/us/st-petersburg/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "9f20bfb4-0d4c-4e0d-8926-4c3758656463",
+    "name": "Jannus Live",
+    "websiteUrl": "http://www.jannuslive.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "a04a8cb2-1a5f-4a7c-8784-80acde14dc65",
+    "name": "Stirling Wine",
+    "websiteUrl": "http://www.stirlingwinedunedin.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "a29c7575-47dd-4ffa-9744-0aa1c92a55ad",
+    "name": "The Living Room on Main",
+    "websiteUrl": "https://www.thelivingroomonmain.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "a2da32d5-ac73-4798-b5e0-c381c66b4c34",
+    "name": "Tate Island Grill - Sandpearl",
+    "websiteUrl": "https://www.opalcollection.com/sandpearl/restaurants/tate-island-grill?utm_source=google&utm_medium=listing",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "a452fca8-d406-4204-9591-29e057ebaedd",
+    "name": "Sonder Social Club",
+    "websiteUrl": "https://www.sondersocial.club/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "a4917b6a-f4cb-41f5-b26c-92cbcc1685e8",
+    "name": "Hi-Fi Rooftop Bar",
+    "websiteUrl": "https://www.fenwayhotel.com/taste/hi-fi-rooftop-bar/?utm_source=GMB&utm_medium=WebsiteClick&utm_campaign=Dunedin&utm_content=7234-17",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "wordpress_event_feed"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "a539b9a5-3600-4684-8b3e-1330268bb80c",
+    "name": "Lost & Found",
+    "websiteUrl": "http://www.lostandfoundstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "a730acb0-c8e2-4d0f-a2a2-a08c8389c531",
+    "name": "Crabby Bill's in St. Pete Beach",
+    "websiteUrl": "https://stpetecrabbybills.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "a7810f9e-2a7d-46c9-b475-540203fa21ba",
+    "name": "Shiso Crispy - Central Ave",
+    "websiteUrl": "http://www.shisocrispy.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "a8409237-703a-4b6a-bc9b-45374c537b62",
+    "name": "The Deck Bar & Grille",
+    "websiteUrl": "http://thedeckbarandgrille.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "a9c6999c-b110-4978-a4a7-8a988ca38b29",
+    "name": "Jimmy's Crows Nest",
+    "websiteUrl": "https://jimmyscrowsnest.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "aa2d402a-9999-478d-871b-c67e89d6e502",
+    "name": "Marina Cantina",
+    "websiteUrl": "http://www.marinacantina.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "aa7075d0-05bf-458e-99f8-139986ac6f60",
+    "name": "Kahuna's Bar and Grill",
+    "websiteUrl": "http://www.kahunasbarandgrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "aa75f5ac-fdb0-48c3-b69c-9453c65d4b6e",
+    "name": "Sporty's",
+    "websiteUrl": "http://sportys.edan.io/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "aba6289b-8adb-4912-9ab9-66bd328ad418",
+    "name": "Rosie's Tavern of Dunedin",
+    "websiteUrl": "https://www.facebook.com/Rosies-Tavern-of-Dunedin-118816951480502/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "ac5673c9-4dcc-445f-8b2e-1a6e4b5d94af",
+    "name": "Mr. & Mrs. Crab Juicy Seafood & Bar - St Pete",
+    "websiteUrl": "https://mmcseafood.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "ac8bc863-93bb-4f60-8c8d-ada1fc11fc7c",
+    "name": "OCC Road House & Museum",
+    "websiteUrl": "https://www.occroadhouse.com/?utm_source=Google&utm_medium=listing&utm_campaign=listing",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "browser_required"
+    ],
+    "historicalCategories": [
+      "browser_required",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "ad42f869-c8cd-478b-a779-5d456512f2f4",
+    "name": "Blur Nightclub",
+    "websiteUrl": "http://facebook.com/blurdunedin",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "aea88236-f753-493b-82fa-35a4683fc659",
+    "name": "Salt Cracker Fish Camp",
+    "websiteUrl": "http://www.saltcrackerfishcamp.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "aeb36ff1-fc16-4288-9e66-a08b19ed9333",
+    "name": "82 Degrees Bar - Grill",
+    "websiteUrl": "https://www.thesainthotelfl.com/82degrees",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "b024a247-fbbd-4ace-8a7b-48880693f3b2",
+    "name": "Gulfport Brewery + Eatery",
+    "websiteUrl": "http://www.gulfport-brewing.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "b15fbae6-790c-4462-93b8-797bc7686589",
+    "name": "Stormrunners Tavern",
+    "websiteUrl": "https://stormrunnerstavern.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image",
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "b1eb0fff-6e81-48c2-99cf-0b9a7eaf650a",
+    "name": "Bauser's",
+    "websiteUrl": "http://www.bausers.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "b43b65b6-2d52-42fd-ae59-778a48c82747",
+    "name": "Cueni Brewing Co.",
+    "websiteUrl": "http://cuenibrewing.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "b5684939-e240-4a6a-b5f5-c7d2c2a9be17",
+    "name": "Bar Mezzo",
+    "websiteUrl": "https://barmezzo.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "b8835b28-808f-4c52-9c6d-9abfb928e6cb",
+    "name": "Parkshore Grill",
+    "websiteUrl": "http://www.parkshoregrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "b9933077-b9e6-45ad-a362-630648aa80f1",
+    "name": "Jimmy B's Beach Bar",
+    "websiteUrl": "https://www.jimmybsbeachbar.com/?utm_source=referral&utm_medium=GMB&utm_campaign=listing",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "pwpc_events_calendar"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "b9d3a078-a956-4d80-a841-0b0c56bd075e",
+    "name": "Sea Sea Riders Restaurant",
+    "websiteUrl": "http://www.seasearidersdunedin.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "ba1ecc3b-2036-4a23-b950-b08e2743e84c",
+    "name": "The Galley: A St. Pete Tavern",
+    "websiteUrl": "http://www.thegalleystpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "bceed3bc-1b2b-455c-a671-f3bc7ddf8415",
+    "name": "Highland House",
+    "websiteUrl": "http://www.highlandhousefl.com/",
+    "enabledSourceCount": 3,
+    "enabledFirstPartyCount": 3,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "bd4d4e8a-63b2-4038-a8d1-f600afb1b591",
+    "name": "Coco Wood Grill",
+    "websiteUrl": "https://cocowoodgrill.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "bdaaa565-d53c-4c12-9f9d-c1b2869377ea",
+    "name": "Texas Roadhouse",
+    "websiteUrl": "https://www.texasroadhouse.com/locations/florida/st-petersburg?utm_source=listing&utm_medium=search",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "beeca9c7-8aea-4741-8c0c-c8f5f7c8d68f",
+    "name": "Applebee's Grill + Bar",
+    "websiteUrl": "https://restaurants.applebees.com/en-us/fl/st-petersburg/4700-4th-street-north-89065?utm_source=google&utm_medium=organic&utm_campaign=google_my_business&utm_term=89065&utm_content=website",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "bf8548e1-1d79-451d-83e8-37a909f43bf1",
+    "name": "Skip's Bar",
+    "websiteUrl": "http://www.facebook.com/pages/Skips-Bar-Grill/115972868432095",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "c04ac3bb-f7ea-4528-a10d-3634d0408880",
+    "name": "Sauvignon Wine Locker & American Trattoria",
+    "websiteUrl": "https://www.sauvignonstpete.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "c119d28b-af39-4607-93ca-8ddd244d577c",
+    "name": "Coco's Crush Bar and Grill - Indian Rocks Beach",
+    "websiteUrl": "https://cocoscrushbar.com/irb",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "c2a32ae9-fd82-4409-b042-c19ea31e83d8",
+    "name": "Woodwright Brewing Company",
+    "websiteUrl": "http://www.woodwrightbrewing.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventer_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "c30d4fd0-3272-43c1-b863-d4b8c9c60152",
+    "name": "Norton's Southside Sports Bar",
+    "websiteUrl": "http://www.sportsbarclearwater.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "c4755bac-a5bd-4ab1-aed3-cfd359cf9192",
+    "name": "Hooters",
+    "websiteUrl": "https://originalhooters.com/locations/tampa-bay/st-pete-4th-st/?utm_source=google&utm_medium=organic&utm_campaign=gmb-website-cta-st-pete",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "c54af3b5-c33a-415b-86ad-6d5124b6b535",
+    "name": "Sparrow St Pete",
+    "websiteUrl": "https://www.sparrowbar.com/sparrow-rooftop-at-st-petersburg",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "c75efc74-35bc-44f9-a272-c7fddc4eaf7f",
+    "name": "The Roaming Petal",
+    "websiteUrl": "https://theroamingpetal.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "c7ec75f4-9b5d-41cc-8507-a95f39c42563",
+    "name": "Crabby's Dockside Clearwater",
+    "websiteUrl": "https://crabbysdocksideclearwater.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "cae3958d-6c71-4c32-9e55-88dfcd649e51",
+    "name": "Whiskey Wings Saint Pete",
+    "websiteUrl": "https://whiskeywings.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "ccecc1e1-6193-41e7-9575-aeecfeae3762",
+    "name": "Pirates Pub & Grub",
+    "websiteUrl": "https://piratespub-n-grub.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "cdc6c25c-de76-478d-8d51-75467a835436",
+    "name": "The Salty Crab Bar & Grill North Beach",
+    "websiteUrl": "https://saltycrabnorthbeach.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "cea432b9-0099-45d7-9f8e-b218a39e7428",
+    "name": "Tommy's Tiki Bar",
+    "websiteUrl": "https://www.hilton.com/en/hotels/piecbhf-hilton-clearwater-beach-resort-and-spa/?SEO_id=GMB--R-PIECBHF-2",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "cf15e0d7-f54d-409d-9a4f-39373abd6e3a",
+    "name": "LALA St. Pete",
+    "websiteUrl": "https://lalakaraoke.com/?utm_source=google&utm_medium=organic&utm_campaign=gmb&utm_content=st-pete",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "d0570316-e592-48bb-8bce-d301ff557b9a",
+    "name": "Cane & Barrel Rooftop Bar",
+    "websiteUrl": "https://www.caneandbarrelstpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventscalendar_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "d110f9d0-2fd2-4a2f-8aaa-54b4d3ccc061",
+    "name": "Reboot Arcade & Bar",
+    "websiteUrl": "http://www.rebootdunedin.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "d20a4be9-1876-4f34-96cb-0b3d0f125d56",
+    "name": "Sandbar Grill",
+    "websiteUrl": "https://sandbardunedin.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "cp_multi_view_calendar"
+    ],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image",
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "d2a88c3d-ed49-4fa1-91db-a901eae368ea",
+    "name": "Pepe's Cantina St. Petersburg",
+    "websiteUrl": "https://www.pepescantina.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "d36fb54e-e782-42bd-ac5d-88dd99de6def",
+    "name": "Birchwood Canopy",
+    "websiteUrl": "http://www.thebirchwood.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "d3e1260b-c82a-4a97-a7d7-17694d06e77d",
+    "name": "Bavaro's Pizza Napoletana & Pastaria",
+    "websiteUrl": "https://bavarospizza.com/locations/st-petersburg",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "d40cea4c-f449-4636-9962-5970c1f54bd2",
+    "name": "Crab Shack Restaurant",
+    "websiteUrl": "http://www.crabshack.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "d48189d9-5b24-4860-b1de-77a975d20787",
+    "name": "The Boxer Kitchen & Bar",
+    "websiteUrl": "https://www.theboxercwb.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "d4bb3840-fa06-4229-820c-2b2d36ea58cb",
+    "name": "Red, White and Booze",
+    "websiteUrl": "https://www.redwhiteboozepag.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events",
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "d524a809-7110-4099-bfa9-0a49f36a61a3",
+    "name": "Frenchy's South Beach Cafe",
+    "websiteUrl": "http://www.frenchysonline.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "challenge_encountered",
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 3
+  },
+  {
+    "venueId": "d531c373-55df-49d1-a3ce-ad85192d95de",
+    "name": "Grape Bottle Wine Merchants",
+    "websiteUrl": "http://www.grapebottle.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "shopify_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "d60605b1-aaeb-4cda-9322-e33048ecb33a",
+    "name": "The Hotel Zamora",
+    "websiteUrl": "https://thehotelzamora.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "d60eb959-74b7-46f7-b5ec-0faec12196b5",
+    "name": "Harry's Beach Bar",
+    "websiteUrl": "https://www.stpeteshoreshotel.com/restaurants/harrys-beach-bar?utm_source=GOOGLE&utm_medium=URL",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "d7d669df-2fe9-42e8-8138-bfe95704639e",
+    "name": "Crabby's Bar & Grill Clearwater",
+    "websiteUrl": "https://crabbysbarandgrill.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "d9ebd0a6-655d-42a4-969b-ba1dbb0ea4ba",
+    "name": "Copper Shaker",
+    "websiteUrl": "http://www.coppershakerstpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "dab8dcca-7ec1-47d3-bf92-43703d6264eb",
+    "name": "Applebee's Grill + Bar",
+    "websiteUrl": "https://restaurants.applebees.com/en-us/fl/largo/10911-starkey-road-90033?utm_source=google&utm_medium=organic&utm_campaign=google_my_business&utm_term=90033&utm_content=website",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "dadce53b-92fe-455f-8f68-8f71023a5b64",
+    "name": "VIP Mexican American Cuisine T.I.",
+    "websiteUrl": "http://www.viptacos.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "dc0bb27c-15a7-4aa9-ac35-aaa3b34a021f",
+    "name": "Smugglers Tavern & Liquor Store | Neighborhood Bar in Tierra Verde, FL",
+    "websiteUrl": "http://www.smugglerstierraverde.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "de4b2aff-7f66-4940-bb63-f1be6e7bdb2b",
+    "name": "The Wharf Restaurant",
+    "websiteUrl": "http://wharfpag.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "deec67c3-7b5c-43b2-8e31-d9ca4ff2e217",
+    "name": "Wave Nightclub at Shephard's",
+    "websiteUrl": "http://www.shephards.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "uvtix_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "e1389023-02bd-4fc4-9729-f876fa8b3a3b",
+    "name": "Dunedin Brewery",
+    "websiteUrl": "http://www.dunedinbrewery.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "bandzoogle_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e16fec17-1c12-4e22-83cd-e8f1232ac903",
+    "name": "3 Daughters Brewing",
+    "websiteUrl": "https://3dbrewing.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "tribe_rest"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e1f5e516-4031-4e5b-a6ec-efba525205e4",
+    "name": "The Honu Restaurant and Tiki Bar",
+    "websiteUrl": "http://www.thehonurestaurant.com/",
+    "enabledSourceCount": 2,
+    "enabledFirstPartyCount": 2,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e25a0188-aa22-42a1-8bea-c6a36e274799",
+    "name": "Casa Tina Mexican",
+    "websiteUrl": "http://www.casatinas.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e40255fe-cc0d-4f2d-a768-5c910cfc3aca",
+    "name": "Buoys Waterfront Bar and Grill",
+    "websiteUrl": "http://www.buoyswaterfrontbar.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e5f408f2-f8bb-4105-80a0-2c68a173aa1b",
+    "name": "FIVE BUCKS DRINKERY PINELLAS PARK",
+    "websiteUrl": "https://fivebucks2go.com/pinellas-park?utm_source=google",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e7c9c393-6cda-4023-998a-d852ed054fa9",
+    "name": "Cocktail St Pete",
+    "websiteUrl": "https://cocktailstpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "e865334c-f2f9-4977-80ed-94db57d7bf33",
+    "name": "Trophy Fish",
+    "websiteUrl": "https://trophyfish.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e89ee721-3eff-4ad0-865e-b3182005c8fb",
+    "name": "Soggy Bottom Brewery",
+    "websiteUrl": "http://soggybottombrewing.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e9081cbb-d4fb-4521-aabb-e70fb34d8bff",
+    "name": "in between days",
+    "websiteUrl": "http://www.inbetweendays.co/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e93a0961-44ac-421d-963c-66bad1bc2b84",
+    "name": "Cool Vibes Pub & Grub",
+    "websiteUrl": "http://www.mycoolvibes.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "e9918dd3-9730-406c-b1d6-d7439e9f5b0d",
+    "name": "Badfins Food + Brew",
+    "websiteUrl": "https://www.badfins.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "eae19e87-1e90-4175-9666-8f8bdf5077a5",
+    "name": "Coconut Charlie's North Redington Beach",
+    "websiteUrl": "https://www.coconutcharliesnorthredingtonbeach.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventscalendar_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "browser_required"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "eb312b1f-dd42-4fd0-b891-43685c155de9",
+    "name": "Oak & Stone",
+    "websiteUrl": "https://www.oakandstone.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "ec3bef01-a39f-4e40-a18a-4a10afe84c18",
+    "name": "Rick's Reef",
+    "websiteUrl": "http://ricksreefstpetebeach.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "ef376275-d412-490e-8b01-6b8341e61a89",
+    "name": "The Deep End",
+    "websiteUrl": "https://www.thedeependclearwaterbeach.com/?scid=feed67b0-9a2f-4de1-8df6-114544116108",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "efbb0630-71bb-417d-af3d-c33264f66dcd",
+    "name": "Hyatt Regency Clearwater Beach Resort and Suites",
+    "websiteUrl": "https://www.hyatt.com/hyatt-regency/en-US/pierc-hyatt-regency-clearwater-beach-resort-and-suites?src=corp_lclb_google_seo_pierc&utm_source=google&utm_medium=organic&utm_campaign=lmr",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "f10864f0-949b-49c6-a70d-0e71c7d8ed9d",
+    "name": "Pee-Pa's Garage Craft Brewery",
+    "websiteUrl": "https://www.peepasgaragecraftbrewery.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "f2427e70-9c62-401d-a0f4-35582be1a9ee",
+    "name": "The Getaway",
+    "websiteUrl": "http://thegetawaytampabay.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "browser_required"
+    ],
+    "historicalCategories": [
+      "browser_required"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "f38148dd-37cc-4c77-a489-042016be5139",
+    "name": "Pinellas Ale Works Dog Friendly Craft Brewery in St Petersburg FL",
+    "websiteUrl": "http://bestdogbrewery.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "f45e6724-af32-4ca1-83e4-b311a4828ee8",
+    "name": "Fenway Hotel, Autograph Collection",
+    "websiteUrl": "https://www.marriott.com/en-us/hotels/tpadu-fenway-hotel-autograph-collection/overview/?scid=f2ae0541-1279-4f24-b197-a979c79310b0",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "f4f71dcc-c861-46c3-9354-f34926b328a8",
+    "name": "The Black Pearl",
+    "websiteUrl": "https://www.theblackpearldunedin.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "squarespace_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "f5d9f240-bf82-4e4e-a344-9c5b2c43720b",
+    "name": "Cheeky's Fish & Raw Bar",
+    "websiteUrl": "https://cheekys.net/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "f61deb1b-7867-43d0-bf72-ee222a076da3",
+    "name": "Evy's Terrace Bar & Bistro",
+    "websiteUrl": "https://www.evysclearwater.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "f6258240-e9aa-419c-87ac-0566b525e3f1",
+    "name": "CJ's Backstage",
+    "websiteUrl": "http://www.cjsbackstage.com/?utm_campaign=gmb",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "calendar_image"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "f6fb892b-4537-4c41-8e81-2bf047f80b59",
+    "name": "Shrimpys Waterfront",
+    "websiteUrl": "http://shrimpysbluesbistro.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "f8c3838a-183f-4515-aa09-5685c98236f0",
+    "name": "Shephard's Tiki Beach Bar & Grill",
+    "websiteUrl": "https://www.shephards.com/dining/tiki-beach-grill",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "uvtix_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "fab15b92-727c-41d8-91d7-2b9bce7019f9",
+    "name": "Ruby's Elixir",
+    "websiteUrl": "https://rubyselixirdtsp.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source",
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "faeeba9b-d056-47ed-b51b-2c6256870a16",
+    "name": "Caledonia Brewing",
+    "websiteUrl": "http://caledoniabrewing.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventbrite_organizer"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "fb9c0569-1deb-49a2-a44a-11ac644cee3d",
+    "name": "O'Maddy's Bar & Grille",
+    "websiteUrl": "http://www.omaddys.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "no_source"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "fca8493f-2a51-4ee2-8251-ca84cc4084cf",
+    "name": "Five Bucks Drinkery",
+    "websiteUrl": "https://fivebucksdrinkery.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [],
+    "historicalCategories": [
+      "facebook",
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "fe4d93b8-94cb-430a-8f2f-05631134f614",
+    "name": "Par Bar",
+    "websiteUrl": "http://parbarstp.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "no_source"
+    ],
+    "historicalCategories": [
+      "no_source"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "fe8f8f4e-5afe-4134-934b-9f8d258ab31d",
+    "name": "Back Bar",
+    "websiteUrl": "http://www.backbarsp.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "facebook"
+    ],
+    "historicalCategories": [
+      "facebook"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 2
+  },
+  {
+    "venueId": "fe9075bc-4cff-4056-a8f0-85132c604f32",
+    "name": "Coconut Charlie's Beach Bar & Grill",
+    "websiteUrl": "https://www.coconutcharliesstpete.com/?y_source=1_mta2njyxnjuymi03njktbg9jyxrpb24ud2vic2l0zq%3D%3D",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "eventscalendar_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "fe9eaa66-9139-4b46-9c4a-72a89e2f2af2",
+    "name": "Bubba Gump Shrimp Co.",
+    "websiteUrl": "https://www.bubbagump.com/location/bubba-gump-madeira-beach-fl/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "schema_org_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 0
+  },
+  {
+    "venueId": "feac3d58-f676-4dfb-a785-8f361cafaf32",
+    "name": "The Study Wine & Bourbon Tasting Lounge St. Pete",
+    "websiteUrl": "http://thestudystpete.com/",
+    "enabledSourceCount": 1,
+    "enabledFirstPartyCount": 1,
+    "hasValidatedFirstPartySource": true,
+    "enabledProviders": [
+      "first_party"
+    ],
+    "enabledAdapterTypes": [
+      "spothopper_events"
+    ],
+    "activeCategories": [],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 0,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "feb0e073-6a30-4003-9950-c72849542e49",
+    "name": "The North End Tap House & Kitchen",
+    "websiteUrl": "http://thenorthendtaphouse.com/",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "calendar_image"
+    ],
+    "historicalCategories": [
+      "calendar_image"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  },
+  {
+    "venueId": "ffb8e00e-69fa-4607-a3a1-db7481ea850f",
+    "name": "Tropico Rooftop Cantina",
+    "websiteUrl": "https://www.hyatt.com/en-US/hotel/florida/hyatt-regency-clearwater-beach-resort-and-spa/pierc/dining",
+    "enabledSourceCount": 0,
+    "enabledFirstPartyCount": 0,
+    "hasValidatedFirstPartySource": false,
+    "enabledProviders": [],
+    "enabledAdapterTypes": [],
+    "activeCategories": [
+      "transport"
+    ],
+    "historicalCategories": [
+      "transport"
+    ],
+    "activeFindingCount": 1,
+    "historicalFindingCount": 1
+  }
+]
