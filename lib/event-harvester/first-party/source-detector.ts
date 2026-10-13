@@ -1740,6 +1740,122 @@ export type RedirectVenueIdentity = {
   postalCode?: string | null;
 };
 
+
+async function discoverWordPressCategoryEvents(
+  pageUrl: string,
+  html: string,
+  detections: SourceDetection[],
+): Promise<void> {
+  // Require evidence of WordPress before probing its REST API.
+  if (!/wp-json|wp-content|wp-includes|wordpress/i.test(html)) {
+    return;
+  }
+
+  const origin = new URL(pageUrl).origin;
+
+  // Limit category discovery to the same WordPress installation.
+  const apiRoot = new URL("/wp-json/wp/v2/", origin);
+  const categoryUrl = new URL("categories", apiRoot);
+  categoryUrl.searchParams.set("per_page", "100");
+
+  try {
+    const response = await signedHarvesterFetch(
+      categoryUrl.toString(),
+      {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+
+    if (!response.ok) return;
+
+    const categories: unknown = await response.json();
+    if (!Array.isArray(categories)) return;
+
+    const candidates = categories
+      .filter((category): category is {
+        id: number;
+        name: string;
+        slug: string;
+        count?: number;
+      } =>
+        category !== null &&
+        typeof category === "object" &&
+        Number.isInteger(category.id) &&
+        typeof category.name === "string" &&
+        typeof category.slug === "string"
+      )
+      .filter(category =>
+        /\b(events?|entertainment|live[-\s]?music|happenings|calendar)\b/i
+          .test(`${category.name} ${category.slug}`)
+      )
+      .slice(0, 3);
+
+    for (const category of candidates) {
+      const postsUrl = new URL("posts", apiRoot);
+      postsUrl.searchParams.set("categories", String(category.id));
+      postsUrl.searchParams.set("per_page", "10");
+
+      try {
+        const postsResponse = await signedHarvesterFetch(
+          postsUrl.toString(),
+          {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          },
+        );
+
+        if (!postsResponse.ok) continue;
+
+        const posts: unknown = await postsResponse.json();
+        if (!Array.isArray(posts)) continue;
+
+        const validPosts = posts.filter(
+          (post): post is {
+            id: number;
+            title: { rendered: string };
+            content: { rendered: string };
+          } =>
+            post !== null &&
+            typeof post === "object" &&
+            Number.isInteger(post.id) &&
+            typeof post.title?.rendered === "string" &&
+            typeof post.content?.rendered === "string"
+        );
+
+        const eventLike = validPosts.filter(post => {
+          const content = `${post.title.rendered} ${post.content.rendered}`
+            .replace(/<[^>]*>/g, " ");
+
+          return (
+            /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}\b/i.test(content) &&
+            /\b(?:am|pm|music|trivia|show|performance|event|festival|party|concert)\b/i.test(content)
+          );
+        });
+
+        if (!eventLike.length) continue;
+
+        pushDetection(detections, {
+          sourceType: "wordpress_category_events",
+          url: postsUrl.toString(),
+          confidence: "high",
+          adapterAvailable: true,
+          supported: true,
+          evidence: [
+            `WordPress category "${category.name}" contains dated event announcements`,
+            `${eventLike.length} event-like posts verified`,
+            "Timezone configuration required before harvesting",
+          ],
+        });
+      } catch {
+        // An inaccessible category does not invalidate other sources.
+      }
+    }
+  } catch {
+    // WordPress REST API may be disabled or restricted.
+  }
+}
+
 export async function detectFirstPartySources(
   websiteUrl: string,
   venueIdentity?: RedirectVenueIdentity,
@@ -1835,6 +1951,12 @@ export async function detectFirstPartySources(
   }
 
   inspectPage(homepage.html, homepage.url, detections);
+
+  await discoverWordPressCategoryEvents(
+    homepage.url,
+    homepage.html,
+    detections,
+  );
 
   const homeHost = hostname(homepage.url);
 
