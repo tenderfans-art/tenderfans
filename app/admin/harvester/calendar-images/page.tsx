@@ -47,7 +47,23 @@ export default function CalendarImagesPage() {
     }
 
     const findings = (findingsResult.data ?? []) as Finding[];
-    setRows(findings);
+    const latestBySpot = new Map<string, Finding>();
+
+    for (const finding of findings) {
+      const previous = latestBySpot.get(finding.venue_id);
+
+      if (
+        !previous ||
+        new Date(finding.last_seen_at).getTime() >
+          new Date(previous.last_seen_at).getTime()
+      ) {
+        latestBySpot.set(finding.venue_id, finding);
+      }
+    }
+
+    setRows([...latestBySpot.values()].sort((a, b) =>
+      a.venue_name.localeCompare(b.venue_name)
+    ));
     setSpots((spotsResult.data ?? []) as Spot[]);
     setError(null);
 
