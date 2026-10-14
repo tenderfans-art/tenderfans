@@ -556,12 +556,33 @@ export async function GET(request: Request) {
                 ? recovered
                 : original;
 
+            const selectedStatus =
+              combined.length > 0
+                ? "detected"
+                : preferred.status;
+
+            const diagnosticErrors = [
+              preferred.error,
+              preferred === original
+                ? recovered.error
+                : original.error,
+            ].filter(
+              (error): error is string =>
+                typeof error === "string" &&
+                error.trim().length > 0,
+            );
+
             detection = {
               ...preferred,
               detections: combined,
-              status: combined.length > 0
-                ? "detected"
-                : preferred.status,
+              status: selectedStatus,
+              error:
+                selectedStatus === "detected" ||
+                selectedStatus === "no_event_source"
+                  ? preferred.error
+                  : [...new Set(diagnosticErrors)].join(
+                      "; Recovery attempt: ",
+                    ) || null,
             };
           }
         } else {
