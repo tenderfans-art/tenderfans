@@ -1915,9 +1915,76 @@ export async function detectFirstPartySources(
 
   let homepage: Awaited<ReturnType<typeof fetchHtml>>;
 
+  let homepageFetchError: unknown = null;
+
   try {
     homepage = await fetchHtml(websiteUrl);
   } catch (error) {
+    homepageFetchError = error;
+    homepage = {
+      ok: false,
+      status: 0,
+      url: websiteUrl,
+      html: "",
+    };
+  }
+
+  /*
+   * Browser-assisted homepage recovery.
+   *
+   * This is available only inside the established transport-recovery
+   * context. Browser evidence rejoins the existing detector pipeline;
+   * no independent source classification or adapter path is introduced.
+   */
+  const recoveryProxy = getTransportRecoveryProxy();
+
+  if (
+    recoveryProxy &&
+    !homepage.ok &&
+    !identifyAccessChallenge(
+      homepage.url,
+      homepage.html,
+      homepage.status,
+    ).length
+  ) {
+    try {
+      const evidence = await fetchBrowserEvidence(
+        websiteUrl,
+        recoveryProxy,
+      );
+
+      const browserChallenge = identifyAccessChallenge(
+        evidence.finalUrl,
+        evidence.html,
+        evidence.status,
+      );
+
+      if (
+        browserChallenge.length > 0 ||
+        (
+          evidence.status !== null &&
+          evidence.status >= 200 &&
+          evidence.status < 400
+        )
+      ) {
+        homepage = {
+          ok:
+            browserChallenge.length === 0 &&
+            evidence.status !== null &&
+            evidence.status >= 200 &&
+            evidence.status < 400,
+          status: evidence.status ?? 0,
+          url: evidence.finalUrl,
+          html: evidence.html,
+          recoveryDetail: "Browser-assisted transport recovery",
+        };
+      }
+    } catch {
+      // Preserve the original HTTP result if browser recovery fails.
+    }
+  }
+
+  if (homepageFetchError && !homepage.ok) {
     return {
       websiteUrl,
       fetchedUrl: null,
@@ -1925,7 +1992,10 @@ export async function detectFirstPartySources(
       pagesInspected: 0,
       discoveredEventPages: [],
       detections: [],
-      error: error instanceof Error ? error.message : String(error),
+      error:
+        homepageFetchError instanceof Error
+          ? homepageFetchError.message
+          : String(homepageFetchError),
     };
   }
 
@@ -2199,16 +2269,28 @@ export async function detectFirstPartySources(
       try {
         const evidence = await fetchBrowserEvidence(
           candidate.finalUrl ?? candidate.url,
+          getTransportRecoveryProxy(),
         );
 
         pagesInspected += 1;
 
         const browserChallenge = identifyAccessChallenge(
-          evidence.finalUrl, evidence.html, null,
+          evidence.finalUrl,
+          evidence.html,
+          evidence.status,
         );
 
         if (browserChallenge.length > 0) {
           encounteredChallenges.push(...browserChallenge);
+          continue;
+        }
+
+        if (
+          evidence.status === null ||
+          evidence.status < 200 ||
+          evidence.status >= 400 ||
+          !sameSite(candidate.url, evidence.finalUrl)
+        ) {
           continue;
         }
 
