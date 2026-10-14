@@ -1,3 +1,8 @@
+import {
+  recoverMissingGoogleWebsites,
+  getRecoveredWebsitePriorityIds,
+  clearRecoveredWebsitePriority,
+} from "@/lib/event-harvester/google-website-recovery";
 import { venueIdentityMatch } from "@/lib/event-harvester/venue-identity";
 import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
 import { NextResponse } from "next/server";
@@ -205,6 +210,15 @@ export async function GET(request: Request) {
       .limit(SPOT_LIMIT);
   }
 
+  const scheduledMode =
+    !recoveryMode && !fullScanMode && !venueId;
+
+  let priorityIds: string[] = [];
+
+  if (scheduledMode) {
+    priorityIds = await getRecoveredWebsitePriorityIds(supabase);
+  }
+
   const { data: venues, error } = await venueQuery;
 
   if (error) {
@@ -214,6 +228,38 @@ export async function GET(request: Request) {
       },
       { status: 500 },
     );
+  }
+
+  if (scheduledMode && priorityIds.length > 0) {
+    const { data: priorityVenues, error: priorityError } =
+      await supabase
+        .from("venues")
+        .select(
+          "id,name,website_url,street_address,city,state_region,postal_code,country_code,latitude,longitude",
+        )
+        .eq("status", "active")
+        .not("website_url", "is", null)
+        .in("id", priorityIds.slice(0, SPOT_LIMIT));
+
+    if (priorityError) {
+      return NextResponse.json(
+        { error: priorityError.message },
+        { status: 500 },
+      );
+    }
+
+    const combined = new Map(
+      (priorityVenues ?? []).map((venue) => [venue.id, venue]),
+    );
+
+    for (const venue of venues ?? []) {
+      if (combined.size >= SPOT_LIMIT) break;
+      if (!combined.has(venue.id)) {
+        combined.set(venue.id, venue);
+      }
+    }
+
+    venues?.splice(0, venues.length, ...combined.values());
   }
 
   let processedSpots = 0;
@@ -1573,7 +1619,19 @@ export async function GET(request: Request) {
         `Could not record execution result for ${venue.id}: ${trackingError.message}`
       );
     }
+
+    if (
+      scheduledMode &&
+      priorityIds.includes(venue.id) &&
+      executionErrors.length === 0
+    ) {
+      await clearRecoveredWebsitePriority(supabase, venue.id);
+    }
   }
+
+  const websiteRecovery = scheduledMode
+    ? await recoverMissingGoogleWebsites(supabase)
+    : null;
 
   const bucketTotal =
     bucketCounts.validated +
@@ -1590,6 +1648,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     spots: processedSpots,
     bucketInvariantHolds,
+    websiteRecovery,
     detected,
     ratified,
     validated,
