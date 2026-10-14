@@ -269,11 +269,10 @@ export async function GET(request: Request) {
         error: previouslyValidatedSourceError,
       } = await supabase
         .from("event_harvest_sources")
-        .select("id")
+        .select("id,source_type,external_source_id,config")
         .eq("venue_id", venue.id)
         .eq("provider", "first_party")
-        .eq("is_enabled", true)
-        .limit(1);
+        .eq("is_enabled", true);
 
       if (previouslyValidatedSourceError) {
         throw new Error(
@@ -283,6 +282,29 @@ export async function GET(request: Request) {
 
       const hasPreviouslyValidatedSource =
         (previouslyValidatedSources?.length ?? 0) > 0;
+
+      const effectiveSourceConfig = (
+        source: {
+          sourceType: string;
+          externalSourceId: string | null;
+          config: Record<string, unknown>;
+        },
+      ): Record<string, unknown> => {
+        const existing = (previouslyValidatedSources ?? []).find(
+          (item) =>
+            item.source_type === source.sourceType &&
+            item.external_source_id === source.externalSourceId,
+        );
+
+        const savedConfig =
+          existing?.config &&
+          typeof existing.config === "object" &&
+          !Array.isArray(existing.config)
+            ? existing.config as Record<string, unknown>
+            : {};
+
+        return { ...savedConfig, ...source.config };
+      };
 
       /*
        * Approved website redirects are venue-scoped identities.
@@ -406,7 +428,7 @@ export async function GET(request: Request) {
               venue_id: venue.id,
               is_enabled: true,
               trust_level: "trusted",
-              config: ratification.source.config,
+              config: effectiveSourceConfig(ratification.source),
               bootstrapped_at: null,
             };
 
@@ -1103,7 +1125,7 @@ export async function GET(request: Request) {
             venue_id: venue.id,
             is_enabled: true,
             trust_level: "trusted",
-            config: ratification.source.config,
+            config: effectiveSourceConfig(ratification.source),
             bootstrapped_at: null,
           };
 
@@ -1146,7 +1168,7 @@ export async function GET(request: Request) {
               p_name: `${venue.name} official events`,
               p_source_url: ratification.source.sourceUrl,
               p_external_source_id: ratification.source.externalSourceId,
-              p_config: ratification.source.config,
+              p_config: effectiveSourceConfig(ratification.source),
             });
 
           if (registrationError || !sourceId) {
