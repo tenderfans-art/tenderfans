@@ -156,7 +156,18 @@ export default function CalendarImagesPage() {
           ) : rows.length === 0 ? (
             <p>No pending calendar-image sources.</p>
           ) : (
-            <div style={{ display: "grid", gap: 14 }}>
+            <div style={{ display: "grid", gap: 5 }}>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(250px,2fr) 130px 130px 190px",
+                gap: 10, padding: "0 10px",
+                fontSize: ".66rem", fontWeight: 800,
+                letterSpacing: ".08em", textTransform: "uppercase",
+                opacity: .55
+              }}>
+                <span>Spot</span><span>Confidence</span>
+                <span>Source</span><span>Last Seen</span>
+              </div>
               {rows.map((finding) => {
                 const search = (
                   spotSearch[finding.id] ?? ""
@@ -172,49 +183,38 @@ export default function CalendarImagesPage() {
                 const busy = busyId !== null;
 
                 return (
-                  <div
+                  <details
                     key={finding.id}
                     style={{
-                      border: "1px solid rgba(20,35,45,.14)",
-                      borderRadius: 12,
-                      padding: 18,
-                      background: "rgba(255,255,255,.9)",
+                      border: "1px solid rgba(20,35,45,.12)",
+                      borderRadius: 9,
+                      background: "rgba(255,255,255,.9)"
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div>
-                        <strong>{finding.venue_name}</strong>
-                        <p style={{ margin: "5px 0", fontSize: ".85rem" }}>
-                          Detected for this Spot
-                        </p>
+                    <summary style={{ cursor: "pointer", listStyle: "none" }}>
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(250px,2fr) 130px 130px 190px",
+                        gap: 10, alignItems: "center",
+                        padding: "7px 10px", fontSize: ".84rem"
+                      }}>
+                        <strong style={{
+                          overflow: "hidden", textOverflow: "ellipsis",
+                          whiteSpace: "nowrap"
+                        }}>{finding.venue_name}</strong>
+                        <span>{finding.confidence ?? "unknown"}</span>
+                        <a href={finding.source_url ?? finding.website_url}
+                          target="_blank" rel="noopener noreferrer"
+                          onClick={(event) => event.stopPropagation()}>
+                          Open Source
+                        </a>
+                        <span style={{ opacity: .65 }}>
+                          {new Date(finding.last_seen_at).toLocaleString()}
+                        </span>
                       </div>
-                      <div style={{ fontSize: ".85rem" }}>
-                        Confidence: {finding.confidence ?? "unknown"}
-                      </div>
-                    </div>
-
-                    <p style={{ overflowWrap: "anywhere" }}>
-                      <a
-                        href={finding.source_url ?? finding.website_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {finding.source_url ?? finding.website_url}
-                      </a>
-                    </p>
-
-                    <p style={{ fontSize: ".8rem", opacity: 0.65 }}>
-                      Last seen:{" "}
-                      {new Date(finding.last_seen_at).toLocaleString()}
-                    </p>
-
+                    </summary>
+                    <div style={{ padding: "10px 14px 14px" }}>
+                      <strong>Review calendar source</strong>
                     <label
                       htmlFor={`search-${finding.id}`}
                       style={{ display: "block", marginTop: 14 }}
@@ -306,7 +306,8 @@ export default function CalendarImagesPage() {
                         Reject
                       </button>
                     </div>
-                  </div>
+                    </div>
+                  </details>
                 );
               })}
             </div>

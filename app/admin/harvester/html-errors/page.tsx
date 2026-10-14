@@ -77,44 +77,55 @@ export default function HtmlErrorsPage() {
           ) : rows.length === 0 ? (
             <p>No active HTML extraction errors.</p>
           ) : (
-            <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gap: 5 }}>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(250px,2fr) minmax(180px,1fr) 130px 190px",
+                gap: 10, padding: "0 10px",
+                fontSize: ".66rem", fontWeight: 800,
+                letterSpacing: ".08em", textTransform: "uppercase",
+                opacity: .55
+              }}>
+                <span>Spot</span><span>Error</span>
+                <span>Source</span><span>Last Seen</span>
+              </div>
               {rows.map((finding) => (
-                <div
-                  key={finding.id}
-                  style={{
-                    padding: 16,
-                    border: "1px solid rgba(20,35,45,.14)",
-                    borderRadius: 12,
-                    background: "rgba(255,255,255,.9)"
-                  }}
-                >
-                  <strong>{finding.venue_name}</strong>
-                  <p>{finding.error ?? "Incomplete HTML extraction"}</p>
-
-                  <a
-                    href={finding.source_url ?? finding.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open Event Source
-                  </a>
-
-                  <details style={{ marginTop: 12 }}>
-                    <summary>Extraction evidence</summary>
-                    <pre style={{
-                      whiteSpace: "pre-wrap",
-                      overflowWrap: "anywhere"
+                <details key={finding.id} style={{
+                  border: "1px solid rgba(20,35,45,.12)",
+                  borderRadius: 9, background: "rgba(255,255,255,.9)"
+                }}>
+                  <summary style={{ cursor: "pointer", listStyle: "none" }}>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "minmax(250px,2fr) minmax(180px,1fr) 130px 190px",
+                      gap: 10, alignItems: "center",
+                      padding: "7px 10px", fontSize: ".84rem"
                     }}>
-                      {JSON.stringify(finding.evidence, null, 2)}
-                    </pre>
-                  </details>
-
-                  <p style={{ opacity: 0.65, fontSize: ".8rem" }}>
-                    Last seen: {new Date(
-                      finding.last_seen_at
-                    ).toLocaleString()}
-                  </p>
-                </div>
+                      <strong style={{
+                        overflow: "hidden", textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                      }}>{finding.venue_name}</strong>
+                      <span style={{
+                        overflow: "hidden", textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                      }}>{finding.error ?? "Incomplete HTML extraction"}</span>
+                      <a href={finding.source_url ?? finding.website_url}
+                        target="_blank" rel="noopener noreferrer"
+                        onClick={(event) => event.stopPropagation()}>
+                        Open Source
+                      </a>
+                      <span style={{ opacity: .65 }}>
+                        {new Date(finding.last_seen_at).toLocaleString()}
+                      </span>
+                    </div>
+                  </summary>
+                  <div style={{ padding: "8px 12px 14px", fontSize: ".84rem" }}>
+                    <strong>Extraction evidence</strong>
+                    <pre style={{
+                      whiteSpace: "pre-wrap", overflowWrap: "anywhere"
+                    }}>{JSON.stringify(finding.evidence, null, 2)}</pre>
+                  </div>
+                </details>
               ))}
             </div>
           )}
