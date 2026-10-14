@@ -388,7 +388,9 @@ function normalizeFacebookPageUrl(
     path.startsWith("/dialog/") ||
     path.startsWith("/plugins/") ||
     path.startsWith("/login") ||
-    path.startsWith("/help")
+    path.startsWith("/help") ||
+    path === "/docs" ||
+    path.startsWith("/docs/")
   ) {
     return null;
   }
