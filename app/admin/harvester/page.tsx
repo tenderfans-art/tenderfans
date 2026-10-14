@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CoverageTally from "./CoverageTally";
+import BucketCount from "./BucketCount";
 
 const tools = [
   {
@@ -11,6 +12,7 @@ const tools = [
   },
   {
     title: "HTML Error",
+    countRpc: "admin_event_harvest_html_error_findings",
     description:
       "Review HTML event sources with failed or incomplete event extraction.",
     href: "/admin/harvester/html-errors",
@@ -18,12 +20,14 @@ const tools = [
   },
   {
     title: "Calendar Image Adapter",
+    countRpc: "admin_event_harvest_calendar_image_findings",
     description: "Manage event sources that require calendar-image extraction.",
     href: "/admin/harvester/calendar-images",
     status: "OPEN",
   },
   {
     title: "Facebook Adapter",
+    countRpc: "admin_event_harvest_facebook_findings",
     description:
       "Review Spots where Facebook is the only potential event source currently detected.",
     href: "/admin/harvester/facebook",
@@ -31,6 +35,7 @@ const tools = [
   },
   {
     title: "Browser Required",
+    countRpc: "admin_event_harvest_browser_required_findings",
     description:
       "Review Spots whose event-source discovery requires browser execution.",
     href: "/admin/harvester/browser-required",
@@ -38,6 +43,7 @@ const tools = [
   },
   {
     title: "Challenge Encountered",
+    countRpc: "admin_event_harvest_challenge_findings",
     description:
       "Review websites presenting verified CAPTCHA or automated-access challenges.",
     href: "/admin/harvester/challenge-encountered",
@@ -45,6 +51,7 @@ const tools = [
   },
   {
     title: "Transport Errors",
+    countRpc: "admin_event_harvest_transport_findings",
     description:
       "Review event sources blocked by transport or website-access failures.",
     href: "/admin/harvester/transport-errors",
@@ -52,6 +59,7 @@ const tools = [
   },
   {
     title: "No Sources",
+    countRpc: "admin_event_harvest_no_source_findings",
     description:
       "Review Spots where detector discovery completed but found no event source.",
     href: "/admin/harvester/no-source",
@@ -132,7 +140,7 @@ export default function AdminHarvesterPage() {
                         fontSize: "1.25rem",
                       }}
                     >
-                      {tool.title}
+                      {tool.title}{tool.countRpc && <BucketCount rpc={tool.countRpc} />}
                     </h2>
 
                     <span
