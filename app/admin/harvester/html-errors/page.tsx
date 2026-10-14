@@ -34,7 +34,26 @@ export default function HtmlErrorsPage() {
       if (result.error) {
         setError(result.error.message);
       } else {
-        setRows((result.data ?? []) as Finding[]);
+        const findings = (result.data ?? []) as Finding[];
+        const latestBySpot = new Map<string, Finding>();
+
+        for (const finding of findings) {
+          const previous = latestBySpot.get(finding.venue_id);
+
+          if (
+            !previous ||
+            new Date(finding.last_seen_at).getTime() >
+              new Date(previous.last_seen_at).getTime()
+          ) {
+            latestBySpot.set(finding.venue_id, finding);
+          }
+        }
+
+        setRows(
+          [...latestBySpot.values()].sort((a, b) =>
+            a.venue_name.localeCompare(b.venue_name)
+          )
+        );
       }
 
       setLoading(false);
