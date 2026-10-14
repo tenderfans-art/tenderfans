@@ -17,7 +17,12 @@ export default function BucketCount({ rpc }: Props) {
       const { data, error } = await supabase.rpc(rpc as never);
 
       if (active) {
-        setCount(error ? null : Array.isArray(data) ? data.length : null);
+        setCount(error ? null : Array.isArray(data)
+          ? new Set(
+              data.map((row: { venue_id: string }) => row.venue_id)
+                .filter(Boolean)
+            ).size
+          : null);
       }
     }
 
