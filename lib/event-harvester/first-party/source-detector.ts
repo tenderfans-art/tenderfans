@@ -1,3 +1,4 @@
+import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -1022,19 +1023,7 @@ function inspectPage(
     }
   }
 
-  const goDaddyMenuRecurring =
-    /data-aid=["']MENU_CATEGORY_/i.test(html);
-
-  const goDaddyContentCardRecurring =
-    /data-ux=["']ContentCard["']/i.test(html) &&
-    /data-aid=["']CONTENT_HEADLINE\d+_RENDERED["']/i.test(html) &&
-    /\b(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|monthly|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(html) &&
-    /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i.test(html);
-
-  if (
-    /Go Daddy Website Builder/i.test(html) &&
-    (goDaddyMenuRecurring || goDaddyContentCardRecurring)
-  ) {
+  if (hasParseableGoDaddyRecurringItems(html, pageUrl)) {
     pushDetection(detections, {
       sourceType: "godaddy_menu_recurring",
       url: pageUrl,
@@ -1043,9 +1032,7 @@ function inspectPage(
       supported: true,
       evidence: [
         "GoDaddy Website Builder signature",
-        goDaddyMenuRecurring
-          ? "Recurring menu category markup"
-          : "Recurring content-card markup",
+        "Parseable recurring-event markup",
       ],
     });
   }

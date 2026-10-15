@@ -538,6 +538,18 @@ function extractRecurringItems(
   return items;
 }
 
+export function hasParseableGoDaddyRecurringItems(
+  html: string,
+  sourceUrl: string,
+): boolean {
+  if (!/Go Daddy Website Builder/i.test(html)) return false;
+
+  return (
+    extractRecurringItems(html).length > 0 ||
+    extractContentCardRecurringItems(html, sourceUrl).length > 0
+  );
+}
+
 export async function fetchGoDaddyMenuRecurringEvents(
   sourceUrl: string,
   options: {
