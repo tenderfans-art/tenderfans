@@ -35,6 +35,7 @@ export type DetectedSourceType =
   | "tribe_rest"
   | "next_rsc_events"
   | "google_calendar"
+  | "google_apps_script_events"
   | "beatgig_events"
   | "bandzoogle_events"
   | "ics"
@@ -811,6 +812,69 @@ function inspectPage(
       supported: true,
       evidence: [
         "Google Calendar embed found on first-party event surface",
+      ],
+    });
+  }
+
+
+  /*
+   * Google Apps Script web apps may be embedded directly or inside
+   * an iframe srcDoc attribute. Keep the actual /exec endpoint as
+   * the source identity, not the containing first-party page.
+   *
+   * Only recognize URLs associated with iframe src attributes.
+   */
+  const appsScriptEndpoints = new Set<string>();
+
+  const appsScriptUrlPattern =
+    /https?:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec\/?(?:\?[^"'<>\s\\]*)?/gi;
+
+  for (const match of html.matchAll(appsScriptUrlPattern)) {
+    const rawUrl = match[0];
+    const before = html.slice(
+      Math.max(0, match.index! - 1500),
+      match.index!,
+    );
+
+    const iframeStart = Math.max(
+      before.toLowerCase().lastIndexOf("<iframe"),
+      before.toLowerCase().lastIndexOf("&lt;iframe"),
+    );
+
+    if (iframeStart < 0) continue;
+
+    const iframeContext = before.slice(iframeStart);
+
+    // The endpoint must be the iframe src, not an unrelated link
+    // or JavaScript URL inside the same surrounding markup.
+    if (!/\bsrc\s*=\s*(?:\\?["']|&quot;|&#34;)?\s*$/i.test(
+      iframeContext,
+    )) {
+      continue;
+    }
+
+    try {
+      const parsed = new URL(decodeHtml(rawUrl));
+      if (
+        parsed.hostname === "script.google.com" &&
+        /^\/macros\/s\/[^/]+\/exec\/?$/.test(parsed.pathname)
+      ) {
+        appsScriptEndpoints.add(parsed.toString());
+      }
+    } catch {
+      // Ignore malformed iframe URLs.
+    }
+  }
+
+  for (const endpoint of appsScriptEndpoints) {
+    pushDetection(detections, {
+      sourceType: "google_apps_script_events",
+      url: endpoint,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Google Apps Script web app embedded in first-party iframe",
       ],
     });
   }

@@ -5,6 +5,7 @@ import { eventFingerprint, normalizeTitle } from "../identity";
 
 import { parseIcsEvents } from "./ics";
 import { fetchGoogleCalendarEvents } from "./google-calendar-events";
+import { fetchGoogleAppsScriptEvents } from "./google-apps-script-events";
 import { fetchBeatGigEvents } from "./beatgig-events";
 import { fetchBandzoogleEvents } from "./bandzoogle-events";
 import { fetchEventsCalendarEvents } from "./eventscalendar-events";
@@ -287,6 +288,16 @@ export async function previewFirstPartySource(
       timeZone,
       weeksForward,
     });
+  } else if (source.source_type === "google_apps_script_events") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    events = await fetchGoogleAppsScriptEvents(
+      source.source_url,
+      { timeZone },
+    );
   } else if (source.source_type === "calendar_image") {
     const timeZone =
       typeof source.config?.timezone === "string"
