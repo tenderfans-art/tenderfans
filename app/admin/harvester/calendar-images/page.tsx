@@ -158,18 +158,31 @@ export default function CalendarImagesPage() {
           ) : rows.length === 0 ? (
             <p>No pending calendar-image sources.</p>
           ) : (
-            <div style={{ display: "grid", gap: 5 }}>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(250px,2fr) 130px 130px 190px",
-                gap: 10, padding: "0 10px",
-                fontSize: ".66rem", fontWeight: 800,
-                letterSpacing: ".08em", textTransform: "uppercase",
-                opacity: .55
-              }}>
-                <span>Spot</span><span>Confidence</span>
-                <span>Source</span><span>Last Seen</span>
+            <div style={{ display: "grid", gap: 8 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "minmax(250px,2fr) minmax(110px,1fr) 150px 185px 82px 82px",
+                  gap: 8,
+                  alignItems: "end",
+                  padding: "0 10px",
+                  fontSize: ".66rem",
+                  fontWeight: 800,
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                  opacity: .55,
+                }}
+              >
+                <span>Source / Spot</span>
+                <span>Confidence</span>
+                <span>Spot Search</span>
+                <span>Select Spot</span>
+                <span style={{ gridColumn: "5 / 7", textAlign: "center" }}>
+                  Action
+                </span>
               </div>
+
               {rows.map((finding) => {
                 const search = (
                   spotSearch[finding.id] ?? ""
@@ -183,49 +196,93 @@ export default function CalendarImagesPage() {
                   selectedSpot[finding.id] ?? finding.venue_id;
 
                 const busy = busyId !== null;
+                const sourceUrl =
+                  finding.source_url ?? finding.website_url;
 
                 return (
-                  <details
+                  <div
                     key={finding.id}
                     style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "minmax(250px,2fr) minmax(110px,1fr) 150px 185px 82px 82px",
+                      gap: 8,
+                      alignItems: "center",
+                      padding: "8px 10px",
                       border: "1px solid rgba(20,35,45,.12)",
-                      borderRadius: 9,
-                      background: "rgba(255,255,255,.9)"
+                      borderRadius: 10,
+                      background: "rgba(255,255,255,.9)",
                     }}
                   >
-                    <summary style={{ cursor: "pointer", listStyle: "none" }}>
-                      <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(250px,2fr) 130px 130px 190px",
-                        gap: 10, alignItems: "center",
-                        padding: "7px 10px", fontSize: ".84rem"
-                      }}>
-                        <strong style={{
-                          overflow: "hidden", textOverflow: "ellipsis",
-                          whiteSpace: "nowrap"
-                        }}>{finding.venue_name}</strong>
-                        <span>{finding.confidence ?? "unknown"}</span>
-                        <a href={finding.source_url ?? finding.website_url}
-                          target="_blank" rel="noopener noreferrer"
-                          onClick={(event) => event.stopPropagation()}>
-                          Open Source
-                        </a>
-                        <span style={{ opacity: .65 }}>
-                          {new Date(finding.last_seen_at).toLocaleString()}
-                        </span>
-                      </div>
-                    </summary>
-                    <div style={{ padding: "10px 14px 14px" }}>
-                      <strong>Review calendar source</strong>
-                    <label
-                      htmlFor={`search-${finding.id}`}
-                      style={{ display: "block", marginTop: 14 }}
-                    >
-                      Search Spots
-                    </label>
+                    <div style={{ minWidth: 0, fontSize: ".88rem" }}>
+                      <a
+                        href={sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`${finding.venue_name} — Open source`}
+                        style={{
+                          display: "block",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          fontWeight: 700,
+                          color: "inherit",
+                          textDecoration: "underline",
+                          textUnderlineOffset: 3,
+                        }}
+                      >
+                        {finding.venue_name}
+                      </a>
+
+                      <details style={{ marginTop: 5 }}>
+                        <summary
+                          style={{
+                            cursor: "pointer",
+                            fontSize: ".74rem",
+                            opacity: .65,
+                          }}
+                        >
+                          Source details
+                        </summary>
+
+                        <div
+                          style={{
+                            paddingTop: 8,
+                            fontSize: ".76rem",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          <div>
+                            <strong>Source: </strong>
+                            <a
+                              href={sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {sourceUrl}
+                            </a>
+                          </div>
+                          <div style={{ marginTop: 5 }}>
+                            First seen:{" "}
+                            {new Date(
+                              finding.first_seen_at
+                            ).toLocaleString()}
+                          </div>
+                          <div style={{ marginTop: 5 }}>
+                            Last seen:{" "}
+                            {new Date(
+                              finding.last_seen_at
+                            ).toLocaleString()}
+                          </div>
+                        </div>
+                      </details>
+                    </div>
+
+                    <div style={{ fontSize: ".84rem" }}>
+                      {finding.confidence ?? "Unknown"}
+                    </div>
 
                     <input
-                      id={`search-${finding.id}`}
                       type="search"
                       value={spotSearch[finding.id] ?? ""}
                       onChange={(event) =>
@@ -234,25 +291,18 @@ export default function CalendarImagesPage() {
                           [finding.id]: event.target.value,
                         }))
                       }
-                      placeholder="Search by Spot name"
+                      placeholder="Search Spots..."
+                      aria-label={`Search Spots for ${finding.venue_name}`}
                       disabled={busy}
                       style={{
-                        width: "100%",
-                        padding: 10,
-                        marginTop: 6,
-                        marginBottom: 10,
+                        width: "150px",
+                        minWidth: "130px",
+                        padding: "7px 9px",
+                        fontSize: ".82rem",
                       }}
                     />
 
-                    <label
-                      htmlFor={`spot-${finding.id}`}
-                      style={{ display: "block" }}
-                    >
-                      Assign source to Spot
-                    </label>
-
                     <select
-                      id={`spot-${finding.id}`}
                       value={currentSpot}
                       onChange={(event) =>
                         setSelectedSpot((current) => ({
@@ -260,21 +310,24 @@ export default function CalendarImagesPage() {
                           [finding.id]: event.target.value,
                         }))
                       }
+                      aria-label={`Select Spot for ${finding.venue_name}`}
                       disabled={busy}
                       style={{
-                        width: "100%",
-                        padding: 10,
-                        marginTop: 6,
-                        marginBottom: 14,
+                        width: "185px",
+                        minWidth: "160px",
+                        padding: "7px 9px",
+                        fontSize: ".82rem",
                       }}
                     >
-                      {!choices.some((spot) => spot.id === currentSpot) &&
-                        currentSpot && (
-                          <option value={currentSpot}>
-                            {spots.find((spot) => spot.id === currentSpot)
-                              ?.name ?? finding.venue_name}
-                          </option>
-                        )}
+                      {!choices.some(
+                        (spot) => spot.id === currentSpot
+                      ) && currentSpot && (
+                        <option value={currentSpot}>
+                          {spots.find(
+                            (spot) => spot.id === currentSpot
+                          )?.name ?? finding.venue_name}
+                        </option>
+                      )}
 
                       {choices.map((spot) => (
                         <option key={spot.id} value={spot.id}>
@@ -283,33 +336,44 @@ export default function CalendarImagesPage() {
                       ))}
                     </select>
 
-                    <div
+                    <button
+                      type="button"
+                      disabled={busy || !currentSpot}
+                      onClick={() => void review(finding, true)}
                       style={{
-                        display: "flex",
-                        gap: 10,
-                        flexWrap: "wrap",
+                        padding: "7px 11px",
+                        border: 0,
+                        borderRadius: 8,
+                        cursor: busy ? "default" : "pointer",
+                        fontWeight: 700,
+                        fontSize: ".8rem",
+                        whiteSpace: "nowrap",
+                        opacity: busy || !currentSpot ? .55 : 1,
                       }}
                     >
-                      <button
-                        type="button"
-                        disabled={busy || !currentSpot}
-                        onClick={() => void review(finding, true)}
-                      >
-                        {busyId === finding.id
-                          ? "Processing..."
-                          : "Approve Source"}
-                      </button>
+                      {busyId === finding.id
+                        ? "Working..."
+                        : "Approve"}
+                    </button>
 
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void review(finding, false)}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                    </div>
-                  </details>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void review(finding, false)}
+                      style={{
+                        padding: "6px 10px",
+                        border: "1px solid rgba(20,35,45,.2)",
+                        borderRadius: 8,
+                        background: "transparent",
+                        cursor: busy ? "default" : "pointer",
+                        fontWeight: 700,
+                        fontSize: ".8rem",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </div>
                 );
               })}
             </div>
