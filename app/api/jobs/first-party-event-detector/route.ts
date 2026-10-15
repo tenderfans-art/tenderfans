@@ -748,6 +748,8 @@ export async function GET(request: Request) {
           (candidate) => candidate.sourceType === "facebook",
         ) ?? null;
 
+      let facebookExhausted = false;
+
       const browserRequiredCandidate =
         detection.detections.find(
           (candidate) => candidate.sourceType === "browser_required",
@@ -951,87 +953,6 @@ export async function GET(request: Request) {
           }
         }
 
-        if (candidate.sourceType === "facebook") {
-          /*
-           * Facebook findings are an actionable future-adapter queue.
-           * If this Spot already has an enabled structured first-party
-           * source, Facebook is no longer needed as its event source.
-           */
-          const { data: structuredSources, error: structuredSourceError } =
-            await supabase
-              .from("event_harvest_sources")
-              .select("id")
-              .eq("venue_id", venue.id)
-              .eq("provider", "first_party")
-              .eq("is_enabled", true)
-              .limit(1);
-
-          if (structuredSourceError) {
-            throw new Error(
-              `Could not check registered first-party sources for Facebook finding: ${structuredSourceError.message}`,
-            );
-          }
-
-          if ((structuredSources?.length ?? 0) > 0) {
-            const { error: facebookResolutionError } = await supabase.rpc(
-              "resolve_event_harvest_detector_findings",
-              {
-                p_venue_id: venue.id,
-                p_category: "facebook",
-              },
-            );
-
-            if (facebookResolutionError) {
-              throw new Error(
-                `Could not resolve Facebook findings: ${facebookResolutionError.message}`,
-              );
-            }
-          } else {
-            /*
-             * Facebook findings represent the Spot's current actionable
-             * source, not detection history. Resolve any older URL-based
-             * finding before persisting the current candidate so redirects
-             * or URL normalization cannot leave duplicate active rows.
-             */
-            const { error: staleFacebookResolutionError } = await supabase.rpc(
-              "resolve_event_harvest_detector_findings",
-              {
-                p_venue_id: venue.id,
-                p_category: "facebook",
-              },
-            );
-
-            if (staleFacebookResolutionError) {
-              throw new Error(
-                `Could not resolve stale Facebook findings: ${staleFacebookResolutionError.message}`,
-              );
-            }
-
-            const { error: facebookFindingError } = await supabase.rpc(
-              "upsert_event_harvest_detector_finding",
-              {
-                p_venue_id: venue.id,
-                p_category: "facebook",
-                p_finding_key: `facebook:${candidate.url}`,
-                p_detector_status: detection.status,
-                p_source_type: candidate.sourceType,
-                p_website_url: detection.websiteUrl,
-                p_source_url: candidate.url,
-                p_fetched_url: detection.fetchedUrl,
-                p_confidence: candidate.confidence,
-                p_evidence: candidate.evidence,
-                p_error: detection.error,
-              },
-            );
-
-            if (facebookFindingError) {
-              throw new Error(
-                `Could not persist Facebook finding: ${facebookFindingError.message}`,
-              );
-            }
-          }
-        }
-
         if (candidate.sourceType === "html_error") {
           const { error: htmlFindingError } = await supabase.rpc(
             "upsert_event_harvest_detector_finding",
@@ -1216,6 +1137,15 @@ export async function GET(request: Request) {
                   await validateFirstPartySource(source);
 
           if (validation.status !== "validated") {
+            if (
+              candidate.sourceType === "facebook" &&
+              /Facebook Page is unofficial and has no supported event source/i.test(
+                validation.error ?? "",
+              )
+            ) {
+              facebookExhausted = true;
+            }
+
             failed += 1;
             failures.push({
               venueId: venue.id,
@@ -1359,7 +1289,7 @@ export async function GET(request: Request) {
         bucketCounts.validated += 1;
       } else if (calendarImageCandidate) {
         bucketCounts.calendar_image += 1;
-      } else if (facebookCandidate) {
+      } else if (facebookCandidate && !facebookExhausted) {
         const { error: findingError } = await supabase.rpc(
           "upsert_event_harvest_detector_finding",
           {
@@ -1503,7 +1433,7 @@ export async function GET(request: Request) {
           ? null
           : calendarImageCandidate
             ? "calendar_image"
-            : facebookCandidate
+            : facebookCandidate && !facebookExhausted
               ? "facebook"
               : browserRequiredCandidate || hasPersistedBrowserRequired
                 ? "browser_required"
@@ -1548,7 +1478,7 @@ export async function GET(request: Request) {
           successfullyRegisteredVenueSource ||
           hasPreviouslyValidatedSource ||
           calendarImageCandidate ||
-          facebookCandidate ||
+          (facebookCandidate && !facebookExhausted) ||
           browserRequiredCandidate ||
           hasPersistedBrowserRequired ||
           (

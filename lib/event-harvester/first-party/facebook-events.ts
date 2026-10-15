@@ -517,10 +517,34 @@ export async function fetchFacebookEvents(
       userAgent: USER_AGENT,
     });
 
-    const response = await page.goto(eventsUrl(sourceUrl), {
+    let response = await page.goto(eventsUrl(sourceUrl), {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
+
+    /*
+     * Legacy Facebook /pages/name/numeric-id URLs may no longer
+     * serve an Events endpoint. Try the corresponding name-id
+     * route only when the original Events URL returns 404.
+     */
+    if (response?.status() === 404) {
+      const parsed = new URL(sourceUrl);
+      const match = parsed.pathname.match(
+        /^\/pages\/([^/]+)\/(\d+)\/?$/i,
+      );
+
+      if (match) {
+        const alternate = new URL(
+          `/${match[1]}-${match[2]}/events/`,
+          "https://www.facebook.com",
+        );
+
+        response = await page.goto(alternate.href, {
+          waitUntil: "domcontentloaded",
+          timeout: 60000,
+        });
+      }
+    }
 
     if (!response || !response.ok()) {
       throw new Error(
@@ -534,6 +558,22 @@ export async function fetchFacebookEvents(
 
     if (/log in to view this 18\+ content/i.test(text)) {
       throw new Error("Facebook Page requires login to view 18+ content");
+    }
+
+    if (/\bUnofficial Page\b/i.test(text)) {
+      throw new Error("Facebook Page is unofficial and has no supported event source");
+    }
+
+    const currentUrl = page.url();
+
+    if (
+      /facebook\.com\/(?:login|login\.php|checkpoint)(?:[/?]|$)/i.test(currentUrl) ||
+      (/\bLog In\b/i.test(text) &&
+        /\bEmail or phone number\b/i.test(text) &&
+        /\bPassword\b/i.test(text) &&
+        !/\bEvents\b/i.test(text))
+    ) {
+      throw new Error("Facebook Events page requires login");
     }
 
     const stubs = await discoverEventStubs(page);
