@@ -107,7 +107,7 @@ function publisherEvidence(
   const name = event.venueName?.trim() ?? "";
   const address = event.venueAddress?.trim() ?? "";
 
-  if (!name || !address) {
+  if (!address) {
     return null;
   }
 
@@ -127,7 +127,7 @@ function publisherEvidence(
   }
 
   return {
-    name,
+    name: name || match[1].trim(),
     streetAddress: match[1].trim(),
     city: match[2].trim(),
     stateRegion: match[3].trim(),
@@ -278,10 +278,13 @@ export async function resolveFirstPartyAttribution(
       };
     }
 
-    if (!event.allowSourceDefaultAttribution) {
+    if (
+      !event.allowSourceDefaultAttribution &&
+      !event.venueName?.trim()
+    ) {
       return {
         status: "unresolved",
-        rawVenueName: event.venueName?.trim() || null,
+        rawVenueName: null,
         rawAddress:
           event.venueAddress?.trim() ||
           event.location?.trim() ||
@@ -523,18 +526,60 @@ export async function resolveFirstPartyAttribution(
       normalizeVenueMatchText(evidence.streetAddress);
 
   if (publisherNameIsAddress) {
+    /*
+     * Address-only evidence is valid location evidence, but the
+     * address itself is not a verified business name.
+     *
+     * Use the shared Google Places address-first discovery and
+     * preserve its qualification and review safeguards.
+     */
+    const google = await searchGoogleVenue(evidence);
+
+    if (google?.evidence.reviewOnly === true) {
+      return {
+        status: "unresolved",
+        rawVenueName: event.venueName?.trim() || null,
+        rawAddress: event.venueAddress ?? null,
+        publisherEvidence: evidence,
+        suggestedVenueId: best?.venue.id ?? null,
+        confidenceScore: google.score,
+        evidence: {
+          ...google.evidence,
+          googlePlaceId: google.place.id,
+          googlePlaceName: google.place.name,
+          googleFormattedAddress: google.place.formattedAddress,
+          reason: "google_address_candidate_requires_review",
+        },
+      };
+    }
+
+    if (google?.evidence.googleQualified === true) {
+      const venueId = await upsertGoogleVenue(supabase, google.place);
+
+      return {
+        status: "resolved",
+        venueId,
+        confidenceScore: google.score,
+        rawVenueName: event.venueName?.trim() || null,
+        rawAddress: event.venueAddress ?? null,
+        method: "google_created_or_resolved",
+      };
+    }
+
     return {
       status: "unresolved",
-      rawVenueName: evidence.name,
+      rawVenueName: event.venueName?.trim() || null,
       rawAddress: event.venueAddress ?? null,
       publisherEvidence: evidence,
       suggestedVenueId: best?.venue.id ?? null,
       confidenceScore: best?.match.score ?? null,
       evidence: {
         ...(best?.match.evidence ?? {}),
-        autoAttach: best?.match.autoAttach ?? false,
+        googlePlaceId: google?.place.id ?? null,
+        googlePlaceName: google?.place.name ?? null,
+        googleFormattedAddress: google?.place.formattedAddress ?? null,
         needsReview: true,
-        reason: "publisher_venue_name_is_address",
+        reason: "address_only_venue_requires_review",
       },
     };
   }
