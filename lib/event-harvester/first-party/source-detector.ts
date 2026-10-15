@@ -35,6 +35,7 @@ export type DetectedSourceType =
   | "tribe_rest"
   | "next_rsc_events"
   | "google_calendar"
+  | "simcal_events"
   | "google_apps_script_events"
   | "beatgig_events"
   | "bandzoogle_events"
@@ -1060,7 +1061,7 @@ function inspectPage(
     /woocommerce|wc-block-|wp-json\/wc\/store/i.test(html) &&
     (
       /\/product-category\/[^"'<>?\s]*(?:event|dinner|comedy|music|show|concert|ticket)/i.test(pageUrl) ||
-      /\/[^/?#]*(?:event|reservation|ticket)[^/?#]*\/?$/i.test(pageUrl)
+      /\/product\/[^/?#]*(?:event|reservation|ticket)[^/?#]*\/?$/i.test(pageUrl)
     )
   ) {
     try {
@@ -1410,6 +1411,25 @@ function inspectPage(
    *
    * Preserve calendar-image discovery on genuine calendar pages.
    */
+  /*
+   * Simple Calendar renders Google Calendar events as structured
+   * Simcal HTML. Detect actual event records, not plugin assets.
+   */
+  if (
+    /class=["'][^"']*\bsimcal-calendar\b/i.test(html) &&
+    /class=["'][^"']*\bsimcal-event\b/i.test(html) &&
+    /data-calendar-id=["']\d+["']/i.test(html)
+  ) {
+    pushDetection(detections, {
+      sourceType: "simcal_events",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: ["Simple Calendar structured event records found"],
+    });
+  }
+
   const isIndividualProductPage =
     /\/product\/[^/?#]+\/?(?:[?#]|$)/i.test(pageUrl);
 

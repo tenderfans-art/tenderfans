@@ -5,6 +5,7 @@ import { eventFingerprint, normalizeTitle } from "../identity";
 
 import { parseIcsEvents } from "./ics";
 import { fetchGoogleCalendarEvents } from "./google-calendar-events";
+import { fetchSimcalEvents } from "./simcal-events";
 import { fetchGoogleAppsScriptEvents } from "./google-apps-script-events";
 import { fetchBeatGigEvents } from "./beatgig-events";
 import { fetchBandzoogleEvents } from "./bandzoogle-events";
@@ -117,6 +118,8 @@ export async function previewFirstPartySource(
 
   if (source.source_type === "ticket_spot_events") {
     events = await fetchTicketSpotEvents(source.source_url);
+  } else if (source.source_type === "simcal_events") {
+    events = await fetchSimcalEvents(source.source_url);
   } else if (source.source_type === "google_calendar") {
     events = await fetchGoogleCalendarEvents(
       source.source_url,

@@ -60,7 +60,20 @@ export function discoverCalendarImageAssets(
     );
 
     if (normalized) {
-      urls.add(normalized);
+      const filename = decodeURIComponent(
+        new URL(normalized).pathname.split("/").pop() ?? "",
+      ).replace(/-\d{2,5}x\d{2,5}(?=\.(?:jpe?g|png|webp)$)/i, "");
+
+      // Generic promotions are not sufficient evidence of a calendar.
+      // Require a calendar/schedule identity or a dated image filename.
+      const isCalendarAsset =
+        /(?:calendar|schedule|lineup)/i.test(filename) ||
+        /(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?[0-9]{2,4}/i.test(filename) ||
+        /(?:^|[-_ ])(?:0?[1-9]|1[0-2])[-_](?:20[0-9]{2})(?:[-_. ]|$)/i.test(filename);
+
+      if (isCalendarAsset) {
+        urls.add(normalized);
+      }
     }
   }
 
