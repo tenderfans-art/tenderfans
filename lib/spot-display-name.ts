@@ -15,9 +15,9 @@ function streetLabel(address: string | null): string {
 
   return address
     .trim()
-    .replace(/^\\d+[A-Za-z]?\\s+/, "")
-    .replace(/\\s+(?:North|South|East|West|N|S|E|W)\\s*$/i, "")
-    .replace(/\\s+/g, " ")
+    .replace(/^\d+[A-Za-z]?\s+/, "")
+    .replace(/\s+(?:North|South|East|West|N|S|E|W)\s*$/i, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
