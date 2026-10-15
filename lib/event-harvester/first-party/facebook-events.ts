@@ -567,13 +567,24 @@ export async function fetchFacebookEvents(
     const currentUrl = page.url();
 
     if (
-      /facebook\.com\/(?:login|login\.php|checkpoint)(?:[/?]|$)/i.test(currentUrl) ||
-      (/\bLog In\b/i.test(text) &&
-        /\bEmail or phone number\b/i.test(text) &&
-        /\bPassword\b/i.test(text) &&
-        !/\bEvents\b/i.test(text))
+      /facebook\.com\/(?:login|login\.php|checkpoint)(?:[/?]|$)/i.test(currentUrl)
     ) {
       throw new Error("Facebook Events page requires login");
+    }
+
+    const hasLoginForm =
+      /\bLog In\b/i.test(text) &&
+      /\bEmail or phone number\b/i.test(text) &&
+      /\bPassword\b/i.test(text);
+
+    const hasEventsSurface = /\bEvents\b/i.test(text);
+
+    if (!hasEventsSurface) {
+      if (hasLoginForm && !/\bPosts\b/i.test(text)) {
+        throw new Error("Facebook Events page requires login");
+      }
+
+      throw new Error("Facebook Page has no public Events surface");
     }
 
     const stubs = await discoverEventStubs(page);
