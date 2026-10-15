@@ -710,7 +710,9 @@ export async function fetchCalendarImageEvents(
   if (
     imageUrls.length === 0
   ) {
-    return [];
+    throw new Error(
+      "No calendar-image assets were discovered on the source page.",
+    );
   }
 
   const events:

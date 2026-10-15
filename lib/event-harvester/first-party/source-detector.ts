@@ -1403,8 +1403,19 @@ function inspectPage(
     });
   }
 
-  const calendarImageAssets =
-    discoverCalendarImageAssets(html, pageUrl);
+  /*
+   * Individual product pages can contain promotional artwork with
+   * event-like filenames. These are not independent
+   * calendar-image sources.
+   *
+   * Preserve calendar-image discovery on genuine calendar pages.
+   */
+  const isIndividualProductPage =
+    /\/product\/[^/?#]+\/?(?:[?#]|$)/i.test(pageUrl);
+
+  const calendarImageAssets = isIndividualProductPage
+    ? []
+    : discoverCalendarImageAssets(html, pageUrl);
 
   if (calendarImageAssets.length > 0) {
     pushDetection(detections, {
