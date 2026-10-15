@@ -19,9 +19,10 @@ const tools = [
     status: "OPEN",
   },
   {
-    title: "Calendar Image Adapter",
+    title: "Calendar Image",
     countRpc: "admin_event_harvest_calendar_image_findings",
-    description: "Manage event sources that require calendar-image extraction.",
+    description:
+      "Review unresolved calendar-image sources. Approve or reject each source before event extraction.",
     href: "/admin/harvester/calendar-images",
     status: "OPEN",
   },

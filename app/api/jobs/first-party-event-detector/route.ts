@@ -982,27 +982,51 @@ export async function GET(request: Request) {
         }
 
         if (candidate.sourceType === "calendar_image") {
-          const { error: calendarFindingError } = await supabase.rpc(
-            "upsert_event_harvest_detector_finding",
-            {
-              p_venue_id: venue.id,
-              p_category: "calendar_image",
-              p_finding_key: `calendar_image:${candidate.url}`,
-              p_detector_status: detection.status,
-              p_source_type: candidate.sourceType,
-              p_website_url: detection.websiteUrl,
-              p_source_url: candidate.url,
-              p_fetched_url: detection.fetchedUrl,
-              p_confidence: candidate.confidence,
-              p_evidence: candidate.evidence,
-              p_error: detection.error,
-            },
-          );
+          /*
+           * Calendar recognition is source review, not event extraction.
+           * An already registered source must not reopen its approval.
+           */
+          const { data: registeredCalendars, error: registeredError } =
+            await supabase
+              .from("event_harvest_sources")
+              .select("id")
+              .eq("venue_id", venue.id)
+              .eq("provider", "first_party")
+              .eq("source_type", "calendar_image")
+              .eq(
+                "external_source_id",
+                `first_party:calendar_image:${candidate.url}`,
+              )
+              .eq("is_enabled", true)
+              .limit(1);
 
-          if (calendarFindingError) {
-            throw new Error(
-              `Could not persist calendar-image finding: ${calendarFindingError.message}`,
+          if (registeredError) {
+            throw new Error(registeredError.message);
+          }
+
+          if ((registeredCalendars?.length ?? 0) === 0) {
+            const { error: calendarFindingError } = await supabase.rpc(
+              "upsert_event_harvest_detector_finding",
+              {
+                p_venue_id: venue.id,
+                p_category: "calendar_image",
+                p_finding_key: `calendar_image:${candidate.url}`,
+                p_detector_status: detection.status,
+                p_source_type: candidate.sourceType,
+                p_website_url: detection.websiteUrl,
+                p_source_url: candidate.url,
+                p_fetched_url: detection.fetchedUrl,
+                p_confidence: candidate.confidence,
+                p_evidence: candidate.evidence,
+                p_error: detection.error,
+              },
             );
+
+            if (calendarFindingError) {
+              throw new Error(
+                `Could not persist calendar-image finding: ${calendarFindingError.message}`,
+              );
+            }
           }
 
           continue;
@@ -1447,7 +1471,6 @@ export async function GET(request: Request) {
                       : "no_source";
 
       for (const category of [
-        "calendar_image",
         "facebook",
         "browser_required",
         "html_error",
