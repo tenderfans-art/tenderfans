@@ -18,6 +18,7 @@ type Finding = {
 
 export default function FacebookAdapterPage() {
   const [rows, setRows] = useState<Finding[]>([]);
+  const [labels, setLabels] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +35,49 @@ export default function FacebookAdapterPage() {
       if (rpcError) {
         setError("Unable to load Facebook findings.");
       } else {
-        setRows((data ?? []) as Finding[]);
+        const findings = (data ?? []) as Finding[];
+        setRows(findings);
+
+        if (findings.length > 0) {
+          const venues: {
+            id: string;
+            name: string;
+            street_address: string | null;
+            city: string | null;
+            state_region: string | null;
+          }[] = [];
+
+          let venueError: string | null = null;
+
+          for (let offset = 0; ; offset += 500) {
+            const result = await supabase
+              .from("venues")
+              .select("id,name,street_address,city,state_region")
+              .order("id")
+              .range(offset, offset + 499);
+
+            if (!active) return;
+
+            if (result.error) {
+              venueError = result.error.message;
+              break;
+            }
+
+            const batch = result.data ?? [];
+            venues.push(...batch);
+
+            if (batch.length < 500) break;
+          }
+
+          if (!venueError) {
+            const { buildSpotDisplayNames } =
+              await import("@/lib/spot-display-name");
+
+            if (!active) return;
+
+            setLabels(buildSpotDisplayNames(venues));
+          }
+        }
       }
 
       setLoading(false);
@@ -134,7 +177,7 @@ export default function FacebookAdapterPage() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {row.venue_name}
+                    {labels[row.venue_id] ?? row.venue_name}
                   </strong>
 
                   <span>{row.confidence ?? "—"}</span>
