@@ -250,7 +250,210 @@ type RecurringItem = {
   title: string;
   description: string | null;
   timeText: string;
+  flyerUrl?: string | null;
+  recurrence?: "weekly" | "monthly" | "dated";
+  ordinal?: number;
+  explicitMonth?: number;
+  explicitDay?: number;
+  explicitYear?: number | null;
+  displayedDate?: string | null;
+  dateConfidence?: number;
 };
+
+const WEEKDAYS = [
+  "Sunday", "Monday", "Tuesday", "Wednesday",
+  "Thursday", "Friday", "Saturday",
+];
+
+const MONTHS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+
+function cardTime(text: string) {
+  const range = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\s*[-–—]\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)|close)\b/i.exec(text);
+  if (range) {
+    const timeText = `${range[1]} - ${range[2]}`;
+    if (parseTimeRange(timeText)) {
+      return { timeText, index: range.index, length: range[0].length };
+    }
+  }
+
+  const single = /\b(?:starting\s+at|starts?\s+at)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i.exec(text);
+  if (single && parseClock(single[1])) {
+    return {
+      timeText: single[1],
+      index: single.index,
+      length: single[0].length,
+    };
+  }
+  return null;
+}
+
+function cardFlyer(card: string, sourceUrl: string): string | null {
+  for (const image of card.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = image[0];
+    const candidates = [
+      tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1],
+      tag.match(/\bsrc=["']([^"']+)["']/i)?.[1],
+      tag.match(/\bsrcset=["']([^"',\s]+)/i)?.[1],
+    ];
+
+    for (const candidate of candidates) {
+      if (
+        !candidate ||
+        /^data:/i.test(candidate) ||
+        /transparent_placeholder|placeholder\.(?:png|gif|jpg|webp)/i.test(candidate)
+      ) continue;
+      try {
+        const url = new URL(candidate.replace(/&amp;/g, "&"), sourceUrl);
+        if (url.protocol === "https:" || url.protocol === "http:") {
+          return url.href;
+        }
+      } catch {
+        // Preserve extraction when an image URL is malformed.
+      }
+    }
+  }
+  return null;
+}
+
+function extractContentCardRecurringItems(
+  html: string,
+  sourceUrl: string
+): RecurringItem[] {
+  const items: RecurringItem[] = [];
+  const seen = new Set<string>();
+
+  // GoDaddy repeats responsive headings and restarts headline
+  // numbering in separate sections. Process individual cards.
+  const starts = [
+    ...html.matchAll(/data-ux=["']ContentCard["']/gi),
+  ].map(match => match.index ?? 0);
+
+  for (let i = 0; i < starts.length; i++) {
+    const card = html.slice(starts[i], starts[i + 1] ?? html.length);
+
+    const headingMatch =
+      /<h[1-6]\b[^>]*data-aid=["']CONTENT_HEADLINE\d+_RENDERED["'][^>]*>([\s\S]*?)<\/h[1-6]>/i.exec(card);
+
+    if (!headingMatch) continue;
+
+    const heading = decodeHtml(headingMatch[1]);
+
+    const descriptionMatch =
+      /data-aid=["']CONTENT_DESCRIPTION\d+_RENDERED["'][^>]*>([\s\S]*?)<\/div>/i.exec(card);
+
+    const description = descriptionMatch
+      ? decodeHtml(descriptionMatch[1])
+      : "";
+
+    const flyerUrl = cardFlyer(card, sourceUrl);
+
+    const primaryDay = WEEKDAYS.findIndex(
+      day => day.toLowerCase() === heading.toLowerCase()
+    );
+
+    const ordinalMatch =
+      /\b(first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th)\s+(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\b/i.exec(
+        `${heading} ${description}`
+      );
+
+    const ordinals: Record<string, number> = {
+      first: 1, second: 2, third: 3, fourth: 4, fifth: 5,
+      "1st": 1, "2nd": 2, "3rd": 3, "4th": 4, "5th": 5,
+    };
+
+    const dateMatch =
+      /\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\b/i.exec(heading);
+
+    const headingTime = cardTime(heading);
+    const bodyTime = cardTime(description);
+    const time = primaryDay >= 0
+      ? bodyTime
+      : headingTime ?? bodyTime;
+
+    if (!time) continue;
+
+    let title = "";
+    let remainder = "";
+    let weekday = primaryDay;
+    let recurrence: RecurringItem["recurrence"] = "weekly";
+    let ordinal: number | undefined;
+    let explicitMonth: number | undefined;
+    let explicitDay: number | undefined;
+    let explicitYear: number | null | undefined;
+    let displayedDate: string | null = null;
+    let dateConfidence = 1;
+
+    if (primaryDay >= 0) {
+      title = description.slice(0, time.index)
+        .replace(/[-–—:,\s]+$/, "").trim();
+      remainder = description.slice(time.index + time.length).trim();
+
+    } else if (ordinalMatch) {
+      recurrence = "monthly";
+      ordinal = ordinals[ordinalMatch[1].toLowerCase()];
+      weekday = WEEKDAYS.findIndex(
+        day => day.toLowerCase() === ordinalMatch[2].toLowerCase()
+      );
+      displayedDate = ordinalMatch[0];
+      title = heading.slice(0, headingTime?.index ?? heading.length)
+        .replace(/\s*[-–—]\s*(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?\b.*$/i, "")
+        .replace(/[-–—:,\s]+$/, "").trim();
+      remainder = description ||
+        heading.slice(
+          (headingTime?.index ?? heading.length) +
+          (headingTime?.length ?? 0)
+        ).trim();
+
+    } else if (dateMatch) {
+      recurrence = "dated";
+      explicitMonth = MONTHS.findIndex(
+        month => month.startsWith(dateMatch[1].toLowerCase().slice(0, 3))
+      ) + 1;
+      explicitDay = Number(dateMatch[2]);
+      explicitYear = dateMatch[3] ? Number(dateMatch[3]) : null;
+      displayedDate = dateMatch[0];
+      dateConfidence = explicitYear ? 1 : 0.5;
+
+      weekday = new Date(
+        Date.UTC(explicitYear ?? 2024, explicitMonth - 1, explicitDay)
+      ).getUTCDay();
+
+      title = heading.slice(0, dateMatch.index)
+        .replace(/[-–—:,\s]+$/, "").trim();
+      remainder = description;
+    } else {
+      continue;
+    }
+
+    if (!title) {
+      title = heading.slice(0, headingTime?.index ?? heading.length).trim();
+    }
+    if (!title || weekday < 0) continue;
+
+    const weekdayName = WEEKDAYS[weekday].toUpperCase() + "S";
+    const key = [
+      recurrence, weekday, ordinal, explicitMonth,
+      explicitDay, explicitYear, slugify(title), time.timeText,
+    ].join(":");
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    items.push({
+      weekday, weekdayName, title,
+      description: remainder || null,
+      timeText: time.timeText,
+      flyerUrl, recurrence, ordinal,
+      explicitMonth, explicitDay, explicitYear,
+      displayedDate, dateConfidence,
+    });
+  }
+
+  return items;
+}
 
 function extractRecurringItems(
   html: string
@@ -364,85 +567,137 @@ export async function fetchGoDaddyMenuRecurringEvents(
 
   const html = await response.text();
 
-  if (
-    !/Go Daddy Website Builder/i.test(html) ||
-    !/data-aid="MENU_CATEGORY_/i.test(html)
-  ) {
+  if (!/Go Daddy Website Builder/i.test(html)) {
     throw new Error(
-      "Source does not expose expected GoDaddy menu recurrence markup"
+      "Source is not a recognized GoDaddy Website Builder page"
     );
   }
 
-  const recurringItems = extractRecurringItems(html);
+  const recurringItems = [
+    ...extractRecurringItems(html),
+    ...extractContentCardRecurringItems(html, sourceUrl),
+  ];
 
-  if (recurringItems.length === 0) {
+  if (!recurringItems.length) {
     throw new Error(
-      "GoDaddy recurring-events page exposed no parseable recurring items"
+      "GoDaddy recurring-events page exposed no parseable items"
     );
   }
 
   const now = new Date();
   const localNow = partsInTimeZone(now, timeZone);
-  const localNoon = zonedDateTimeToUtc(
-    localNow.year,
-    localNow.month,
-    localNow.day,
-    12,
-    0,
-    timeZone
+  const today = new Date(
+    Date.UTC(localNow.year, localNow.month - 1, localNow.day)
   );
-
-  const weekdayFormatter = new Intl.DateTimeFormat(
-    "en-US",
-    {
-      timeZone,
-      weekday: "short",
-    }
+  const horizon = addLocalDays(
+    localNow.year, localNow.month, localNow.day,
+    weeksForward * 7
   );
-
-  const weekdayLookup: Record<string, number> = {
-    Sun: 0,
-    Mon: 1,
-    Tue: 2,
-    Wed: 3,
-    Thu: 4,
-    Fri: 5,
-    Sat: 6,
-  };
-
-  const todayWeekday =
-    weekdayLookup[weekdayFormatter.format(localNoon)];
+  const horizonKey = [
+    horizon.year,
+    String(horizon.month).padStart(2, "0"),
+    String(horizon.day).padStart(2, "0"),
+  ].join("-");
 
   const events: FirstPartyHarvestEvent[] = [];
+  const emitted = new Set<string>();
 
   for (const item of recurringItems) {
-    const range = parseTimeRange(item.timeText);
-    if (!range) {
-      continue;
+    const range = parseTimeRange(item.timeText) ?? (() => {
+      const start = parseClock(item.timeText);
+      return start ? {
+        startHour: start.hour,
+        startMinute: start.minute,
+        endHour: null,
+        endMinute: null,
+      } : null;
+    })();
+
+    if (!range) continue;
+
+    const recurrence = item.recurrence ?? "weekly";
+
+    const dates: {
+      year: number;
+      month: number;
+      day: number;
+      inferredYear?: boolean;
+    }[] = [];
+
+    if (recurrence === "weekly") {
+      const daysUntil =
+        (item.weekday - today.getUTCDay() + 7) % 7;
+
+      for (let week = 0; week < weeksForward; week++) {
+        dates.push(addLocalDays(
+          localNow.year, localNow.month, localNow.day,
+          daysUntil + week * 7
+        ));
+      }
+
+    } else if (recurrence === "monthly" && item.ordinal) {
+      const monthsForward = Math.ceil(weeksForward * 7 / 28) + 1;
+
+      for (let offset = 0; offset <= monthsForward; offset++) {
+        const first = new Date(
+          Date.UTC(localNow.year, localNow.month - 1 + offset, 1)
+        );
+
+        const year = first.getUTCFullYear();
+        const month = first.getUTCMonth() + 1;
+        const day = 1 +
+          ((item.weekday - first.getUTCDay() + 7) % 7) +
+          (item.ordinal - 1) * 7;
+
+        if (
+          new Date(Date.UTC(year, month - 1, day))
+            .getUTCMonth() + 1 !== month
+        ) continue;
+
+        dates.push({ year, month, day });
+      }
+
+    } else if (
+      recurrence === "dated" &&
+      item.explicitMonth &&
+      item.explicitDay
+    ) {
+      const years = item.explicitYear
+        ? [item.explicitYear]
+        : [localNow.year, localNow.year + 1];
+
+      for (const year of years) {
+        const check: Date = new Date(
+          Date.UTC(year, item.explicitMonth - 1, item.explicitDay)
+        );
+
+        if (
+          check.getUTCFullYear() !== year ||
+          check.getUTCMonth() + 1 !== item.explicitMonth ||
+          check.getUTCDate() !== item.explicitDay
+        ) continue;
+
+        dates.push({
+          year,
+          month: item.explicitMonth,
+          day: item.explicitDay,
+          inferredYear: !item.explicitYear,
+        });
+      }
     }
 
-    const daysUntil =
-      (item.weekday - todayWeekday + 7) % 7;
+    for (const date of dates) {
+      const dateKey = [
+        date.year,
+        String(date.month).padStart(2, "0"),
+        String(date.day).padStart(2, "0"),
+      ].join("-");
 
-    for (
-      let weekOffset = 0;
-      weekOffset < weeksForward;
-      weekOffset += 1
-    ) {
-      const occurrenceDate = addLocalDays(
-        localNow.year,
-        localNow.month,
-        localNow.day,
-        daysUntil + weekOffset * 7
-      );
+      if (dateKey > horizonKey) continue;
 
       const startsAt = zonedDateTimeToUtc(
-        occurrenceDate.year,
-        occurrenceDate.month,
-        occurrenceDate.day,
-        range.startHour,
-        range.startMinute,
-        timeZone
+        date.year, date.month, date.day,
+        range.startHour, range.startMinute, timeZone
       );
 
       let endsAt: Date | null = null;
@@ -452,65 +707,76 @@ export async function fetchGoDaddyMenuRecurringEvents(
         range.endMinute !== null
       ) {
         endsAt = zonedDateTimeToUtc(
-          occurrenceDate.year,
-          occurrenceDate.month,
-          occurrenceDate.day,
-          range.endHour,
-          range.endMinute,
-          timeZone
+          date.year, date.month, date.day,
+          range.endHour, range.endMinute, timeZone
         );
 
         if (endsAt <= startsAt) {
-          const nextDay = addLocalDays(
-            occurrenceDate.year,
-            occurrenceDate.month,
-            occurrenceDate.day,
-            1
+          const next = addLocalDays(
+            date.year, date.month, date.day, 1
           );
 
           endsAt = zonedDateTimeToUtc(
-            nextDay.year,
-            nextDay.month,
-            nextDay.day,
-            range.endHour,
-            range.endMinute,
-            timeZone
+            next.year, next.month, next.day,
+            range.endHour, range.endMinute, timeZone
           );
         }
       }
 
-      const lifecycleBoundary = endsAt ?? startsAt;
-
-      if (lifecycleBoundary.getTime() < now.getTime()) {
+      if ((endsAt ?? startsAt).getTime() < now.getTime()) {
         continue;
       }
 
-      const dateKey = localDateKey(
-        startsAt,
-        timeZone
-      );
+      const recurringKey = recurrence === "dated"
+        ? ["dated", slugify(item.title)].join(":")
+        : [
+            recurrence,
+            item.weekdayName.toLowerCase(),
+            slugify(item.title),
+            item.ordinal ?? "",
+          ].filter(Boolean).join(":");
 
-      const recurringKey =
-        `${item.weekdayName.toLowerCase()}:${slugify(item.title)}`;
+      const externalEventId = `${recurringKey}:${dateKey}`;
+
+      if (emitted.has(externalEventId)) continue;
+      emitted.add(externalEventId);
 
       events.push({
-        externalEventId:
-          `${recurringKey}:${dateKey}`,
+        externalEventId,
         title: item.title,
         description: item.description,
         startsAt: startsAt.toISOString(),
         endsAt: endsAt?.toISOString() ?? null,
         allDay: false,
         sourceUrl,
-        flyerUrl: null,
+        flyerUrl: item.flyerUrl ?? null,
         location: null,
         rawPayload: {
           platform: "godaddy_website_builder",
-          recurrence: "weekly",
-          weekday: item.weekdayName,
+          recurrence,
+          weekday: recurrence === "dated"
+            ? WEEKDAYS[new Date(Date.UTC(date.year, date.month - 1, date.day)).getUTCDay()].toUpperCase() + "S"
+            : item.weekdayName,
           recurringKey,
           occurrenceDate: dateKey,
+          displayedDate: item.displayedDate ?? null,
           displayedTime: item.timeText,
+          dateConfidence: item.dateConfidence ?? 1,
+          dateBasis: date.inferredYear
+            ? "year_inferred"
+            : recurrence === "dated"
+              ? "event_explicit"
+              : "weekday_explicit",
+          yearInferred: date.inferredYear ?? false,
+          requiresDateReview: date.inferredYear ?? false,
+          eventEvidence: {
+            requiresReview: date.inferredYear ?? false,
+            reasons: date.inferredYear
+              ? ["Event year inferred from month/day without explicit year"]
+              : [],
+            displayedDate: item.displayedDate ?? null,
+            occurrenceDate: dateKey,
+          },
           timeZone,
         },
       });
@@ -518,8 +784,6 @@ export async function fetchGoDaddyMenuRecurringEvents(
   }
 
   return events.sort(
-    (a, b) =>
-      Date.parse(a.startsAt) -
-      Date.parse(b.startsAt)
+    (a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)
   );
 }

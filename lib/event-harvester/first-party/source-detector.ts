@@ -1022,9 +1022,18 @@ function inspectPage(
     }
   }
 
+  const goDaddyMenuRecurring =
+    /data-aid=["']MENU_CATEGORY_/i.test(html);
+
+  const goDaddyContentCardRecurring =
+    /data-ux=["']ContentCard["']/i.test(html) &&
+    /data-aid=["']CONTENT_HEADLINE\d+_RENDERED["']/i.test(html) &&
+    /\b(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|monthly|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(html) &&
+    /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i.test(html);
+
   if (
     /Go Daddy Website Builder/i.test(html) &&
-    /data-aid=["']MENU_CATEGORY_/i.test(html)
+    (goDaddyMenuRecurring || goDaddyContentCardRecurring)
   ) {
     pushDetection(detections, {
       sourceType: "godaddy_menu_recurring",
@@ -1034,7 +1043,9 @@ function inspectPage(
       supported: true,
       evidence: [
         "GoDaddy Website Builder signature",
-        "Recurring menu category markup",
+        goDaddyMenuRecurring
+          ? "Recurring menu category markup"
+          : "Recurring content-card markup",
       ],
     });
   }
