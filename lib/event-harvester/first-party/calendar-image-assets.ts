@@ -66,11 +66,32 @@ export function discoverCalendarImageAssets(
 
       // Generic promotions are not sufficient evidence of a calendar.
       // Require a calendar/schedule identity or a dated image filename.
-      const isCalendarAsset =
-        /(?:calendar|schedule|lineup)/i.test(filename) ||
-        /(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?[0-9]{2,4}/i.test(filename) ||
-        /(?:^|[-_ ])(?:0?[1-9]|1[0-2])[-_](?:20[0-9]{2})(?:[-_. ]|$)/i.test(filename);
+      const explicitCalendarIdentity =
+        /(?:calendar|schedule|lineup)/i.test(filename);
 
+      const monthYearMatch = filename.match(
+      /(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?(20[0-9]{2})/i,
+      );
+
+      const numericMonthYearMatch = filename.match(
+      /(?:^|[-_ ])(?:0?[1-9]|1[0-2])[-_](20[0-9]{2})(?:[-_. ]|$)/i,
+      );
+
+      const datedImageYear = monthYearMatch
+      ? Number(monthYearMatch[1])
+      : numericMonthYearMatch
+      ? Number(numericMonthYearMatch[1])
+      : null;
+
+      const currentYear = new Date().getUTCFullYear();
+
+      // Historical date-only filenames are not sufficient evidence
+      // of an event calendar. Explicit calendar identities remain eligible.
+      const isCalendarAsset =
+      explicitCalendarIdentity ||
+      (datedImageYear !== null &&
+      datedImageYear >= currentYear - 1 &&
+      datedImageYear <= currentYear + 1);
       if (isCalendarAsset) {
         urls.add(normalized);
       }
