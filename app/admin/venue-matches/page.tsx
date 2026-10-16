@@ -200,7 +200,11 @@ export default function AdminVenueMatchesPage() {
 
     const unresolvedRows = (unresolvedResult.data as UnresolvedVenue[]) || [];
 
-    setMatches((matchResult.data as VenueMatch[]) || []);
+    setMatches(
+      ((matchResult.data as VenueMatch[]) || []).filter(
+        (match) => match.provider !== "website_redirect"
+      )
+    );
     setUnresolved(unresolvedRows);
     setCalendarEvents(
       (calendarResult.data as CalendarEventVerification[]) || [],
