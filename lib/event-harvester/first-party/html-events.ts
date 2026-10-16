@@ -141,88 +141,157 @@ export type HtmlExtractionDiagnostics = {
 };
 
 
-function extractPickledGrouperAnnouncement(
+function extractMultidayHtmlAnnouncement(
   html: string,
   pageUrl: string,
 ): HtmlNormalizedEvent | null {
-  const path = new URL(pageUrl).pathname;
-
-  if (!/^\/frenchys-pickled-grouper-classic\/?$/i.test(path)) {
-    return null;
-  }
-
   const main =
-    html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1];
+    html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ??
+    html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1] ??
+    "";
 
   if (!main) return null;
 
   const content = text(main);
+  const lines = content.split("\n").map(line => line.trim()).filter(Boolean);
 
-  if (
-    !/Pickled Grouper Classic/i.test(content) ||
-    !/St\.?\s*Pete Athletic/i.test(content)
-  ) {
-    return null;
-  }
+  const titleHtml =
+    main.match(/<span\b[^>]*class=["'][^"']*\bentry-title\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1] ??
+    main.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ??
+    "";
 
-  const dateMatch = content.match(
-    /\b(March)\s+(\d{1,2})\s*,\s*(\d{1,2})\s*(?:&|and)\s*(\d{1,2})\b/i,
-  );
+  const title = text(titleHtml);
 
+  if (!title || title.length > 160) return null;
+
+  const datePattern =
+    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*,\s*(\d{1,2})\s*(?:&|and)\s*(\d{1,2})(?:\s*,?\s*(20\d{2}))?\b/i;
+
+  const dateLines = lines.filter(line => datePattern.test(line));
+
+  if (!dateLines.length) return null;
+
+  const dateMatch = dateLines[0].match(datePattern);
   if (!dateMatch) return null;
 
-  const firstDay = Number(dateMatch[2]);
-  const middleDay = Number(dateMatch[3]);
-  const lastDay = Number(dateMatch[4]);
+  const months = [
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+  ];
+
+  const month = months.indexOf(dateMatch[1].toLowerCase()) + 1;
+  const days = [
+    Number(dateMatch[2]),
+    Number(dateMatch[3]),
+    Number(dateMatch[4]),
+  ];
 
   if (
-    firstDay !== 5 ||
-    middleDay !== 6 ||
-    lastDay !== 7
+    !month ||
+    days.some(day => day < 1 || day > 31) ||
+    days[1] !== days[0] + 1 ||
+    days[2] !== days[1] + 1
   ) {
     return null;
   }
 
-  /*
-   * Page metadata establishes publication/update in September 2026,
-   * while registration for the March event is described as upcoming.
-   * The 2027 date remains an inference, retained in provenance.
-   */
-  const updated = html.match(
-    /\b2026-09-\d{2}T\d{2}:\d{2}:\d{2}/,
-  );
+  const explicitYear = dateMatch[5]
+    ? Number(dateMatch[5])
+    : null;
 
-  if (!updated || !/Registration Opens SOON/i.test(content)) {
+  const updated =
+    html.match(/"dateModified"\s*:\s*"(20\d{2})-(\d{2})-/i) ??
+    html.match(/\bupdated[^>]*>\s*(20\d{2})-(\d{2})-/i);
+
+  /*
+   * A future-year inference is permitted only when the page's
+   * modification month is later than the announced event month.
+   * It is never represented as a confirmed published year.
+   */
+  const inferredYear =
+    !explicitYear && updated && Number(updated[2]) > month
+      ? Number(updated[1]) + 1
+      : null;
+
+  const year = explicitYear ?? inferredYear;
+  if (!year) return null;
+
+  const start = new Date(Date.UTC(year, month - 1, days[0]));
+  const last = new Date(Date.UTC(year, month - 1, days[2]));
+
+  if (
+    start.getUTCMonth() !== month - 1 ||
+    last.getUTCMonth() !== month - 1
+  ) {
     return null;
   }
 
+  const end = new Date(Date.UTC(year, month - 1, days[2] + 1));
+
+  const dateLine = dateLines[0];
+
+  const locationMatch =
+    dateLine.match(/(?:@|\bat\b)\s+(.+)$/i) ??
+    lines.find(line => /^at\s+\S/i.test(line))
+      ?.match(/^at\s+(.+)$/i);
+
+  const location =
+    locationMatch?.[1]?.trim().replace(/[!,;]+$/, "").trim() ?? null;
+
+  const description =
+    lines.find(line =>
+      line !== title &&
+      /(?:annual|charity|tournament|festival|benefit)/i.test(line) &&
+      line.length < 350
+    ) ?? null;
+
+  const publishedDates = dateMatch[0];
+
+  const sourcePath = new URL(pageUrl).pathname;
+  const sourceSlug = sourcePath
+    .split("/")
+    .filter(Boolean)
+    .pop() ?? "announcement";
+
+  /*
+   * Preserve the previously emitted Pickled Grouper identifier.
+   * All other announcements use the source URL path for identity,
+   * avoiding title punctuation and presentation changes.
+   */
+  const identitySlug =
+    sourceSlug === "frenchys-pickled-grouper-classic"
+      ? "pickled-grouper"
+      : sourceSlug;
+
   return {
-    externalEventId: `html:${pageUrl}:pickled-grouper:2027-03-05`,
+    externalEventId:
+      `html:${pageUrl}:${identitySlug}:${start.toISOString().slice(0, 10)}`,
     sourceUrl: pageUrl,
-    title: "Frenchy's Pickled Grouper Classic",
-    description:
-      "4th Annual charity pickleball tournament benefiting Big Brothers Big Sisters of Tampa Bay. Registration information coming soon.",
-    startsAt: "2027-03-05",
-    endsAt: "2027-03-08",
+    title,
+    description,
+    startsAt: start.toISOString().slice(0, 10),
+    endsAt: end.toISOString().slice(0, 10),
     allDay: true,
     flyerUrl: null,
-    location: "St. Pete Athletic",
-    venueName: "St. Pete Athletic",
+    location,
+    venueName: location,
     venueAddress: null,
     rawPayload: {
       extraction: "html_multiday_announcement",
-      publishedDates: "March 5,6 & 7",
-      inferredYear: 2027,
-      yearInference:
-        "Page updated September 2026; registration described as upcoming",
-      yearRequiresConfirmation: true,
+      publishedDates,
+      ...(explicitYear
+        ? { publishedYear: explicitYear }
+        : {
+            inferredYear,
+            yearInference:
+              "Event month precedes the page's modification month",
+            yearRequiresConfirmation: true,
+          }),
       timeNotPublished: true,
       endDateExclusive: true,
-      beneficiary: "Big Brothers Big Sisters of Tampa Bay",
     },
   };
 }
-
 
 function extractDiviHtmlEvents(
   html: string,
@@ -404,7 +473,7 @@ export function extractHtmlEventsWithDiagnostics(
     ...extractDiviHtmlEvents(html, pageUrl),
   ];
 
-  const announcement = extractPickledGrouperAnnouncement(
+  const announcement = extractMultidayHtmlAnnouncement(
     html,
     pageUrl,
   );
