@@ -1148,6 +1148,65 @@ export async function GET(request: Request) {
             }
           }
 
+          /*
+           * A validated HTML page may be a corporate event announcement,
+           * not a source owned by every Spot linking to it.
+           *
+           * Preserve existing legitimate source registrations. A second
+           * Spot claiming the same HTML source enters review rather than
+           * acquiring trusted source ownership automatically.
+           */
+          if (ratification.source.sourceType === "html_events") {
+            const { data: otherOwners, error: ownershipError } =
+              await supabase
+                .from("event_harvest_sources")
+                .select("id,venue_id,name")
+                .eq("provider", "first_party")
+                .eq("external_source_id", ratification.source.externalSourceId)
+                .eq("is_enabled", true)
+                .neq("venue_id", venue.id)
+                .limit(1);
+
+            if (ownershipError) {
+              throw new Error(
+                `Could not inspect HTML source ownership: ${ownershipError.message}`,
+              );
+            }
+
+            if ((otherOwners?.length ?? 0) > 0) {
+              const { error: findingError } = await supabase.rpc(
+                "upsert_event_harvest_detector_finding",
+                {
+                  p_venue_id: venue.id,
+                  p_category: "source_ownership",
+                  p_finding_key:
+                    `source_ownership:${ratification.source.externalSourceId}`,
+                  p_detector_status: detection.status,
+                  p_source_type: ratification.source.sourceType,
+                  p_website_url: detection.websiteUrl,
+                  p_source_url: ratification.source.sourceUrl,
+                  p_fetched_url: detection.fetchedUrl,
+                  p_confidence: candidate.confidence,
+                  p_evidence: [
+                    ...candidate.evidence,
+                    "HTML source is already registered to another Spot",
+                    `Existing source owner: ${otherOwners[0].name}`,
+                  ],
+                  p_error:
+                    "Shared HTML event source requires ownership review",
+                },
+              );
+
+              if (findingError) {
+                throw new Error(
+                  `Could not record HTML source ownership finding: ${findingError.message}`,
+                );
+              }
+
+              continue;
+            }
+          }
+
           const source: FirstPartySource = {
             id: `probe:${venue.id}`,
             provider: "first_party",

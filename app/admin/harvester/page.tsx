@@ -19,11 +19,10 @@ const tools = [
     status: "OPEN",
   },
   {
-    title: "Calendar Image",
-    countRpc: "admin_event_harvest_calendar_image_findings",
+    title: "Source Review",
     description:
-      "Review unresolved calendar-image sources. Approve or reject each source before event extraction.",
-    href: "/admin/harvester/calendar-images",
+      "Review calendar images and ambiguous HTML source ownership before authorizing source attribution.",
+    href: "/admin/harvester/source-review",
     status: "OPEN",
   },
   {
