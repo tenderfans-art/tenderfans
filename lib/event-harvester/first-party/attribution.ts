@@ -139,7 +139,15 @@ export async function resolveFirstPartyAttribution(
   supabase: SupabaseClient,
   event: FirstPartyEventPreview,
 ): Promise<FirstPartyAttribution> {
-  const evidence = publisherEvidence(event);
+  /*
+   * HTML event adapters may identify a physical performance venue
+   * that differs from the Spot publishing the schedule.
+   * Do not treat that physical venue as publisher identity.
+   */
+  const evidence =
+    event.sourceType === "html_events"
+      ? null
+      : publisherEvidence(event);
   const facebookPlace = facebookPlaceEvidence(event);
 
   /*

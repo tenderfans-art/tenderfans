@@ -223,6 +223,176 @@ function extractPickledGrouperAnnouncement(
   };
 }
 
+
+function extractDiviHtmlEvents(
+  html: string,
+  pageUrl: string,
+): HtmlNormalizedEvent[] {
+  if (!/\bet_pb_text_inner\b/i.test(html)) return [];
+
+  const main =
+    html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ??
+    html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1] ??
+    "";
+
+  if (!main) return [];
+
+  const modules = [
+    ...main.matchAll(
+      /<div\b[^>]*class=["'][^"']*\bet_pb_text_inner\b[^"']*["'][^>]*>([\s\S]*?)(?=<\/div>\s*<\/div>|<div\b[^>]*class=["'][^"']*\bet_pb_button_module_wrapper\b)/gi,
+    ),
+  ];
+
+  const months = [
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+  ];
+
+  const publishedYear =
+    html.match(/"dateModified"\s*:\s*"(\d{4})-/i)?.[1] ??
+    html.match(/"datePublished"\s*:\s*"(\d{4})-/i)?.[1] ??
+    null;
+
+  const events: HtmlNormalizedEvent[] = [];
+
+  for (const module of modules) {
+    const headings = [
+      ...module[1].matchAll(
+        /<h([2-5])\b[^>]*>([\s\S]*?)<\/h\1>/gi,
+      ),
+    ];
+
+    const title = headings
+      .map(heading => text(heading[2]).trim())
+      .find(Boolean);
+
+    if (!title) continue;
+
+    const content = text(module[1]);
+
+    if (!/\b(?:when|upcoming dates)\s*:/i.test(content)) {
+      continue;
+    }
+
+    const timeMatch = content.match(
+      /\bTime:\s*(\d{1,2}(?::\d{2})?)\s*[–—-]\s*(\d{1,2}(?::\d{2})?)\s*(a\.?m\.?|p\.?m\.?)/i,
+    );
+
+    const endMeridiem = timeMatch?.[3]
+      ?.replace(/\./g, "")
+      .toUpperCase() ?? null;
+
+    const startTime =
+      timeMatch && endMeridiem
+        ? resolveStartTime(timeMatch[1], timeMatch[2], endMeridiem)
+        : null;
+
+    const endTime =
+      timeMatch && endMeridiem
+        ? parseTime(timeMatch[2], endMeridiem)
+        : null;
+
+    const dateMatches = [
+      ...content.matchAll(
+        /\b(?:(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+)?(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\b/gi,
+      ),
+    ];
+
+    const seen = new Set<string>();
+
+    for (const match of dateMatches) {
+      const monthIndex = months.findIndex(month =>
+        month.startsWith(match[2].toLowerCase().slice(0, 3))
+      );
+
+      if (monthIndex < 0) continue;
+
+      const month = monthIndex + 1;
+      const day = Number(match[3]);
+
+      const metadataYear =
+        publishedYear ? Number(publishedYear) : null;
+
+      const year =
+        match[4] ? Number(match[4]) : metadataYear;
+
+      if (!year) continue;
+
+      if (match[1]) {
+        const weekdayIndex = [
+          "Sunday", "Monday", "Tuesday", "Wednesday",
+          "Thursday", "Friday", "Saturday",
+        ].findIndex(
+          name => name.toLowerCase() === match[1].toLowerCase()
+        );
+
+        const actualWeekday = new Date(
+          Date.UTC(year, month - 1, day)
+        ).getUTCDay();
+
+        if (weekdayIndex < 0 || actualWeekday !== weekdayIndex) {
+          continue;
+        }
+      }
+
+      const validDate = new Date(Date.UTC(year, month - 1, day));
+      if (
+        validDate.getUTCFullYear() !== year ||
+        validDate.getUTCMonth() !== month - 1 ||
+        validDate.getUTCDate() !== day
+      ) continue;
+
+      const localDate =
+        `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+      if (seen.has(localDate)) continue;
+      seen.add(localDate);
+
+      const timed = Boolean(startTime && endTime);
+
+      const startsAt = timed
+        ? easternTimestamp(
+            year, month, day,
+            startTime!.hour, startTime!.minute,
+          )
+        : localDate;
+
+      const endsAt = timed
+        ? easternTimestamp(
+            year, month, day,
+            endTime!.hour, endTime!.minute,
+          )
+        : null;
+
+      events.push({
+        externalEventId: `html:${pageUrl}:${title}:${localDate}`,
+        sourceUrl: pageUrl,
+        title,
+        description: content.slice(0, 1500),
+        startsAt,
+        endsAt,
+        allDay: !timed,
+        flyerUrl: null,
+        location: null,
+        venueName: null,
+        venueAddress: null,
+        rawPayload: {
+          extraction: "html_divi_text_module",
+          publishedDate: match[0],
+          yearSource: match[4]
+            ? "explicit"
+            : match[1]
+              ? "page_metadata_weekday_verified"
+              : "page_metadata",
+          timeNotPublished: !timed,
+        },
+      });
+    }
+  }
+
+  return events;
+}
+
 export function extractHtmlEventsWithDiagnostics(
   html: string,
   pageUrl: string,
@@ -230,7 +400,9 @@ export function extractHtmlEventsWithDiagnostics(
   events: HtmlNormalizedEvent[];
   diagnostics: HtmlExtractionDiagnostics;
 } {
-  const events: HtmlNormalizedEvent[] = [];
+  const events: HtmlNormalizedEvent[] = [
+    ...extractDiviHtmlEvents(html, pageUrl),
+  ];
 
   const announcement = extractPickledGrouperAnnouncement(
     html,
@@ -261,13 +433,17 @@ export function extractHtmlEventsWithDiagnostics(
   }
 
   /*
-   * Frenchy's Stone Crab Weekend:
-   * Each Avada accordion heading is followed by its panel-body.
-   * Capture the complete panel, then normalize its individual lines.
+   * Generic Avada accordion schedules.
+   *
+   * A dated accordion heading identifies the schedule date.
+   * Its panel contains time-range/title rows. A preceding section
+   * heading and its nearby published address provide location context.
+   *
+   * No website, event name, or venue is hardcoded here.
    */
-  const panels = [
+  const sections = [
     ...article.matchAll(
-      /<span\b[^>]*class=["'][^"']*fusion-toggle-heading[^"']*["'][^>]*>([\s\S]*?)<\/span>[\s\S]*?<div\b[^>]*class=["'][^"']*panel-body[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
+      /<h3\b[^>]*>([\s\S]*?)<\/h3>|<span\b[^>]*class=["'][^"']*fusion-toggle-heading[^"']*["'][^>]*>([\s\S]*?)<\/span>[\s\S]*?<div\b[^>]*class=["'][^"']*panel-body[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
     ),
   ];
 
@@ -277,58 +453,97 @@ export function extractHtmlEventsWithDiagnostics(
     "september", "october", "november", "december",
   ];
 
+  const datePattern =
+    /\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday):?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?/i;
+
+  const performancePattern =
+    /^(\d{1,2}(?::\d{2})?)\s*[–—-]\s*(\d{1,2}(?::\d{2})?)\s*(AM|PM)?\s*[–—-]\s*(.+)$/i;
+
   /*
-   * Find a year supported by the event page, not the current
-   * system date. A unique weekday/date match is required.
+   * Extract an address from its published link text, and a business
+   * identity from the linked Google Maps place URL when available.
+   * No Places API call is made here.
    */
-  function scheduleYear(
-    month: number,
-    day: number,
-    weekday: string,
-  ): number | null {
-    const years = [
-      ...new Set(
-        [...article.matchAll(/\b20\d{2}\b/g)]
-          .map((match) => Number(match[0]))
-          .filter((year) => year >= 2020 && year <= 2040),
-      ),
-    ];
+  function sectionPlaceEvidence(fragment: string): {
+    name: string | null;
+    address: string | null;
+  } {
+    const links = [...fragment.matchAll(
+      /<a\b[^>]*href=(?:"([^"]+)"|'([^']+)')[^>]*>([\s\S]*?)<\/a>/gi,
+    )];
 
-    const weekdayIndex = [
-      "sunday", "monday", "tuesday", "wednesday",
-      "thursday", "friday", "saturday",
-    ].indexOf(weekday.toLowerCase());
+    for (const link of links) {
+      const visible = text(link[3]);
+      if (!/^\d{1,6}\s+\S+/.test(visible)) continue;
 
-    const matches = years.filter(
-      (year) =>
-        new Date(Date.UTC(year, month - 1, day)).getUTCDay() ===
-        weekdayIndex,
-    );
+      const address = visible
+        .replace(/,?\s*\d{5}(?:-\d{4})?\s*$/, "")
+        .replace(/\s*,\s*/g, ", ")
+        .replace(/\s+([A-Z]{2})(?=,|$)/, ", $1")
+        .replace(/,\s*,/g, ",")
+        .trim();
 
-    return matches.length > 0 ? Math.min(...matches) : null;
+      let name: string | null = null;
+
+      try {
+        const url = new URL(decode(link[1] ?? link[2]), pageUrl);
+        const match = url.pathname.match(/\/maps\/place\/([^/]+)/i);
+
+        if (match) {
+          name = decodeURIComponent(match[1])
+            .replace(/\+/g, " ")
+            .trim() || null;
+        }
+      } catch {
+        // Malformed links cannot establish a business identity.
+      }
+
+      return { name, address };
+    }
+
+    return { name: null, address: null };
   }
 
   let location: string | null = null;
+  let venueName: string | null = null;
+  let venueAddress: string | null = null;
 
-  /*
-   * Preserve location headings in document order. They precede
-   * the corresponding schedule accordions.
-   */
-  const sections = [
-    ...article.matchAll(
-      /<h3\b[^>]*>([\s\S]*?)<\/h3>|<span\b[^>]*class=["'][^"']*fusion-toggle-heading[^"']*["'][^>]*>([\s\S]*?)<\/span>[\s\S]*?<div\b[^>]*class=["'][^"']*panel-body[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
-    ),
-  ];
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i];
 
-  for (const section of sections) {
     if (section[1] !== undefined) {
-      const heading = text(section[1]);
-      const locationHeading = heading.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+      const headingHtml = section[1];
 
-      if (/Clearwater Beach.*Block Party/i.test(locationHeading)) {
-        location = "Clearwater Beach";
-      } else if (/Dunedin.*Backlot Bash/i.test(locationHeading)) {
-        location = "Dunedin Causeway";
+      /*
+       * Prefer the first displayed line for a section name.
+       * This handles headings such as:
+       *   City<br />"Event Name"
+       */
+      const firstLine = text(
+        headingHtml.split(/<br\s*\/?>/i)[0],
+      ).trim();
+
+      /*
+       * Only treat a heading as location context when the section
+       * itself publishes an address before its next accordion.
+       */
+      const nextIndex = sections[i + 1]?.index ?? article.length;
+      const fragment = article.slice(section.index, nextIndex);
+      const place = sectionPlaceEvidence(fragment);
+
+      if (place.address && firstLine && firstLine.length < 100) {
+        location = firstLine;
+        venueAddress = place.address;
+
+        /*
+         * Retain the section's event-area label separately from
+         * the physical business identity.
+         */
+        if (place.name) {
+          venueName = place.name;
+        } else {
+          venueName = firstLine;
+        }
       }
 
       continue;
@@ -336,39 +551,39 @@ export function extractHtmlEventsWithDiagnostics(
 
     const heading = text(section[2] ?? "");
     const schedule = text(section[3] ?? "");
+    const dateMatch = heading.match(datePattern);
 
-    const dateMatch = heading.match(
-      /\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday):?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?/i,
-    );
-
-    if (!dateMatch || !/LIVE\s*MUSIC/i.test(heading)) {
-      continue;
-    }
+    if (!dateMatch) continue;
 
     const month = months.indexOf(dateMatch[2].toLowerCase()) + 1;
     const day = Number(dateMatch[3]);
-    const year = scheduleYear(month, day, dateMatch[1]);
 
-    /*
-     * Each performance occupies one line after HTML text
-     * normalization. The meridiem is optional because Frenchy's
-     * omits it on some entries.
-     */
-    const performancePattern =
-      /^(\d{1,2}(?::\d{2})?)\s*[–—-]\s*(\d{1,2}(?::\d{2})?)\s*(AM|PM)?\s*[–—-]\s*(.+)$/i;
+    const year = dateMatch[4]
+      ? Number(dateMatch[4])
+      : eventYear(article, month, day, dateMatch[1]);
+
+    let previousMeridiem: string | null = null;
 
     for (const line of schedule.split("\n")) {
       const match = line.trim().match(performancePattern);
       if (!match) continue;
 
-      expectedPerformances += 1;
+      expectedPerformances++;
 
       const title = match[4].trim();
-      const meridiem = match[3]?.toUpperCase() ?? "PM";
 
-      if (!year || !location) {
+      /*
+       * A missing meridiem may inherit the immediately preceding
+       * performance's meridiem within the same dated schedule.
+       * Never assume PM for an isolated ambiguous time.
+       */
+      const meridiem: string | null =
+        match[3]?.toUpperCase() ??
+        previousMeridiem;
+
+      if (!year || !location || !venueAddress || !meridiem) {
         errors.push(
-          `${heading}: cannot establish year/location for ${title}`,
+          `${heading}: insufficient date, time, or location evidence for ${title}`,
         );
         continue;
       }
@@ -378,9 +593,9 @@ export function extractHtmlEventsWithDiagnostics(
         match[2],
         meridiem,
       );
-      const end = parseTime(match[2], meridiem);
+      const finish = parseTime(match[2], meridiem);
 
-      if (!start || !end) {
+      if (!start || !finish) {
         errors.push(`${heading}: invalid time for ${title}`);
         continue;
       }
@@ -389,13 +604,8 @@ export function extractHtmlEventsWithDiagnostics(
         year, month, day, start.hour, start.minute,
       );
       const endsAt = easternTimestamp(
-        year, month, day, end.hour, end.minute,
+        year, month, day, finish.hour, finish.minute,
       );
-
-      const venueAddress =
-        location === "Clearwater Beach"
-          ? "41 Baymont St, Clearwater Beach, FL"
-          : "501 Causeway Blvd, Dunedin, FL";
 
       events.push({
         externalEventId:
@@ -408,7 +618,7 @@ export function extractHtmlEventsWithDiagnostics(
         allDay: false,
         flyerUrl: null,
         location,
-        venueName: location,
+        venueName,
         venueAddress,
         rawPayload: {
           extraction: "html_performance_schedule",
@@ -417,6 +627,8 @@ export function extractHtmlEventsWithDiagnostics(
           venueAddress,
         },
       });
+
+      previousMeridiem = meridiem;
     }
   }
 
