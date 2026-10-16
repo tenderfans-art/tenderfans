@@ -1525,6 +1525,7 @@ export async function fetchHtml(
   url: string;
   html: string;
   recoveryDetail?: string;
+  challengeEvidence?: string[];
 }> {
   const recoveryProxy = getTransportRecoveryProxy();
   const preferProxy =
@@ -1560,11 +1561,27 @@ export async function fetchHtml(
       proxy,
     );
 
+    const html = await response.text();
+    const finalUrl = response.url || normalizedUrl.toString();
+    const challengeEvidence = identifyAccessChallenge(
+      finalUrl, html, response.status,
+    );
+
+    if (
+      response.headers.get("cf-mitigated")?.toLowerCase() === "challenge" &&
+      !challengeEvidence.some(e => e.startsWith("Provider: Cloudflare"))
+    ) {
+      challengeEvidence.push("Provider: Cloudflare; cf-mitigated challenge header");
+      challengeEvidence.push(`HTTP status: ${response.status}`);
+      challengeEvidence.push(`Final URL: ${finalUrl}`);
+    }
+
     return {
       ok: response.ok,
       status: response.status,
-      url: response.url || normalizedUrl.toString(),
-      html: await response.text(),
+      url: finalUrl,
+      html,
+      challengeEvidence,
     };
   }
 
@@ -1684,7 +1701,15 @@ export async function fetchHtml(
     const recovered = await request(url, recoveryProxy);
 
     if (recovered.ok && !isChallengeResponse(recovered)) {
-      return recovered;
+      return {
+        ...recovered,
+        challengeEvidence: [
+          ...new Set([
+            ...(direct?.challengeEvidence ?? []),
+            ...(recovered.challengeEvidence ?? []),
+          ]),
+        ],
+      };
     }
 
     if (direct) {
@@ -2094,9 +2119,14 @@ export async function detectFirstPartySources(
     };
   }
 
-  const homepageChallenge = identifyAccessChallenge(
-    homepage.url, homepage.html, homepage.status,
-  );
+  const homepageChallenge = [
+    ...new Set([
+      ...(homepage.challengeEvidence ?? []),
+      ...identifyAccessChallenge(
+        homepage.url, homepage.html, homepage.status,
+      ),
+    ]),
+  ];
 
   if (homepageChallenge.length > 0) {
     return {
@@ -2505,7 +2535,9 @@ export async function detectFirstPartySources(
   const challengeOnly =
     encounteredChallenges.length > 0 &&
     !detections.some(
-      (candidate) => candidate.sourceType !== "browser_required",
+      (candidate) =>
+        candidate.sourceType !== "browser_required" &&
+        candidate.sourceType !== "facebook",
     );
 
   return {
@@ -2516,9 +2548,12 @@ export async function detectFirstPartySources(
       : detections.length > 0
         ? "detected"
         : "no_event_source",
-    challengeEvidence: challengeOnly
-      ? [...new Set(encounteredChallenges)]
-      : undefined,
+    challengeEvidence: [
+      ...new Set([
+        ...(homepage.challengeEvidence ?? []),
+        ...encounteredChallenges,
+      ]),
+    ],
     pagesInspected,
     discoveredEventPages,
     detections: challengeOnly ? [] : detections,

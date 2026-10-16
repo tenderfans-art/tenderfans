@@ -546,20 +546,40 @@ export async function GET(request: Request) {
             }
 
             const combined = [...merged.values()];
+            const combinedChallengeEvidence = [
+              ...new Set([
+                ...(original.challengeEvidence ?? []),
+                ...(recovered.challengeEvidence ?? []),
+              ]),
+            ];
 
             const preferred =
-              recovered.status === "detected" ||
+              (
+                recovered.status === "detected" &&
+                !(
+                  original.status === "challenge_encountered" &&
+                  recovered.detections.every(
+                    (candidate) => candidate.sourceType === "facebook",
+                  )
+                )
+              ) ||
               (
                 original.status !== "detected" &&
+                original.status !== "challenge_encountered" &&
                 recovered.status === "no_event_source"
               )
                 ? recovered
                 : original;
 
             const selectedStatus =
-              combined.length > 0
-                ? "detected"
-                : preferred.status;
+              preferred.status === "challenge_encountered" &&
+              combined.every(
+                (candidate) => candidate.sourceType === "facebook",
+              )
+                ? "challenge_encountered"
+                : combined.length > 0
+                  ? "detected"
+                  : preferred.status;
 
             const diagnosticErrors = [
               preferred.error,
@@ -575,6 +595,7 @@ export async function GET(request: Request) {
             detection = {
               ...preferred,
               detections: combined,
+              challengeEvidence: combinedChallengeEvidence,
               status: selectedStatus,
               error:
                 selectedStatus === "detected" ||
@@ -1367,14 +1388,14 @@ export async function GET(request: Request) {
         bucketCounts.browser_required += 1;
       } else if (htmlErrorCandidate) {
         bucketCounts.html_error += 1;
-      } else if (detection.status === "challenge_encountered") {
+      } else if ((detection.challengeEvidence?.length ?? 0) > 0) {
         const { error: findingError } = await supabase.rpc(
           "upsert_event_harvest_detector_finding",
           {
             p_venue_id: venue.id,
             p_category: "challenge_encountered",
             p_finding_key: "challenge_encountered",
-            p_detector_status: detection.status,
+            p_detector_status: "challenge_encountered",
             p_source_type: null,
             p_website_url: detection.websiteUrl,
             p_source_url: null,
@@ -1463,7 +1484,7 @@ export async function GET(request: Request) {
                 ? "browser_required"
                 : htmlErrorCandidate
                   ? "html_error"
-                  : detection.status === "challenge_encountered"
+                  : (detection.challengeEvidence?.length ?? 0) > 0
                     ? "challenge_encountered"
                     : detection.status === "transport_blocked" ||
                         detection.status === "transport_failed"
