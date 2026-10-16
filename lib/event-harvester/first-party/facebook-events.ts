@@ -49,7 +49,13 @@ function canonicalPageUrl(value: string): string {
 }
 
 function eventsUrl(sourceUrl: string): string {
-  return `${canonicalPageUrl(sourceUrl)}/events`;
+  const pageUrl = canonicalPageUrl(sourceUrl);
+
+  // Detected sources may already point directly to the Events tab.
+  // Avoid constructing /events/events.
+  return /\/events$/i.test(new URL(pageUrl).pathname)
+    ? pageUrl
+    : `${pageUrl}/events`;
 }
 
 function eventIdFromUrl(value: string): string | null {
