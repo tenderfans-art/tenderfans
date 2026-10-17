@@ -984,10 +984,8 @@ export async function GET(request: Request) {
 
           if ((registeredCalendars?.length ?? 0) === 0) {
             /*
-             * A calendar already approved for another Spot cannot
-             * automatically become this Spot's calendar.
-             *
-             * Preserve the detection for ownership review.
+             * A calendar already registered to another Spot is off-limits.
+             * Do not create a finding, register it, or ingest it here.
              */
             const { data: otherOwners, error: otherOwnersError } =
               await supabase
@@ -1012,34 +1010,7 @@ export async function GET(request: Request) {
             const otherOwner = otherOwners?.[0];
 
             if (otherOwner) {
-              const { error: ownershipFindingError } = await supabase.rpc(
-                "upsert_event_harvest_detector_finding",
-                {
-                  p_venue_id: venue.id,
-                  p_category: "source_ownership",
-                  p_finding_key: `calendar_image:${candidate.url}`,
-                  p_detector_status: detection.status,
-                  p_source_type: "calendar_image",
-                  p_website_url: detection.websiteUrl,
-                  p_source_url: candidate.url,
-                  p_fetched_url: detection.fetchedUrl,
-                  p_confidence: candidate.confidence,
-                  p_evidence: [
-                    ...candidate.evidence,
-                    "Calendar source already approved for another Spot",
-                    `Existing owner: ${otherOwner.name ?? otherOwner.venue_id}`,
-                    "Explicit calendar source association review required",
-                  ],
-                  p_error: null,
-                },
-              );
-
-              if (ownershipFindingError) {
-                throw new Error(
-                  `Could not persist calendar ownership review: ${ownershipFindingError.message}`,
-                );
-              }
-
+              // This source belongs to another Spot. Never reopen it.
               continue;
             }
 
