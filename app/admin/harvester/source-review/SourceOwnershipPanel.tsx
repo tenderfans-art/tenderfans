@@ -19,6 +19,8 @@ type Finding = {
 export default function SourceOwnershipPanel() {
   const [rows, setRows] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewing, setReviewing] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,8 +55,35 @@ export default function SourceOwnershipPanel() {
     return () => { active = false; };
   }, []);
 
+  async function review(finding: Finding, approve: boolean) {
+    if (!window.confirm(
+      `${approve ? "Approve and register" : "Reject"} HTML source for ${finding.venue_name}?`
+    )) return;
+
+    setReviewing(finding.id);
+    setActionError(null);
+
+    const { error: reviewError } = await supabase.rpc(
+      "admin_review_html_source_ownership",
+      {
+        p_finding_id: finding.id,
+        p_approve: approve,
+        p_venue_id: finding.venue_id,
+      }
+    );
+
+    if (reviewError) {
+      setActionError(reviewError.message);
+    } else {
+      setRows(current => current.filter(row => row.id !== finding.id));
+    }
+
+    setReviewing(null);
+  }
+
   return (
     <div>
+          {actionError && <p role="alert">{actionError}</p>}
           {loading ? (
             <p>Loading findings...</p>
           ) : error ? (
@@ -109,6 +138,28 @@ export default function SourceOwnershipPanel() {
                     <pre style={{
                       whiteSpace: "pre-wrap", overflowWrap: "anywhere"
                     }}>{JSON.stringify(finding.evidence, null, 2)}</pre>
+                    <div style={{
+                      display: "flex",
+                      gap: 12,
+                      marginTop: 12
+                    }}>
+                      <button
+                        type="button"
+                        disabled={reviewing !== null}
+                        onClick={() => void review(finding, true)}
+                      >
+                        {reviewing === finding.id
+                          ? "Processing..."
+                          : "Approve source for this Spot"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={reviewing !== null}
+                        onClick={() => void review(finding, false)}
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 </details>
               ))}
