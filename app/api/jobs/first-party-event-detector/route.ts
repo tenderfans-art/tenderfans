@@ -1,8 +1,3 @@
-import {
-  recoverMissingGoogleWebsites,
-  getRecoveredWebsitePriorityIds,
-  clearRecoveredWebsitePriority,
-} from "@/lib/event-harvester/google-website-recovery";
 import { venueIdentityMatch } from "@/lib/event-harvester/venue-identity";
 import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
 import { NextResponse } from "next/server";
@@ -210,15 +205,6 @@ export async function GET(request: Request) {
       .limit(SPOT_LIMIT);
   }
 
-  const scheduledMode =
-    !recoveryMode && !fullScanMode && !venueId;
-
-  let priorityIds: string[] = [];
-
-  if (scheduledMode) {
-    priorityIds = await getRecoveredWebsitePriorityIds(supabase);
-  }
-
   const { data: venues, error } = await venueQuery;
 
   if (error) {
@@ -228,38 +214,6 @@ export async function GET(request: Request) {
       },
       { status: 500 },
     );
-  }
-
-  if (scheduledMode && priorityIds.length > 0) {
-    const { data: priorityVenues, error: priorityError } =
-      await supabase
-        .from("venues")
-        .select(
-          "id,name,website_url,street_address,city,state_region,postal_code,country_code,latitude,longitude",
-        )
-        .eq("status", "active")
-        .not("website_url", "is", null)
-        .in("id", priorityIds.slice(0, SPOT_LIMIT));
-
-    if (priorityError) {
-      return NextResponse.json(
-        { error: priorityError.message },
-        { status: 500 },
-      );
-    }
-
-    const combined = new Map(
-      (priorityVenues ?? []).map((venue) => [venue.id, venue]),
-    );
-
-    for (const venue of venues ?? []) {
-      if (combined.size >= SPOT_LIMIT) break;
-      if (!combined.has(venue.id)) {
-        combined.set(venue.id, venue);
-      }
-    }
-
-    venues?.splice(0, venues.length, ...combined.values());
   }
 
   let processedSpots = 0;
@@ -1003,6 +957,9 @@ export async function GET(request: Request) {
         }
 
         if (candidate.sourceType === "calendar_image") {
+
+
+
           /*
            * Calendar recognition is source review, not event extraction.
            * An already registered source must not reopen its approval.
@@ -1026,6 +983,66 @@ export async function GET(request: Request) {
           }
 
           if ((registeredCalendars?.length ?? 0) === 0) {
+            /*
+             * A calendar already approved for another Spot cannot
+             * automatically become this Spot's calendar.
+             *
+             * Preserve the detection for ownership review.
+             */
+            const { data: otherOwners, error: otherOwnersError } =
+              await supabase
+                .from("event_harvest_sources")
+                .select("venue_id,name")
+                .eq("provider", "first_party")
+                .eq("source_type", "calendar_image")
+                .eq(
+                  "external_source_id",
+                  `first_party:calendar_image:${candidate.url}`,
+                )
+                .eq("is_enabled", true)
+                .neq("venue_id", venue.id)
+                .limit(1);
+
+            if (otherOwnersError) {
+              throw new Error(
+                `Could not check calendar ownership: ${otherOwnersError.message}`,
+              );
+            }
+
+            const otherOwner = otherOwners?.[0];
+
+            if (otherOwner) {
+              const { error: ownershipFindingError } = await supabase.rpc(
+                "upsert_event_harvest_detector_finding",
+                {
+                  p_venue_id: venue.id,
+                  p_category: "source_ownership",
+                  p_finding_key: `calendar_image:${candidate.url}`,
+                  p_detector_status: detection.status,
+                  p_source_type: "calendar_image",
+                  p_website_url: detection.websiteUrl,
+                  p_source_url: candidate.url,
+                  p_fetched_url: detection.fetchedUrl,
+                  p_confidence: candidate.confidence,
+                  p_evidence: [
+                    ...candidate.evidence,
+                    "Calendar source already approved for another Spot",
+                    `Existing owner: ${otherOwner.name ?? otherOwner.venue_id}`,
+                    "Explicit calendar source association review required",
+                  ],
+                  p_error: null,
+                },
+              );
+
+              if (ownershipFindingError) {
+                throw new Error(
+                  `Could not persist calendar ownership review: ${ownershipFindingError.message}`,
+                );
+              }
+
+              continue;
+            }
+
             const { error: calendarFindingError } = await supabase.rpc(
               "upsert_event_harvest_detector_finding",
               {
@@ -1299,7 +1316,7 @@ export async function GET(request: Request) {
                     ...candidate.evidence,
                     "Source validation succeeded",
                     "Multiple active Spots share the same registered website identity",
-                    "Explicit publisher ownership approval required",
+                    "Explicit HTML source association review required",
                   ],
                   p_error:
                     "Shared website HTML publisher ownership requires review",
@@ -1730,18 +1747,7 @@ export async function GET(request: Request) {
       );
     }
 
-    if (
-      scheduledMode &&
-      priorityIds.includes(venue.id) &&
-      executionErrors.length === 0
-    ) {
-      await clearRecoveredWebsitePriority(supabase, venue.id);
-    }
   }
-
-  const websiteRecovery = scheduledMode
-    ? await recoverMissingGoogleWebsites(supabase)
-    : null;
 
   const bucketTotal =
     bucketCounts.validated +
@@ -1758,7 +1764,6 @@ export async function GET(request: Request) {
   return NextResponse.json({
     spots: processedSpots,
     bucketInvariantHolds,
-    websiteRecovery,
     detected,
     ratified,
     validated,

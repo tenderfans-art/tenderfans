@@ -9,7 +9,7 @@ type Tab = "calendar" | "ownership";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "calendar", label: "Calendar Image" },
-  { id: "ownership", label: "Source Review" },
+  { id: "ownership", label: "HTML Source" },
 ];
 
 export default function SourceReviewPage() {
