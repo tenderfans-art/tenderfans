@@ -479,3 +479,89 @@ export async function upsertGoogleVenue(
 
   return data;
 }
+
+
+export async function recordGoogleSpotDiscovery(
+  supabase: SupabaseClient,
+  result: {
+    place: GooglePlace;
+    score: number;
+    evidence: Record<string, unknown>;
+  },
+): Promise<"pending" | "approved" | "rejected"> {
+  const { data, error } = await supabase.rpc(
+    "record_event_harvest_google_spot",
+    {
+      p_place_id: result.place.id,
+      p_place_data: result.place,
+      p_confidence_score: result.score,
+      p_evidence: result.evidence,
+    },
+  );
+
+  if (error) {
+    throw new Error(`Google Spot discovery failed: ${error.message}`);
+  }
+
+  if (data !== "pending" && data !== "approved" && data !== "rejected") {
+    throw new Error("Unexpected Google Spot review status");
+  }
+
+  return data;
+}
+
+
+
+export async function resolveReviewedGoogleSpot(
+  supabase: SupabaseClient,
+  result: {
+    place: GooglePlace;
+    score: number;
+    evidence: Record<string, unknown>;
+  },
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc(
+    "resolved_event_harvest_google_spot",
+    {
+      p_place_id: result.place.id,
+      p_place_data: result.place,
+      p_confidence_score: result.score,
+      p_evidence: result.evidence,
+    },
+  );
+
+  if (error) {
+    throw new Error(`Google Spot review lookup failed: ${error.message}`);
+  }
+
+  return typeof data === "string" && data ? data : null;
+}
+
+export async function registerHarvestGoogleSpot(
+  supabase: SupabaseClient,
+  result: {
+    place: GooglePlace;
+    score: number;
+    evidence: Record<string, unknown>;
+  },
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc(
+    "register_event_harvest_google_spot",
+    {
+      p_place_id: result.place.id,
+      p_place_data: result.place,
+      p_confidence_score: result.score,
+      p_evidence: result.evidence,
+    },
+  );
+
+  if (error) {
+    throw new Error(`Harvester Google registration failed: ${error.message}`);
+  }
+
+  if (data !== null && typeof data !== "string") {
+    throw new Error("Unexpected harvester registration result");
+  }
+
+  return data;
+}

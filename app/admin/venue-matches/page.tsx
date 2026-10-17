@@ -419,7 +419,7 @@ export default function AdminVenueMatchesPage() {
 
           <div className="eyebrow">TENDERFANS ADMIN</div>
 
-          <h1 style={{ marginBottom: "8px" }}>Event Venue Match Review</h1>
+          <h1 style={{ marginBottom: "8px" }}>Event Review</h1>
 
           <p
             className="lead-copy"

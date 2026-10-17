@@ -6,7 +6,12 @@ import {
   type VenueIdentity,
 } from "../venue-identity";
 
-import { searchGoogleVenue, upsertGoogleVenue } from "../google-places";
+import {
+  searchGoogleVenue,
+  registerHarvestGoogleSpot,
+  recordGoogleSpotDiscovery,
+  resolveReviewedGoogleSpot,
+} from "../google-places";
 
 import type { FirstPartyEventPreview } from "./preview";
 
@@ -544,6 +549,23 @@ export async function resolveFirstPartyAttribution(
     const google = await searchGoogleVenue(evidence);
 
     if (google?.evidence.reviewOnly === true) {
+    const approvedVenueId = await resolveReviewedGoogleSpot(
+      supabase,
+      google,
+    );
+
+    if (approvedVenueId) {
+      return {
+        status: "resolved",
+        venueId: approvedVenueId,
+        confidenceScore: google.score,
+        rawVenueName: evidence.name,
+        rawAddress: event.venueAddress ?? null,
+        method: "admin_resolved",
+      };
+    }
+
+      await recordGoogleSpotDiscovery(supabase, google);
       return {
         status: "unresolved",
         rawVenueName: event.venueName?.trim() || null,
@@ -562,7 +584,23 @@ export async function resolveFirstPartyAttribution(
     }
 
     if (google?.evidence.googleQualified === true) {
-      const venueId = await upsertGoogleVenue(supabase, google.place);
+      const venueId = await registerHarvestGoogleSpot(supabase, google);
+
+      if (!venueId) {
+        return {
+          status: "unresolved",
+          rawVenueName: evidence.name,
+          rawAddress: event.venueAddress ?? null,
+          publisherEvidence: evidence,
+          suggestedVenueId: best?.venue.id ?? null,
+          confidenceScore: google.score,
+          evidence: {
+            ...google.evidence,
+            googlePlaceId: google.place.id,
+            reason: "google_spot_admin_rejected",
+          },
+        };
+      }
 
       return {
         status: "resolved",
@@ -628,6 +666,23 @@ export async function resolveFirstPartyAttribution(
   const google = await searchGoogleVenue(evidence);
 
   if (google && google.evidence.reviewOnly === true) {
+    const approvedVenueId = await resolveReviewedGoogleSpot(
+      supabase,
+      google,
+    );
+
+    if (approvedVenueId) {
+      return {
+        status: "resolved",
+        venueId: approvedVenueId,
+        confidenceScore: google.score,
+        rawVenueName: evidence.name,
+        rawAddress: event.venueAddress ?? null,
+        method: "admin_resolved",
+      };
+    }
+
+    await recordGoogleSpotDiscovery(supabase, google);
     return {
       status: "unresolved",
       rawVenueName: evidence.name,
@@ -646,7 +701,23 @@ export async function resolveFirstPartyAttribution(
   }
 
   if (google && google.evidence.googleQualified === true) {
-    const venueId = await upsertGoogleVenue(supabase, google.place);
+    const venueId = await registerHarvestGoogleSpot(supabase, google);
+
+      if (!venueId) {
+        return {
+          status: "unresolved",
+          rawVenueName: evidence.name,
+          rawAddress: event.venueAddress ?? null,
+          publisherEvidence: evidence,
+          suggestedVenueId: best?.venue.id ?? null,
+          confidenceScore: google.score,
+          evidence: {
+            ...google.evidence,
+            googlePlaceId: google.place.id,
+            reason: "google_spot_admin_rejected",
+          },
+        };
+      }
 
     return {
       status: "resolved",
