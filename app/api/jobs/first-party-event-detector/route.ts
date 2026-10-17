@@ -1270,8 +1270,9 @@ export async function GET(request: Request) {
             }
 
             const { data: sharedWebsite, error: sharedWebsiteError } =
-              await supabase.rpc("first_party_html_website_is_shared", {
+              await supabase.rpc("first_party_html_source_requires_review", {
                 p_venue_id: venue.id,
+                p_source_url: ratification.source.sourceUrl,
               });
 
             if (sharedWebsiteError) {
