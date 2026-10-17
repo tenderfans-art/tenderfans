@@ -4,25 +4,32 @@ import BucketCount from "./BucketCount";
 
 const tools = [
   {
-    title: "Venue Matches",
+    title: "Spot Review",
     description:
-      "Review unresolved event venues and provider venue matches that need administrator approval.",
+      "Review uncertain Spot identities, redirects and Google Places matches before source detection.",
     href: "/admin/venue-matches",
-    status: "OPEN",
-  },
-  {
-    title: "HTML Error",
-    countRpc: "admin_event_harvest_html_error_findings",
-    description:
-      "Review HTML event sources with failed or incomplete event extraction.",
-    href: "/admin/harvester/html-errors",
     status: "OPEN",
   },
   {
     title: "Source Review",
     description:
-      "Review calendar images and ambiguous HTML source ownership before authorizing source attribution.",
+      "Review calendar and HTML source ownership before validation and harvesting.",
     href: "/admin/harvester/source-review",
+    status: "OPEN",
+  },
+  {
+    title: "Event Review",
+    description:
+      "Review uncertain harvested events before publication.",
+    href: "/admin/venue-matches",
+    status: "OPEN",
+  },
+  {
+    title: "HTML Errors",
+    countRpc: "admin_event_harvest_html_error_findings",
+    description:
+      "Review HTML event sources with failed or incomplete event extraction.",
+    href: "/admin/harvester/html-errors",
     status: "OPEN",
   },
   {
@@ -34,18 +41,10 @@ const tools = [
     status: "OPEN",
   },
   {
-    title: "Browser Required",
-    countRpc: "admin_event_harvest_browser_required_findings",
-    description:
-      "Review Spots whose event-source discovery requires browser execution.",
-    href: "/admin/harvester/browser-required",
-    status: "OPEN",
-  },
-  {
     title: "Challenge Encountered",
     countRpc: "admin_event_harvest_challenge_findings",
     description:
-      "Review websites presenting verified CAPTCHA or automated-access challenges.",
+      "Review CAPTCHA and automated-access challenges.",
     href: "/admin/harvester/challenge-encountered",
     status: "OPEN",
   },
@@ -53,7 +52,7 @@ const tools = [
     title: "Transport Errors",
     countRpc: "admin_event_harvest_transport_findings",
     description:
-      "Review event sources blocked by transport or website-access failures.",
+      "Review transport and website-access failures.",
     href: "/admin/harvester/transport-errors",
     status: "OPEN",
   },
@@ -61,7 +60,7 @@ const tools = [
     title: "No Sources",
     countRpc: "admin_event_harvest_no_source_findings",
     description:
-      "Review Spots where detector discovery completed but found no event source.",
+      "Review Spots where discovery found no event source.",
     href: "/admin/harvester/no-source",
     status: "OPEN",
   },
@@ -118,7 +117,7 @@ export default function AdminHarvesterPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
               gap: "18px",
             }}
           >
