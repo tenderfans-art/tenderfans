@@ -7,7 +7,7 @@ const tools = [
     title: "Spot Review",
     description:
       "Review uncertain Spot identities, redirects and Google Places matches before source detection.",
-    href: "/admin/venue-matches",
+    href: "/admin/harvester/spot-review",
     status: "OPEN",
   },
   {

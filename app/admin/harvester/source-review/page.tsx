@@ -4,14 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import CalendarImagePanel from "./CalendarImagePanel";
 import SourceOwnershipPanel from "./SourceOwnershipPanel";
-import HttpRedirectPanel from "./HttpRedirectPanel";
 
-type Tab = "calendar" | "ownership" | "redirect";
+type Tab = "calendar" | "ownership";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "calendar", label: "Calendar Image" },
   { id: "ownership", label: "Source Review" },
-  { id: "redirect", label: "HTTP Redirect" },
 ];
 
 export default function SourceReviewPage() {
@@ -39,8 +37,8 @@ export default function SourceReviewPage() {
           <h1 style={{ marginBottom: 8 }}>Source Review</h1>
 
           <p className="lead-copy" style={{ marginBottom: 24 }}>
-            Review discovered sources, ownership conflicts, and website
-            redirects before they proceed through the harvesting pipeline.
+            Review discovered calendar and HTML sources, including ownership
+            conflicts, before validation and harvesting.
           </p>
 
           <div
@@ -81,7 +79,6 @@ export default function SourceReviewPage() {
           <div role="tabpanel">
             {activeTab === "calendar" && <CalendarImagePanel />}
             {activeTab === "ownership" && <SourceOwnershipPanel />}
-            {activeTab === "redirect" && <HttpRedirectPanel />}
           </div>
         </section>
       </div>
