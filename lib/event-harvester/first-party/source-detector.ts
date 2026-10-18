@@ -795,7 +795,7 @@ function inspectPage(
    * endpoint.
    */
   const googleCalendarEmbedMatch = html.match(
-    /https?:\\?\/\\?\/(?:www\\?\.)?google\\?\.com\\?\/calendar\\?\/embed\?[^"'<>\\\s]*\bsrc=[^"'<>\\\s&]+[^"'<>\\\s]*/i,
+    /https?:\\?\/\\?\/(?:(?:www|calendar)\\?\.)?google\\?\.com\\?\/calendar\\?\/embed\?[^"'<>\\\s]*\bsrc=[^"'<>\\\s&]+[^"'<>\\\s]*/i,
   );
 
   if (googleCalendarEmbedMatch) {
