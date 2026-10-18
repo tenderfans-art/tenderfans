@@ -2,26 +2,31 @@ import Link from "next/link";
 import CoverageTally from "./CoverageTally";
 import BucketCount from "./BucketCount";
 
-const tools = [
+const reviewTools = [
   {
     title: "Spot Review",
-    description:
-      "Review uncertain Spot identities, redirects and Google Places matches before source detection.",
+    description: "Spot identities, redirects and Google Places matches.",
     href: "/admin/harvester/spot-review",
-    status: "OPEN",
   },
   {
     title: "Source Review",
-    description:
-      "Review calendar and HTML source ownership before validation and harvesting.",
+    description: "Calendar and HTML source ownership.",
     href: "/admin/harvester/source-review",
-    status: "OPEN",
   },
   {
     title: "Event Review",
-    description:
-      "Review uncertain harvested events before publication.",
+    description: "Uncertain harvested events before publication.",
     href: "/admin/venue-matches",
+  },
+];
+
+const tools = [
+  {
+    title: "Calendar Images",
+    countRpc: "admin_event_harvest_calendar_image_findings",
+    description:
+      "Review event calendars published as images.",
+    href: "/admin/harvester/calendar-images",
     status: "OPEN",
   },
   {
@@ -121,6 +126,86 @@ export default function AdminHarvesterPage() {
               gap: "18px",
             }}
           >
+            <details
+              style={{
+                gridColumn: "1 / -1",
+                border: "1px solid rgba(20, 35, 45, 0.12)",
+                borderRadius: "18px",
+                background: "rgba(255,255,255,0.9)",
+                padding: "22px",
+              }}
+            >
+              <summary
+                style={{
+                  cursor: "pointer",
+                  fontSize: "1.25rem",
+                  fontWeight: 700,
+                }}
+              >
+                Review Required
+              </summary>
+
+              <p
+                style={{
+                  margin: "12px 0 18px",
+                  lineHeight: 1.55,
+                  opacity: 0.75,
+                }}
+              >
+                Review Spot identities, source ownership and event attribution.
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(210px, 1fr))",
+                  gap: "14px",
+                }}
+              >
+                {reviewTools.map((tool) => (
+                  <Link
+                    key={tool.title}
+                    href={tool.href}
+                    style={{
+                      display: "block",
+                      padding: "18px",
+                      border: "1px solid rgba(20, 35, 45, 0.12)",
+                      borderRadius: "12px",
+                      background: "rgba(245,243,236,0.65)",
+                      textDecoration: "none",
+                      color: "inherit",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: "10px",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      <h2 style={{ margin: 0, fontSize: "1.1rem" }}>
+                        {tool.title}
+                      </h2>
+                      <span
+                        style={{
+                          fontSize: ".68rem",
+                          fontWeight: 800,
+                          letterSpacing: ".08em",
+                        }}
+                      >
+                        OPEN
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, lineHeight: 1.5, opacity: 0.75 }}>
+                      {tool.description}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </details>
+
             {tools.map((tool) => {
               const content = (
                 <>
