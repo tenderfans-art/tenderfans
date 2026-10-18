@@ -41,7 +41,7 @@ const tools = [
     title: "Facebook Adapter",
     countRpc: "admin_event_harvest_facebook_findings",
     description:
-      "Review Spots where Facebook is the only potential event source currently detected.",
+      "Review Facebook-only event sources.",
     href: "/admin/harvester/facebook",
     status: "OPEN",
   },
