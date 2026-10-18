@@ -126,74 +126,49 @@ export default function AdminHarvesterPage() {
               gap: "18px",
             }}
           >
-            <details
+            <Link
+            href="/admin/harvester/review-required"
+            style={{
+              display: "block",
+              padding: "22px",
+              border: "1px solid rgba(20, 35, 45, 0.12)",
+              borderRadius: "18px",
+              background: "rgba(255,255,255,0.9)",
+              textDecoration: "none",
+              color: "inherit",
+              minHeight: "145px",
+              cursor: "pointer",
+            }}
+          >
+            <div
               style={{
-                padding: "22px",
-                border: "1px solid rgba(20, 35, 45, 0.12)",
-                borderRadius: "18px",
-                background: "rgba(255,255,255,0.9)",
-                minHeight: "145px",
-                height: "100%",
-                boxSizing: "border-box",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: "12px",
+                marginBottom: "12px",
               }}
             >
-              <summary
-                style={{
-                  cursor: "pointer",
-                  fontSize: "1.25rem",
-                  fontWeight: 700,
-                  marginBottom: "12px",
-                }}
-              >
+              <h2 style={{ margin: 0, fontSize: "1.25rem" }}>
                 Review Required
-                <span
-                  style={{
-                    display: "block",
-                    marginTop: "16px",
-                    fontSize: "1rem",
-                    fontWeight: 400,
-                    lineHeight: 1.55,
-                    opacity: 0.75,
-                  }}
-                >
-                  Review Spot identities, event-source ownership, and
-                  harvested events awaiting approval.
-                </span>
-              </summary>
-
-              <div
+              </h2>
+              <span
                 style={{
-                  display: "grid",
-                  gap: "10px",
-                  marginTop: "18px",
+                  fontSize: "0.68rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
                 }}
               >
-                {reviewTools.map((tool) => (
-                  <Link
-                    key={tool.title}
-                    href={tool.href}
-                    style={{
-                      display: "block",
-                      padding: "12px",
-                      border: "1px solid rgba(20, 35, 45, 0.12)",
-                      borderRadius: "10px",
-                      background: "rgba(245,243,236,0.65)",
-                      textDecoration: "none",
-                      color: "inherit",
-                    }}
-                  >
-                    <strong style={{ display: "block", marginBottom: "5px" }}>
-                      {tool.title}
-                    </strong>
-                    <span style={{ fontSize: ".8rem", opacity: 0.75 }}>
-                      {tool.description}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </details>
+                OPEN
+              </span>
+            </div>
+            <p style={{ margin: 0, lineHeight: 1.55, opacity: 0.75 }}>
+              Review Spot identities, event-source ownership, and
+              harvested events awaiting approval.
+            </p>
+          </Link>
 
-            {tools.map((tool) => {
+          {tools.map((tool) => {
               const content = (
                 <>
                   <div
