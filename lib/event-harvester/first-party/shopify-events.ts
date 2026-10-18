@@ -485,6 +485,278 @@ function parseWeeklyRecurrence(text: string): {
   };
 }
 
+
+/*
+ * Numeric-date ticket collections, such as OCC Road House.
+ * Keep this separate from the established written-month and
+ * weekly recurrence parsers to preserve existing behavior.
+ */
+function numericTicketDate(title: string): {
+  year: number;
+  month: number;
+  day: number;
+  label: string;
+} | null {
+  const match = title.match(
+    /\b(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})\b/,
+  );
+
+  if (!match) return null;
+
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const year = match[3].length === 2
+    ? 2000 + Number(match[3])
+    : Number(match[3]);
+
+  const check = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() + 1 !== month ||
+    check.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day, label: match[0] };
+}
+
+function numericTicketName(title: string): string {
+  return title
+    .replace(/\b\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4})\b.*$/, "")
+    .replace(/\s*[-–—]\s*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function numericTicketKey(title: string, date: {
+  year: number;
+  month: number;
+  day: number;
+}): string {
+  const name = numericTicketName(title)
+    .toLowerCase()
+    .replace(/[“”"']/g, "")
+    .replace(/\s*[-–—]\s*/g, "-")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  const day = [
+    date.year,
+    String(date.month).padStart(2, "0"),
+    String(date.day).padStart(2, "0"),
+  ].join("-");
+
+  return `${day}:${name}`;
+}
+
+type NumericPerformance = {
+  label: string;
+  time: string;
+};
+
+function numericTicketTimes(description: string): NumericPerformance[] {
+  const performances: NumericPerformance[] = [];
+
+  for (const line of description.split("\n")) {
+    const match = line.trim().match(
+      /^(?:[•*\-]\s*)?(.{2,80}?)\s*:\s*(\d{1,2}(?::\d{2})?\s*(?:AM|PM))\b/i,
+    );
+
+    if (!match) continue;
+
+    const label = match[1].trim();
+    const normalized = label.toLowerCase();
+
+    if (
+      /\b(?:gates?|doors?|registration|check-in|practice|resident dj|midnight music djs?)\b/i.test(normalized)
+    ) continue;
+
+    const clock = parseClock(match[2]);
+    if (!clock) continue;
+
+    const time =
+      `${String(clock.hour).padStart(2, "0")}:` +
+      `${String(clock.minute).padStart(2, "0")}`;
+
+    if (!performances.some(
+      (item) => item.label.toLowerCase() === normalized && item.time === time
+    )) {
+      performances.push({ label, time });
+    }
+  }
+
+  return performances;
+}
+
+function performanceKey(label: string): string {
+  return label.toLowerCase()
+    .replace(/[“”"']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function isNumericTicketProduct(
+  product: ShopifyProduct,
+  sourceUrl: string,
+): boolean {
+  const tags = tagsOf(product);
+  const type = cleanText(product.product_type)?.toLowerCase();
+
+  const collectionIsTicketed = /\/collections\/ticketed-events(?:\/|$)/i.test(
+    new URL(sourceUrl).pathname,
+  );
+
+  return (
+    tags.includes("ticketed events") ||
+    (
+      collectionIsTicketed &&
+      (type === "ticket" || type === "event" || type === null)
+    )
+  );
+}
+
+type NumericTicketGroup = {
+  key: string;
+  title: string;
+  date: {
+    year: number;
+    month: number;
+    day: number;
+  };
+  products: ShopifyProduct[];
+  performances: Map<string, {
+    label: string;
+    times: Set<string>;
+  }>;
+};
+
+function extractNumericTicketEvents(
+  products: ShopifyProduct[],
+  sourceUrl: string,
+  timeZone: string,
+  now: Date,
+): {
+  events: FirstPartyHarvestEvent[];
+  handledIds: Set<string>;
+} {
+  const groups = new Map<string, NumericTicketGroup>();
+  const handledIds = new Set<string>();
+
+  for (const product of products) {
+    const id = productId(product);
+    const title = cleanText(product.title);
+
+    if (!id || !title || isPrivateEventProduct(product)) continue;
+    if (!isNumericTicketProduct(product, sourceUrl)) continue;
+
+    const date = numericTicketDate(title);
+    if (!date) continue;
+
+    handledIds.add(id);
+
+    const key = numericTicketKey(title, date);
+    const description = htmlToText(product.body_html) ?? "";
+
+    let group = groups.get(key);
+
+    if (!group) {
+      group = {
+        key,
+        title: numericTicketName(title),
+        date,
+        products: [],
+        performances: new Map(),
+      };
+      groups.set(key, group);
+    }
+
+    group.products.push(product);
+
+    for (const performance of numericTicketTimes(description)) {
+      const key = performanceKey(performance.label);
+      if (!key) continue;
+
+      let entry = group.performances.get(key);
+      if (!entry) {
+        entry = {
+          label: performance.label,
+          times: new Set<string>(),
+        };
+        group.performances.set(key, entry);
+      }
+      entry.times.add(performance.time);
+    }
+  }
+
+  const events: FirstPartyHarvestEvent[] = [];
+
+  for (const group of groups.values()) {
+    const primary = group.products[0];
+    const ids = group.products
+      .map(productId)
+      .filter((id): id is string => Boolean(id));
+
+    for (const [labelKey, performance] of group.performances) {
+      const conflicting = performance.times.size > 1;
+
+      for (const time of performance.times) {
+        const [hour, minute] = time.split(":").map(Number);
+
+        const startsAt = zonedDateTimeToUtc(
+          group.date.year,
+          group.date.month,
+          group.date.day,
+          hour,
+          minute,
+          timeZone,
+        );
+
+        if (startsAt.getTime() < now.getTime()) continue;
+
+        const title =
+          labelKey === "event-start-time" ||
+          labelKey === "showtime"
+            ? group.title
+            : performance.label;
+
+        events.push({
+          externalEventId:
+            `shopify:event:${group.key}:performance:${labelKey}:${time}`,
+          title,
+          description: htmlToText(primary.body_html),
+          startsAt: startsAt.toISOString(),
+          endsAt: null,
+          allDay: false,
+          sourceUrl: productUrl(sourceUrl, primary),
+          flyerUrl: flyerUrl(primary),
+          location: null,
+          rawPayload: {
+            platform: "shopify",
+            occurrenceType: "numeric_ticket_performance",
+            productIds: ids,
+            productCount: ids.length,
+            eventKey: group.key,
+            performanceLabel: performance.label,
+            performanceTime: time,
+            observedTimes: [...performance.times],
+            timeZone,
+            ...(conflicting ? {
+              eventEvidence: {
+                requiresReview: true,
+                reviewReasons: ["conflicting_performance_start_times"],
+              },
+            } : {}),
+          },
+        });
+      }
+    }
+  }
+
+  return { events, handledIds };
+}
+
 function productId(product: ShopifyProduct): string | null {
   if (typeof product.id === "string" || typeof product.id === "number") {
     const id = String(product.id).trim();
@@ -554,9 +826,22 @@ export async function fetchShopifyEvents(
 
   const todayWeekday = weekdayLookup[weekdayFormatter.format(localNoon)];
 
-  const events: FirstPartyHarvestEvent[] = [];
+  const numeric = extractNumericTicketEvents(
+    products,
+    sourceUrl,
+    timeZone,
+    now,
+  );
+
+  const events: FirstPartyHarvestEvent[] = [...numeric.events];
 
   for (const product of products) {
+    const numericId = productId(product);
+
+    if (numericId && numeric.handledIds.has(numericId)) {
+      continue;
+    }
+
     if (!isEventProduct(product) || isPrivateEventProduct(product)) {
       continue;
     }

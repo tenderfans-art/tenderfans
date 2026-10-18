@@ -152,6 +152,41 @@ async function ingestEvent(
   }
 
   /*
+   * Explicitly disputed publisher times must reach Event Review
+   * before cross-source linking or canonical graduation.
+   * Preserve every observed candidate and its original evidence.
+   */
+  const reviewEvidence = event.rawPayload?.eventEvidence;
+
+  const explicitlyRequiresReview =
+    reviewEvidence !== null &&
+    typeof reviewEvidence === "object" &&
+    !Array.isArray(reviewEvidence) &&
+    (
+      reviewEvidence as { requiresReview?: unknown }
+    ).requiresReview === true &&
+    event.rawPayload?.occurrenceType === "numeric_ticket_performance";
+
+  if (explicitlyRequiresReview) {
+    const { error: reviewError } = await supabase.rpc(
+      "mark_harvest_candidate_for_review",
+      { p_candidate_id: candidateId },
+    );
+
+    if (reviewError) {
+      throw new Error(
+        `Candidate review routing failed for "${event.title}": ${reviewError.message}`,
+      );
+    }
+
+    return {
+      candidateId,
+      canonicalEventId: null,
+      action: "needs_review",
+    };
+  }
+
+  /*
    * Cross-source dedupe MUST happen before graduation.
    *
    * If Ticketmaster or another source already owns the exact
