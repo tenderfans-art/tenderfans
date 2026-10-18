@@ -45,36 +45,26 @@ export default function NoSourcePage() {
         const findings = (data ?? []) as Finding[];
         setRows(findings);
 
-        const facebookIds = new Set<string>();
+        const { data: facebookMarkers, error: facebookError } =
+          await supabase.rpc(
+            "admin_event_harvest_no_source_facebook_markers"
+          );
 
-        for (let offset = 0; offset < findings.length; offset += 100) {
-          const venueIds = findings
-            .slice(offset, offset + 100)
-            .map((finding) => finding.venue_id);
+        if (!active) return;
 
-          if (venueIds.length === 0) continue;
-
-          const { data: facebookFindings, error: facebookError } =
-            await supabase
-              .from("event_harvest_detector_findings")
-              .select("venue_id")
-              .eq("category", "facebook")
-              .in("venue_id", venueIds);
-
-          if (!active) return;
-
-          if (facebookError) {
-            setError("Unable to load Facebook detection markers.");
-            setLoading(false);
-            return;
-          }
-
-          for (const finding of facebookFindings ?? []) {
-            facebookIds.add(finding.venue_id);
-          }
+        if (facebookError) {
+          setError("Unable to load Facebook detection markers.");
+          setLoading(false);
+          return;
         }
 
-        setFacebookVenueIds(facebookIds);
+        setFacebookVenueIds(
+          new Set(
+            (facebookMarkers ?? []).map(
+              (marker: { venue_id: string }) => marker.venue_id
+            )
+          )
+        );
       }
 
       setLoading(false);
