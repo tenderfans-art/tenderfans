@@ -38,7 +38,7 @@ function calendarPageBusinessName(html: string): string | null {
     value
       .replace(/&amp;/gi, "&")
       .replace(/&quot;/gi, '"')
-      .replace(/&#(?:39|x27);/gi, "'")
+      .replace(/&#(?:0*39|x27);/gi, "'")
       .replace(/&(?:#8217|rsquo);/gi, "’")
       .replace(/<[^>]*>/g, " ")
       .replace(/\s+/g, " ")
@@ -59,7 +59,7 @@ function calendarPageBusinessName(html: string): string | null {
   for (const candidate of candidates) {
     // Remove a site-title suffix without interpreting it as ownership.
     const pageTitle = candidate
-      .split(/\s+[|–—]\s+/)[0]
+      .split(/\s+[-|–—]\s+/)[0]
       .trim();
 
     // Only a business-qualified calendar title is eligible.
