@@ -254,14 +254,10 @@ function extractMultidayHtmlAnnouncement(
     .pop() ?? "announcement";
 
   /*
-   * Preserve the previously emitted Pickled Grouper identifier.
-   * All other announcements use the source URL path for identity,
+   * Use the published source URL path for event identity,
    * avoiding title punctuation and presentation changes.
    */
-  const identitySlug =
-    sourceSlug === "frenchys-pickled-grouper-classic"
-      ? "pickled-grouper"
-      : sourceSlug;
+  const identitySlug = sourceSlug;
 
   return {
     externalEventId:
