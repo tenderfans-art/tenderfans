@@ -1334,7 +1334,7 @@ export async function GET(request: Request) {
           if (validation.status !== "validated") {
             if (
               candidate.sourceType === "facebook" &&
-              /Facebook Page is unofficial and has no supported event source|Facebook Page has no public Events surface/i.test(
+              /Facebook Page is unofficial and has no supported event source|Facebook Page has no public Events surface|Facebook Events page is unavailable or access restricted/i.test(
                 validation.error ?? "",
               )
             ) {

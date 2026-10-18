@@ -17,6 +17,8 @@ type Finding = {
 export default function NoSourcePage() {
   const [rows, setRows] =
     useState<Finding[]>([]);
+  const [facebookVenueIds, setFacebookVenueIds] =
+    useState<Set<string>>(new Set());
   const [loading, setLoading] =
     useState(true);
   const [error, setError] =
@@ -40,9 +42,39 @@ export default function NoSourcePage() {
           "Unable to load No Source findings."
         );
       } else {
-        setRows(
-          (data ?? []) as Finding[]
-        );
+        const findings = (data ?? []) as Finding[];
+        setRows(findings);
+
+        const facebookIds = new Set<string>();
+
+        for (let offset = 0; offset < findings.length; offset += 100) {
+          const venueIds = findings
+            .slice(offset, offset + 100)
+            .map((finding) => finding.venue_id);
+
+          if (venueIds.length === 0) continue;
+
+          const { data: facebookFindings, error: facebookError } =
+            await supabase
+              .from("event_harvest_detector_findings")
+              .select("venue_id")
+              .eq("category", "facebook")
+              .in("venue_id", venueIds);
+
+          if (!active) return;
+
+          if (facebookError) {
+            setError("Unable to load Facebook detection markers.");
+            setLoading(false);
+            return;
+          }
+
+          for (const finding of facebookFindings ?? []) {
+            facebookIds.add(finding.venue_id);
+          }
+        }
+
+        setFacebookVenueIds(facebookIds);
       }
 
       setLoading(false);
@@ -161,6 +193,24 @@ export default function NoSourcePage() {
                     }}
                   >
                     {row.venue_name}
+                    {facebookVenueIds.has(row.venue_id) && (
+                      <span
+                        title="Facebook detected but no validated event source"
+                        style={{
+                          display: "inline-block",
+                          marginLeft: "9px",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          background: "#b42318",
+                          color: "#fff",
+                          fontSize: ".65rem",
+                          fontWeight: 800,
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        FB
+                      </span>
+                    )}
                   </strong>
 
                   <a

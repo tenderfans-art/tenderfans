@@ -1363,19 +1363,14 @@ function inspectPage(
   } = extractHtmlEventsWithDiagnostics(html, pageUrl);
 
   /*
-   * Detect recognizable dated performance schedules independently
-   * of successful event normalization.
+   * Report HTML extraction failures only when the extractor
+   * recognizes a schedule and identifies missing performances.
+   * Unrelated page-wide text is insufficient evidence.
    */
-  const htmlScheduleEvidence =
-    /LIVE\s*MUSIC/i.test(html) &&
-    /(?:Friday|Saturday|Sunday|Monday|Tuesday|Wednesday|Thursday)/i.test(html) &&
-    /\d{1,2}(?::\d{2})?\s*(?:&ndash;|&#8211;|–|—|-)\s*\d{1,2}(?::\d{2})?/i.test(html);
-
   if (
-    (htmlDiagnostics.recognizedSchedule &&
-      htmlDiagnostics.extractedPerformances <
-        htmlDiagnostics.expectedPerformances) ||
-    (htmlScheduleEvidence && htmlEvents.length === 0)
+    htmlDiagnostics.recognizedSchedule &&
+    htmlDiagnostics.extractedPerformances <
+      htmlDiagnostics.expectedPerformances
   ) {
     pushDetection(detections, {
       sourceType: "html_error",

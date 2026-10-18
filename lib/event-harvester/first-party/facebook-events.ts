@@ -41,6 +41,24 @@ function canonicalPageUrl(value: string): string {
 
   url.pathname = url.pathname.replace(/\/+$/, "");
 
+  /*
+   * Normalize Facebook Page links before requesting the Events tab.
+   * Remove unrelated Page tabs and support /people/name/id URLs.
+   */
+  const peoplePage = url.pathname.match(
+    /^\/people\/[^/]+\/(\d+)(?:\/(?:events|reviews|posts|photos|about))?$/i,
+  );
+
+  if (peoplePage) {
+    url.pathname = `/${peoplePage[1]}`;
+  } else {
+    url.pathname = url.pathname.replace(
+      /\/(?:reviews|posts|photos|about)$/i,
+      "",
+    );
+  }
+
+
   if (!url.pathname || url.pathname === "/") {
     throw new Error(`Facebook source does not identify a Page: ${value}`);
   }
@@ -561,6 +579,17 @@ export async function fetchFacebookEvents(
     await page.waitForTimeout(5000);
 
     const text = await pageText(page);
+
+    /*
+     * Facebook may return HTTP 200 with an unavailable-content page.
+     * This is not evidence that the Page has no Events source.
+     * Preserve the validation failure without marking Facebook exhausted.
+     */
+    if (/This content isn't available right now/i.test(text)) {
+      throw new Error(
+        "Facebook Events page is unavailable or access restricted",
+      );
+    }
 
     if (/log in to view this 18\+ content/i.test(text)) {
       throw new Error("Facebook Page requires login to view 18+ content");
