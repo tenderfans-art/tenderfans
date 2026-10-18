@@ -30,6 +30,7 @@ import { fetchTicketSpotEvents } from "./ticket-spot-events";
 import { fetchSpotHopperEvents } from "./spothopper-events";
 import { fetchFacebookEvents } from "./facebook-events";
 import { fetchCalendarImageEvents } from "./calendar-image-events";
+import { fetchTanStackSerovalEvents } from "./tanstack-seroval-events";
 
 export type FirstPartySource = {
   id: string;
@@ -311,6 +312,8 @@ export async function previewFirstPartySource(
       source.source_url,
       { timeZone },
     );
+  } else if (source.source_type === "tanstack_seroval_events") {
+    events = await fetchTanStackSerovalEvents(source.source_url);
   } else if (source.source_type === "facebook_events") {
     events = await fetchFacebookEvents(source.source_url);
   } else if (source.source_type === "eventer_events") {

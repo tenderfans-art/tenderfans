@@ -13,6 +13,7 @@ import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
 import { fetchBrowserEvidence } from "./browser-transport";
 import { discoverCalendarImageAssets } from "./calendar-image-assets";
 import { extractHtmlEventsWithDiagnostics } from "./html-events";
+import { discoverTanStackCalendar } from "./tanstack-seroval-events";
 
 export type DetectedSourceType =
   | "eventbrite_organizer"
@@ -34,6 +35,7 @@ export type DetectedSourceType =
   | "squarespace_events"
   | "tribe_rest"
   | "next_rsc_events"
+  | "tanstack_seroval_events"
   | "google_calendar"
   | "simcal_events"
   | "google_apps_script_events"
@@ -2486,6 +2488,54 @@ export async function detectFirstPartySources(
           detections.splice(index, 1);
         }
       }
+    }
+  }
+
+  /*
+   * TanStack Start / Seroval calendar discovery.
+   *
+   * Inspect only event surfaces already found by the existing
+   * discovery pipeline. The adapter verifies the compiled route,
+   * server-function module, and unique function hash.
+   *
+   * A generic TanStack application is not sufficient evidence.
+   */
+  const tanstackCandidates = [
+    ...new Set(
+      discoveredEventPages
+        .filter(
+          (page) =>
+            page.sameSite &&
+            page.fetched &&
+            page.httpStatus !== null &&
+            page.httpStatus >= 200 &&
+            page.httpStatus < 400,
+        )
+        .map((page) => page.finalUrl ?? page.url),
+    ),
+  ];
+
+  for (const candidateUrl of tanstackCandidates) {
+    try {
+      const descriptor =
+        await discoverTanStackCalendar(candidateUrl);
+
+      if (!descriptor) {
+        continue;
+      }
+
+      pushDetection(detections, {
+        sourceType: "tanstack_seroval_events",
+        url: descriptor.pageUrl,
+        confidence: "high",
+        adapterAvailable: true,
+        supported: true,
+        evidence: [
+          "TanStack Start calendar route and Seroval server function verified",
+        ],
+      });
+    } catch {
+      // Unsupported or inaccessible TanStack candidates are ignored.
     }
   }
 

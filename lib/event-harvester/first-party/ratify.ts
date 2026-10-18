@@ -331,6 +331,7 @@ const directlyRatifiableSourceTypes = new Set([
   "sociablekit_facebook_events",
   "tribe_rest",
   "next_rsc_events",
+  "tanstack_seroval_events",
   "eventer_events",
   "ticket_spot_events",
   "wordpress_category_events",

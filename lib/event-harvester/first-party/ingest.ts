@@ -8,6 +8,7 @@ import {
 
 import { eventFingerprint } from "../identity";
 import { resolveFirstPartyAttribution } from "./attribution";
+import { classifyEventEligibility } from "./event-eligibility";
 
 export type FirstPartyIngestResult = {
   sourceId: string;
@@ -413,12 +414,24 @@ export async function ingestFirstPartySource(
 
   const allPreview = await previewFirstPartySource(source);
 
+  /*
+   * TanStack calendar inventories may include television schedules.
+   * Preserve the complete inventory for source diagnostics, but do
+   * not persist broadcast-only listings as TenderFans events.
+   */
+  const eligiblePreview =
+    source.source_type === "tanstack_seroval_events"
+      ? allPreview.filter(
+          (event) => classifyEventEligibility(event).eligible,
+        )
+      : allPreview;
+
   const selectedPreview = options.title
-    ? allPreview.filter(
+    ? eligiblePreview.filter(
         (event) =>
           event.title.toLowerCase() === options.title!.trim().toLowerCase(),
       )
-    : allPreview;
+    : eligiblePreview;
 
   const preview =
     options.limit === undefined
@@ -500,7 +513,7 @@ export async function ingestFirstPartySource(
     allPreview.length > 0 &&
     options.title === undefined &&
     options.limit === undefined &&
-    preview.length === allPreview.length &&
+    preview.length === eligiblePreview.length &&
     result.needsReview === 0;
 
   if (completeInitialRun) {
@@ -527,6 +540,7 @@ export async function ingestFirstPartySource(
    */
   const completeNormalRun =
     !bootstrap &&
+    source.source_type !== "tanstack_seroval_events" &&
     allPreview.length > 0 &&
     options.title === undefined &&
     options.limit === undefined &&
