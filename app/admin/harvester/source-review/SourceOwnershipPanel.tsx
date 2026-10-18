@@ -34,6 +34,28 @@ type Finding = {
   last_seen_at: string;
 };
 
+function matchingSpots<T extends { id: string; name: string }>(
+  spots: T[],
+  query: string
+): T[] {
+  const term = query.trim().toLowerCase();
+
+  const rank = (name: string) => {
+    const value = name.toLowerCase();
+    if (value === term) return 0;
+    if (value.startsWith(term)) return 1;
+    if (value.split(/\s+/).some(word => word.startsWith(term))) return 2;
+    return 3;
+  };
+
+  return spots
+    .filter(spot => spot.name.toLowerCase().includes(term))
+    .sort((a, b) =>
+      rank(a.name) - rank(b.name) ||
+      a.name.localeCompare(b.name)
+    );
+}
+
 export default function SourceOwnershipPanel() {
   const [rows, setRows] = useState<Finding[]>([]);
   const [spots, setSpots] = useState<Spot[]>([]);
@@ -164,7 +186,18 @@ export default function SourceOwnershipPanel() {
   }
 
   async function review(finding: Finding, approve: boolean) {
-    const venueId = selectedSpot[finding.id] ?? finding.venue_id;
+    const query = (spotSearch[finding.id] ?? "").trim();
+    const matches = matchingSpots(spots, query);
+
+    const venueId = query
+      ? (
+          matches.some(spot =>
+            spot.id === selectedSpot[finding.id]
+          )
+            ? selectedSpot[finding.id]
+            : (matches[0]?.id ?? "")
+        )
+      : (selectedSpot[finding.id] ?? finding.venue_id);
 
     if (approve && !venueId) {
       setActionError("Select a Spot before approval.");
@@ -233,11 +266,16 @@ export default function SourceOwnershipPanel() {
           {rows.map(finding => {
             const search = (spotSearch[finding.id] ?? "")
               .toLowerCase().trim();
-            const choices = spots.filter(spot =>
-              spot.name.toLowerCase().includes(search)
-            );
-            const currentSpot =
-              selectedSpot[finding.id] ?? finding.venue_id;
+            const choices = matchingSpots(spots, search);
+            const currentSpot = search
+              ? (
+                  choices.some(spot =>
+                    spot.id === selectedSpot[finding.id]
+                  )
+                    ? selectedSpot[finding.id]
+                    : (choices[0]?.id ?? "")
+                )
+              : (selectedSpot[finding.id] ?? finding.venue_id);
             const busy = reviewing !== null;
             const sourceUrl =
               finding.source_url ?? finding.website_url;
@@ -305,12 +343,23 @@ export default function SourceOwnershipPanel() {
                 <input
                   type="search"
                   value={spotSearch[finding.id] ?? ""}
-                  onChange={event =>
+                  onChange={(event) => {
+                    const value = event.target.value;
+
                     setSpotSearch(current => ({
                       ...current,
-                      [finding.id]: event.target.value
-                    }))
-                  }
+                      [finding.id]: value
+                    }));
+
+                    if (value.trim()) {
+                      const first = matchingSpots(spots, value)[0];
+
+                      setSelectedSpot(current => ({
+                        ...current,
+                        [finding.id]: first?.id ?? ""
+                      }));
+                    }
+                  }}
                   placeholder="Search Spots..."
                   aria-label={`Search Spots for ${finding.venue_name}`}
                   disabled={busy}
@@ -343,7 +392,7 @@ export default function SourceOwnershipPanel() {
                   }}
                 >
                   {!choices.some(spot => spot.id === currentSpot) &&
-                    currentSpot && (
+                    currentSpot && !search && (
                       <option value={currentSpot}>
                         {spots.find(spot => spot.id === currentSpot)?.name ??
                           finding.venue_name}
