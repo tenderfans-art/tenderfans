@@ -128,11 +128,12 @@ export default function AdminHarvesterPage() {
           >
             <details
               style={{
-                gridColumn: "1 / -1",
+                padding: "22px",
                 border: "1px solid rgba(20, 35, 45, 0.12)",
                 borderRadius: "18px",
                 background: "rgba(255,255,255,0.9)",
-                padding: "22px",
+                minHeight: "145px",
+                alignSelf: "start",
               }}
             >
               <summary
@@ -140,6 +141,7 @@ export default function AdminHarvesterPage() {
                   cursor: "pointer",
                   fontSize: "1.25rem",
                   fontWeight: 700,
+                  marginBottom: "12px",
                 }}
               >
                 Review Required
@@ -147,7 +149,7 @@ export default function AdminHarvesterPage() {
 
               <p
                 style={{
-                  margin: "12px 0 18px",
+                  margin: 0,
                   lineHeight: 1.55,
                   opacity: 0.75,
                 }}
@@ -158,9 +160,8 @@ export default function AdminHarvesterPage() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(210px, 1fr))",
-                  gap: "14px",
+                  gap: "10px",
+                  marginTop: "18px",
                 }}
               >
                 {reviewTools.map((tool) => (
@@ -169,38 +170,20 @@ export default function AdminHarvesterPage() {
                     href={tool.href}
                     style={{
                       display: "block",
-                      padding: "18px",
+                      padding: "12px",
                       border: "1px solid rgba(20, 35, 45, 0.12)",
-                      borderRadius: "12px",
+                      borderRadius: "10px",
                       background: "rgba(245,243,236,0.65)",
                       textDecoration: "none",
                       color: "inherit",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: "10px",
-                        marginBottom: "10px",
-                      }}
-                    >
-                      <h2 style={{ margin: 0, fontSize: "1.1rem" }}>
-                        {tool.title}
-                      </h2>
-                      <span
-                        style={{
-                          fontSize: ".68rem",
-                          fontWeight: 800,
-                          letterSpacing: ".08em",
-                        }}
-                      >
-                        OPEN
-                      </span>
-                    </div>
-                    <p style={{ margin: 0, lineHeight: 1.5, opacity: 0.75 }}>
+                    <strong style={{ display: "block", marginBottom: "5px" }}>
+                      {tool.title}
+                    </strong>
+                    <span style={{ fontSize: ".8rem", opacity: 0.75 }}>
                       {tool.description}
-                    </p>
+                    </span>
                   </Link>
                 ))}
               </div>
