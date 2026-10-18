@@ -6,13 +6,81 @@ import { createClient } from "@supabase/supabase-js";
 import {
   detectFirstPartySources,
   runWithPreferredFirstPartyProxy,
+  fetchHtml,
 } from "@/lib/event-harvester/first-party/source-detector";
 
 import { ratifyDetectedSource } from "@/lib/event-harvester/first-party/ratify";
 
+import {
+  searchGoogleVenue,
+  recordGoogleSpotDiscovery,
+  resolveReviewedGoogleSpot,
+  registerHarvestGoogleSpot,
+} from "@/lib/event-harvester/google-places";
+
 import { validateFirstPartySource } from "@/lib/event-harvester/first-party/validate";
 
 import type { FirstPartySource } from "@/lib/event-harvester/first-party/preview";
+
+
+/*
+ * Calendar-page identity discovery.
+ *
+ * Only the page's own title/heading may identify a business.
+ * Navigation, footer links and the containing corporate domain
+ * are not evidence of calendar ownership.
+ *
+ * This returns a candidate identity for Google qualification;
+ * it does not itself approve a Spot or a source.
+ */
+function calendarPageBusinessName(html: string): string | null {
+  const decode = (value: string) =>
+    value
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#(?:39|x27);/gi, "'")
+      .replace(/&(?:#8217|rsquo);/gi, "’")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const title = html.match(
+    /<title\b[^>]*>([\s\S]*?)<\/title>/i,
+  );
+
+  const heading = html.match(
+    /<h1\b[^>]*>([\s\S]*?)<\/h1>/i,
+  );
+
+  const candidates = [title?.[1], heading?.[1]]
+    .filter((value): value is string => Boolean(value))
+    .map(decode);
+
+  for (const candidate of candidates) {
+    // Remove a site-title suffix without interpreting it as ownership.
+    const pageTitle = candidate
+      .split(/\s+[|–—]\s+/)[0]
+      .trim();
+
+    // Only a business-qualified calendar title is eligible.
+    const match = pageTitle.match(
+      /^(.{4,120}?)\s+(?:live\s+music|entertainment\s+(?:calendar|schedule)|live\s+music\s+calendar|event\s+calendar|music\s+calendar)$/i,
+    );
+
+    if (!match) continue;
+
+    const name = match[1].trim();
+
+    if (
+      name.length >= 5 &&
+      !/^(?:home|events?|calendar|live music|entertainment)$/i.test(name)
+    ) {
+      return name;
+    }
+  }
+
+  return null;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -958,8 +1026,6 @@ export async function GET(request: Request) {
 
         if (candidate.sourceType === "calendar_image") {
 
-
-
           /*
            * Calendar recognition is source review, not event extraction.
            * An already registered source must not reopen its approval.
@@ -1014,10 +1080,90 @@ export async function GET(request: Request) {
               continue;
             }
 
+          /*
+           * Identify a business from the calendar page itself.
+           * Never infer ownership from the corporate domain.
+           */
+          let calendarVenueId: string | null = null;
+          let calendarBusinessName: string | null = null;
+
+          try {
+            const page = await fetchHtml(candidate.url);
+
+            if (page.ok) {
+              calendarBusinessName =
+                calendarPageBusinessName(page.html);
+            }
+
+            if (calendarBusinessName) {
+              const google = await searchGoogleVenue(
+                {
+                  name: calendarBusinessName,
+                  streetAddress: null,
+                  city: null,
+                  stateRegion: null,
+                  postalCode: null,
+                },
+                { allowReviewCandidate: true },
+              );
+
+              if (google) {
+                const calendarGoogle = {
+                  ...google,
+                  evidence: {
+                    ...google.evidence,
+                    calendarPageUrl: candidate.url,
+                    calendarBusinessName,
+                  },
+                };
+
+                /*
+                 * Honor existing admin decisions first.
+                 * Review-only discoveries must not auto-register.
+                 */
+                calendarVenueId =
+                  await resolveReviewedGoogleSpot(
+                    supabase,
+                    calendarGoogle,
+                  );
+
+                if (!calendarVenueId) {
+                  const reviewStatus =
+                    await recordGoogleSpotDiscovery(
+                      supabase,
+                      calendarGoogle,
+                    );
+
+                  if (
+                    reviewStatus === "pending" &&
+                    google.evidence.reviewOnly !== true
+                  ) {
+                    calendarVenueId =
+                      await registerHarvestGoogleSpot(
+                        supabase,
+                        calendarGoogle,
+                      );
+                  }
+                }
+              }
+            }
+          } catch (calendarDiscoveryError) {
+            /*
+             * Google discovery must never destroy or suppress
+             * an otherwise valid calendar-image finding.
+             */
+            console.error(
+              "Calendar Spot discovery failed:",
+              candidate.url,
+              calendarDiscoveryError,
+            );
+          }
+
+
             const { error: calendarFindingError } = await supabase.rpc(
               "upsert_event_harvest_detector_finding",
               {
-                p_venue_id: venue.id,
+                p_venue_id: calendarVenueId ?? venue.id,
                 p_category: "calendar_image",
                 p_finding_key: `calendar_image:${candidate.url}`,
                 p_detector_status: detection.status,
@@ -1026,7 +1172,15 @@ export async function GET(request: Request) {
                 p_source_url: candidate.url,
                 p_fetched_url: detection.fetchedUrl,
                 p_confidence: candidate.confidence,
-                p_evidence: candidate.evidence,
+                p_evidence: [
+                  ...candidate.evidence,
+                  ...(calendarBusinessName
+                    ? [`Calendar business: ${calendarBusinessName}`]
+                    : []),
+                  ...(calendarVenueId
+                    ? [`Qualified Spot ID: ${calendarVenueId}`]
+                    : []),
+                ],
                 p_error: detection.error,
               },
             );
