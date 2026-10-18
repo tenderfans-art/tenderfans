@@ -349,12 +349,12 @@ export default function SourceOwnershipPanel() {
                           finding.venue_name}
                       </option>
                     )}
+                  <option value="__add_spot__">+ Add New Spot</option>
                   {choices.map(spot => (
                     <option key={spot.id} value={spot.id}>
                       {spot.name}
                     </option>
                   ))}
-                  <option value="__add_spot__">+ Add New Spot</option>
                 </select>
 
                 <button type="button"

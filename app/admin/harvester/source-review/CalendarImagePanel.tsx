@@ -2,7 +2,23 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import GooglePlacePicker from "@/components/GooglePlacePicker";
 import { supabase } from "@/lib/supabase";
+
+type GooglePlace = {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  streetAddress: string;
+  publicPhone: string;
+  websiteUrl: string;
+  regularHours: string[];
+};
 
 type Finding = {
   id: string;
@@ -26,6 +42,12 @@ export default function CalendarImagePanel() {
   const [selectedSpot, setSelectedSpot] = useState<Record<string, string>>({});
   const [spotSearch, setSpotSearch] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [addForFinding, setAddForFinding] = useState<string | null>(null);
+  const [selectedPlace, setSelectedPlace] =
+    useState<GooglePlace | null>(null);
+  const [savingSpot, setSavingSpot] = useState(false);
+  const [addError, setAddError] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -69,6 +91,73 @@ export default function CalendarImagePanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  function closeAddSpot() {
+    if (savingSpot) return;
+    setAddForFinding(null);
+    setSelectedPlace(null);
+    setAddError("");
+  }
+
+  async function addSpot() {
+    if (!selectedPlace || !addForFinding || savingSpot) return;
+
+    const findingId = addForFinding;
+    setSavingSpot(true);
+    setAddError("");
+
+    try {
+      const response = await fetch("/api/google/place", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ placeId: selectedPlace.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not add Spot.");
+      }
+
+      if (typeof result.venueId !== "string" || !result.venueId) {
+        throw new Error("Spot registration returned no Spot ID.");
+      }
+
+      const venueId: string = result.venueId;
+      const venueName: string =
+        result.place?.name ?? selectedPlace.name;
+
+      setSpots(current => {
+        const existing = current.find(spot => spot.id === venueId);
+        return existing
+          ? current
+          : [...current, {
+              id: venueId,
+              name: venueName,
+              status: "active"
+            }].sort((a, b) => a.name.localeCompare(b.name));
+      });
+
+      setSelectedSpot(current => ({
+        ...current,
+        [findingId]: venueId
+      }));
+
+      setSpotSearch(current => ({
+        ...current,
+        [findingId]: ""
+      }));
+
+      setAddForFinding(null);
+      setSelectedPlace(null);
+    } catch (error) {
+      setAddError(
+        error instanceof Error ? error.message : "Could not add Spot."
+      );
+    } finally {
+      setSavingSpot(false);
+    }
+  }
 
   async function review(finding: Finding, approve: boolean) {
     const venueId = selectedSpot[finding.id] ?? finding.venue_id;
@@ -276,12 +365,19 @@ export default function CalendarImagePanel() {
 
                     <select
                       value={currentSpot}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        if (event.target.value === "__add_spot__") {
+                          setSelectedPlace(null);
+                          setAddError("");
+                          setAddForFinding(finding.id);
+                          return;
+                        }
+
                         setSelectedSpot((current) => ({
                           ...current,
                           [finding.id]: event.target.value,
-                        }))
-                      }
+                        }));
+                      }}
                       aria-label={`Select Spot for ${finding.venue_name}`}
                       disabled={busy}
                       style={{
@@ -291,6 +387,7 @@ export default function CalendarImagePanel() {
                         fontSize: ".82rem",
                       }}
                     >
+                      <option value="__add_spot__">+ Add New Spot</option>
                       {!choices.some(
                         (spot) => spot.id === currentSpot
                       ) && currentSpot && (
@@ -350,6 +447,80 @@ export default function CalendarImagePanel() {
               })}
             </div>
           )}
+      {addForFinding && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add TenderFans Spot"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            background: "rgba(0,0,0,.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20
+          }}
+        >
+          <div style={{
+            width: "min(540px,100%)",
+            background: "#fff",
+            color: "#24352e",
+            padding: 24,
+            borderRadius: 14,
+            display: "grid",
+            gap: 16
+          }}>
+            <h2 style={{ margin: 0 }}>+ Add Spot</h2>
+
+            <p style={{ margin: 0, fontSize: ".9rem" }}>
+              Search Google Places and select the publishing Spot.
+            </p>
+
+            <GooglePlacePicker
+              onSelect={setSelectedPlace}
+            />
+
+            {selectedPlace && (
+              <p style={{ margin: 0, fontSize: ".85rem" }}>
+                <strong>{selectedPlace.name}</strong>
+                {" — "}
+                {selectedPlace.address}
+              </p>
+            )}
+
+            {addError && (
+              <p role="alert" style={{ color: "crimson", margin: 0 }}>
+                {addError}
+              </p>
+            )}
+
+            <div style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 10
+            }}>
+              <button
+                type="button"
+                disabled={savingSpot}
+                onClick={closeAddSpot}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="btn"
+                disabled={!selectedPlace || savingSpot}
+                onClick={() => void addSpot()}
+              >
+                {savingSpot ? "Adding..." : "Add Spot"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
