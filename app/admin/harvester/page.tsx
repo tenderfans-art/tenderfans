@@ -133,7 +133,8 @@ export default function AdminHarvesterPage() {
                 borderRadius: "18px",
                 background: "rgba(255,255,255,0.9)",
                 minHeight: "145px",
-                alignSelf: "start",
+                height: "100%",
+                boxSizing: "border-box",
               }}
             >
               <summary
@@ -145,17 +146,20 @@ export default function AdminHarvesterPage() {
                 }}
               >
                 Review Required
+                <span
+                  style={{
+                    display: "block",
+                    marginTop: "16px",
+                    fontSize: "1rem",
+                    fontWeight: 400,
+                    lineHeight: 1.55,
+                    opacity: 0.75,
+                  }}
+                >
+                  Review Spot identities, event-source ownership, and
+                  harvested events awaiting approval.
+                </span>
               </summary>
-
-              <p
-                style={{
-                  margin: 0,
-                  lineHeight: 1.55,
-                  opacity: 0.75,
-                }}
-              >
-                Review Spot identities, source ownership and event attribution.
-              </p>
 
               <div
                 style={{
