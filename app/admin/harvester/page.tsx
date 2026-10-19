@@ -22,6 +22,14 @@ const reviewTools = [
 
 const tools = [
   {
+    title: "Archive",
+    countRpc: null,
+    description:
+      "Archived Spots organized by city for monthly detector rechecks.",
+    href: "/admin/harvester/archive",
+    status: "OPEN",
+  },
+  {
     title: "Calendar Images",
     countRpc: "admin_event_harvest_calendar_image_findings",
     description:

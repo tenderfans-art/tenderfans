@@ -130,10 +130,12 @@ export async function GET(request: Request) {
     requestUrl.searchParams.get("mode") === "transport-recovery";
   const fullScanMode =
     requestUrl.searchParams.get("mode") === "full-scan";
+  const archiveMode =
+    requestUrl.searchParams.get("mode") === "archive-recheck";
 
   const recoveryIdsParam = requestUrl.searchParams.get("venue_ids");
 
-  if ((recoveryMode || fullScanMode) && venueId) {
+  if ((recoveryMode || fullScanMode || archiveMode) && venueId) {
     return NextResponse.json(
       { error: "Batch modes cannot be combined with venue_id." },
       { status: 400 },
@@ -148,14 +150,69 @@ export async function GET(request: Request) {
   }
 
   let venueQuery = supabase
-    .from("venues")
+    .from(
+      archiveMode
+        ? "venues"
+        : "event_harvest_detector_eligible_venues"
+    )
     .select(
       "id,name,website_url,street_address,city,state_region,postal_code,country_code,latitude,longitude",
     )
     .eq("status", "active")
     .not("website_url", "is", null);
 
-  if (recoveryMode) {
+  let archiveLeases = new Map<string, string>();
+
+  if (archiveMode) {
+    const configuredBatchSize = Number(
+      process.env.ARCHIVE_RECHECK_BATCH_SIZE ?? "30"
+    );
+
+    const archiveBatchSize =
+      Number.isSafeInteger(configuredBatchSize) &&
+      configuredBatchSize >= 1 &&
+      configuredBatchSize <= 100
+        ? configuredBatchSize
+        : 30;
+
+    const { data: due, error: dueError } =
+      await supabase.rpc(
+        "claim_event_harvest_archive_rechecks",
+        { p_limit: archiveBatchSize }
+      );
+
+    if (dueError) {
+      return NextResponse.json(
+        { error: dueError.message },
+        { status: 500 }
+      );
+    }
+
+    const archiveClaims = (due ?? []) as Array<{
+      venue_id: string;
+      lease_token: string;
+    }>;
+
+    const dueIds = archiveClaims.map(
+      (item) => item.venue_id
+    );
+
+    archiveLeases = new Map(
+      archiveClaims.map(
+        (item) => [item.venue_id, item.lease_token]
+      )
+    );
+
+    if (dueIds.length === 0) {
+      return NextResponse.json({
+        mode: "archive-recheck",
+        spots: 0,
+        message: "No archived Spots currently due.",
+      });
+    }
+
+    venueQuery = venueQuery.in("id", dueIds);
+  } else if (recoveryMode) {
     const { data: findings, error: findingsError } = await supabase
       .from("event_harvest_detector_findings")
       .select("venue_id")
@@ -283,6 +340,8 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
+
+  const archiveCompleted = new Set<string>();
 
   let processedSpots = 0;
   let detected = 0;
@@ -1874,6 +1933,39 @@ export async function GET(request: Request) {
       throw new Error("Transport recovery proxy is not configured.");
     } else {
       await processVenue();
+    }
+
+    if (archiveMode) {
+      archiveCompleted.add(venue.id);
+    }
+  }
+
+  if (archiveMode) {
+    for (const venue of venues ?? []) {
+      if (!archiveCompleted.has(venue.id)) {
+        continue;
+      }
+
+      const scanSucceeded = !failures.some(
+        (failure) => failure.venueId === venue.id
+      );
+
+      const { error: finishError } =
+        await supabase.rpc(
+          "finish_event_harvest_archive_recheck",
+          {
+            p_venue_id: venue.id,
+            p_scan_succeeded: scanSucceeded,
+            p_lease_token: archiveLeases.get(venue.id),
+          }
+        );
+
+      if (finishError) {
+        throw new Error(
+          `Could not finish archive recheck for ` +
+          `${venue.id}: ${finishError.message}`
+        );
+      }
     }
   }
 

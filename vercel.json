@@ -5,6 +5,10 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/jobs/first-party-event-detector?mode=archive-recheck",
+      "schedule": "0 11 * * *"
+    },
+    {
       "path": "/api/jobs/event-harvester",
       "schedule": "0 10 * * *"
     },

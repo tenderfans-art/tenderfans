@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import HarvesterSpotActions from "@/components/admin/HarvesterSpotActions";
+import HarvesterBulkActions from "@/components/admin/HarvesterBulkActions";
 
 type Finding = {
   id: string;
@@ -15,6 +17,7 @@ type Finding = {
 };
 
 export default function NoSourcePage() {
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [rows, setRows] =
     useState<Finding[]>([]);
   const [facebookVenueIds, setFacebookVenueIds] =
@@ -131,6 +134,45 @@ export default function NoSourcePage() {
               No active No Source findings.
             </p>
           ) : (
+            <>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                flexWrap: "wrap",
+                marginBottom: "14px",
+              }}
+            >
+              <strong>{bulkSelected.size} selected</strong>
+              <HarvesterBulkActions
+                bucket="no_source"
+                selected={rows
+                  .filter((row) =>
+                    bulkSelected.has(row.venue_id)
+                  )
+                  .map((row) => ({
+                    id: row.venue_id,
+                    name: row.venue_name,
+                  }))}
+                onComplete={(completedIds) => {
+                  const completed = new Set(completedIds);
+                  setRows((current) =>
+                    current.filter(
+                      (row) => !completed.has(row.venue_id)
+                    )
+                  );
+                  setBulkSelected((current) => {
+                    const next = new Set(current);
+                    completedIds.forEach((id) =>
+                      next.delete(id)
+                    );
+                    return next;
+                  });
+                }}
+              />
+            </div>
             <div
               style={{
                 display: "grid",
@@ -141,7 +183,7 @@ export default function NoSourcePage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "minmax(300px,2fr) 150px 190px",
+                    "30px minmax(300px,2fr) 150px 190px 165px",
                   gap: "10px",
                   padding: "0 10px",
                   fontSize: ".66rem",
@@ -151,9 +193,34 @@ export default function NoSourcePage() {
                   opacity: 0.55,
                 }}
               >
+                <input
+                  type="checkbox"
+                  aria-label="Select all visible Spots"
+                  style={{
+                    width: 17,
+                    height: 17,
+                    borderRadius: "50%",
+                    accentColor: "#557747",
+                    cursor: "pointer",
+                  }}
+                  checked={
+                    rows.length > 0 &&
+                    rows.every((row) =>
+                      bulkSelected.has(row.venue_id)
+                    )
+                  }
+                  onChange={(event) => {
+                    setBulkSelected(
+                      event.target.checked
+                        ? new Set(rows.map((row) => row.venue_id))
+                        : new Set()
+                    );
+                  }}
+                />
                 <span>Spot</span>
                 <span>Source</span>
                 <span>Last Seen</span>
+                <span>Actions</span>
               </div>
 
               {rows.map((row) => (
@@ -162,7 +229,7 @@ export default function NoSourcePage() {
                   style={{
                     display: "grid",
                     gridTemplateColumns:
-                      "minmax(300px,2fr) 150px 190px",
+                      "30px minmax(300px,2fr) 150px 190px 165px",
                     gap: "10px",
                     alignItems: "center",
                     padding: "7px 10px",
@@ -174,6 +241,29 @@ export default function NoSourcePage() {
                     fontSize: ".84rem",
                   }}
                 >
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${row.venue_name}`}
+                    checked={bulkSelected.has(row.venue_id)}
+                    style={{
+                      width: 17,
+                      height: 17,
+                      borderRadius: "50%",
+                      accentColor: "#557747",
+                      cursor: "pointer",
+                    }}
+                    onChange={(event) => {
+                      setBulkSelected((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) {
+                          next.add(row.venue_id);
+                        } else {
+                          next.delete(row.venue_id);
+                        }
+                        return next;
+                      });
+                    }}
+                  />
                   <strong
                     style={{
                       overflow: "hidden",
@@ -220,9 +310,22 @@ export default function NoSourcePage() {
                       row.last_seen_at
                     ).toLocaleString()}
                   </span>
-                </div>
+                                  <HarvesterSpotActions
+                    venueId={row.venue_id}
+                    venueName={row.venue_name}
+                    bucket="no_source"
+                    onComplete={(id) =>
+                      setRows((current) =>
+                        current.filter((item) => item.venue_id !== id)
+                      )
+                    }
+                  />
+</div>
+
+
               ))}
             </div>
+            </>
           )}
         </section>
       </div>
