@@ -775,6 +775,12 @@ export async function GET(request: Request) {
          */
       }
 
+      // A definitive DNS lookup failure belongs in No Sources.
+      // Evaluate only the final result after transport recovery.
+      const unresolvedWebsiteDomain =
+        detection.status === "transport_failed" &&
+        /\b(?:ENOTFOUND|ENODATA)\b/i.test(detection.error ?? "");
+
       const calendarImageCandidate =
         detection.detections.find(
           (candidate) => candidate.sourceType === "calendar_image",
@@ -839,8 +845,11 @@ export async function GET(request: Request) {
       }
 
       if (
-        detection.status === "transport_blocked" ||
-        detection.status === "transport_failed"
+        !unresolvedWebsiteDomain &&
+        (
+          detection.status === "transport_blocked" ||
+          detection.status === "transport_failed"
+        )
       ) {
         /*
          * A Spot that has already been verified as browser-required
@@ -1683,8 +1692,11 @@ export async function GET(request: Request) {
 
         bucketCounts.challenge_encountered += 1;
       } else if (
-        detection.status === "transport_blocked" ||
-        detection.status === "transport_failed"
+        !unresolvedWebsiteDomain &&
+        (
+          detection.status === "transport_blocked" ||
+          detection.status === "transport_failed"
+        )
       ) {
         const { error: findingError } = await supabase.rpc(
           "upsert_event_harvest_detector_finding",
@@ -1755,8 +1767,11 @@ export async function GET(request: Request) {
                   ? "html_error"
                   : (detection.challengeEvidence?.length ?? 0) > 0
                     ? "challenge_encountered"
-                    : detection.status === "transport_blocked" ||
+                    : !unresolvedWebsiteDomain &&
+                      (
+                        detection.status === "transport_blocked" ||
                         detection.status === "transport_failed"
+                      )
                       ? "transport"
                       : "no_source";
 
