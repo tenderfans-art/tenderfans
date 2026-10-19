@@ -107,6 +107,47 @@ function feedUrlFromArchive(
   return url.toString();
 }
 
+function parseArchiveEventLinks(
+  html: string,
+  sourceUrl: string,
+): string[] {
+  const archive = new URL(sourceUrl);
+  const links: string[] = [];
+
+  for (
+    const match of html.matchAll(
+      /<a\b[^>]*href=["']([^"']+)["']/gi,
+    )
+  ) {
+    try {
+      const url = new URL(
+        decodeHtml(match[1]),
+        archive,
+      );
+
+      if (
+        url.origin !== archive.origin ||
+        !/^\/events\/\d{4}\/[^/]+\/?$/i.test(
+          url.pathname,
+        )
+      ) {
+        continue;
+      }
+
+      url.search = "";
+      url.hash = "";
+
+      if (!links.includes(url.toString())) {
+        links.push(url.toString());
+      }
+    } catch {
+      // Ignore malformed links.
+    }
+  }
+
+  return links;
+}
+
 function parseFeedLinks(
   xml: string,
 ): string[] {
@@ -277,7 +318,7 @@ function parseClock(
 function parseTimes(
   html: string,
 ): {
-  start: TimeParts;
+  start: TimeParts | null;
   end: TimeParts | null;
 } {
   const startHtml = extractClassHtml(
@@ -286,12 +327,6 @@ function parseTimes(
     "span",
   );
 
-  if (!startHtml) {
-    throw new Error(
-      "WordPress event detail exposed no start time",
-    );
-  }
-
   const endHtml = extractClassHtml(
     html,
     "c-events__end-time",
@@ -299,10 +334,8 @@ function parseTimes(
   );
 
   return {
-    start: parseClock(startHtml),
-    end: endHtml
-      ? parseClock(endHtml)
-      : null,
+    start: startHtml ? parseClock(startHtml) : null,
+    end: endHtml ? parseClock(endHtml) : null,
   };
 }
 
@@ -545,10 +578,93 @@ function eventIdFromUrl(
   return `wordpress-event:${match[1]}:${match[2]}`;
 }
 
+function extractPerformanceDates(
+  html: string,
+  eventUrl: string,
+  firstDate: DateParts,
+): DateParts[] {
+  const section = html.match(
+    /Performance Dates:\s*<\/u>\s*<\/h5>\s*<ul\b[^>]*>([\s\S]*?)<\/ul>/i,
+  );
+
+  if (!section) {
+    return [];
+  }
+
+  const entries = [
+    ...section[1].matchAll(
+      /<li\b[^>]*>([\s\S]*?)<\/li>/gi,
+    ),
+  ];
+
+  if (entries.length < 2 || entries.length > 32) {
+    return [];
+  }
+
+  const dates: DateParts[] = [];
+
+  try {
+    for (const entry of entries) {
+      const date = parseDisplayedDate(
+        entry[1],
+        eventUrl,
+      );
+
+      const timestamp = Date.UTC(
+        date.year,
+        date.month - 1,
+        date.day,
+      );
+
+      const firstTimestamp = Date.UTC(
+        firstDate.year,
+        firstDate.month - 1,
+        firstDate.day,
+      );
+
+      if (timestamp < firstTimestamp) {
+        return [];
+      }
+
+      if (
+        dates.some(
+          (existing) =>
+            existing.year === date.year &&
+            existing.month === date.month &&
+            existing.day === date.day,
+        )
+      ) {
+        return [];
+      }
+
+      dates.push(date);
+    }
+  } catch {
+    return [];
+  }
+
+  if (
+    !dates.some(
+      (date) =>
+        date.year === firstDate.year &&
+        date.month === firstDate.month &&
+        date.day === firstDate.day,
+    )
+  ) {
+    return [];
+  }
+
+  return dates.sort(
+    (a, b) =>
+      Date.UTC(a.year, a.month - 1, a.day) -
+      Date.UTC(b.year, b.month - 1, b.day),
+  );
+}
+
 async function parseEventPage(
   eventUrl: string,
   timeZone: string,
-): Promise<FirstPartyHarvestEvent> {
+): Promise<FirstPartyHarvestEvent[]> {
   const html = await fetchText(
     eventUrl,
     "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
@@ -573,57 +689,91 @@ async function parseEventPage(
 
   const times = parseTimes(html);
 
-  const startsAt = zonedDateTimeToUtc(
-    date,
-    times.start,
-    timeZone,
-  );
-
-  let endsAt: Date | null = null;
-
-  if (times.end) {
-    const startMinutes =
-      times.start.hour * 60 +
-      times.start.minute;
-
-    const endMinutes =
-      times.end.hour * 60 +
-      times.end.minute;
-
-    endsAt = zonedDateTimeToUtc(
-      endMinutes < startMinutes
-        ? addDay(date)
-        : date,
-      times.end,
-      timeZone,
-    );
-  }
-
   const locationEvidence =
     extractLocationEvidence(html);
 
-  return {
-    externalEventId:
-      eventIdFromUrl(eventUrl),
-    title: extractTitle(html),
-    description:
-      extractDescription(html),
-    startsAt: startsAt.toISOString(),
-    endsAt:
-      endsAt?.toISOString() ?? null,
-    allDay: false,
-    sourceUrl: eventUrl,
-    flyerUrl:
-      extractFlyerUrl(html, eventUrl),
-    location: locationEvidence.location,
-    venueName: locationEvidence.venueName,
-    venueAddress: locationEvidence.venueAddress,
-    rawPayload: {
-      platform: "wordpress_event_feed",
-      eventUrl,
+  const title = extractTitle(html);
+  const description = extractDescription(html);
+  const flyerUrl = extractFlyerUrl(html, eventUrl);
+  const baseId = eventIdFromUrl(eventUrl);
+
+  const performanceDates = extractPerformanceDates(
+    html,
+    eventUrl,
+    date,
+  );
+
+  const dates = performanceDates.length
+    ? performanceDates
+    : [date];
+
+  return dates.map((occurrenceDate) => {
+    const allDay = times.start === null;
+
+    const startsAt = zonedDateTimeToUtc(
+      occurrenceDate,
+      times.start ?? { hour: 0, minute: 0 },
       timeZone,
-    },
-  };
+    );
+
+    let endsAt: Date | null = null;
+
+    if (times.start && times.end) {
+      const startMinutes =
+        times.start.hour * 60 +
+        times.start.minute;
+
+      const endMinutes =
+        times.end.hour * 60 +
+        times.end.minute;
+
+      endsAt = zonedDateTimeToUtc(
+        endMinutes < startMinutes
+          ? addDay(occurrenceDate)
+          : occurrenceDate,
+        times.end,
+        timeZone,
+      );
+    }
+
+    const isFirst =
+      occurrenceDate.year === date.year &&
+      occurrenceDate.month === date.month &&
+      occurrenceDate.day === date.day;
+
+    const dateKey = [
+      occurrenceDate.year,
+      String(occurrenceDate.month).padStart(2, "0"),
+      String(occurrenceDate.day).padStart(2, "0"),
+    ].join("-");
+
+    return {
+      externalEventId: isFirst
+        ? baseId
+        : `${baseId}:${dateKey}`,
+      title,
+      description,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt?.toISOString() ?? null,
+      allDay,
+      sourceUrl: eventUrl,
+      flyerUrl,
+      location: locationEvidence.location,
+      venueName: locationEvidence.venueName,
+      venueAddress: locationEvidence.venueAddress,
+      rawPayload: {
+        platform: "wordpress_event_feed",
+        eventUrl,
+        timeZone,
+        ...(performanceDates.length
+          ? {
+              recurrence: "explicit_dates",
+              occurrenceDate: dateKey,
+            }
+          : {}),
+      },
+    };
+  });
 }
 
 export async function fetchWordPressEventFeedEvents(
@@ -655,6 +805,41 @@ export async function fetchWordPressEventFeedEvents(
 
   const links = parseFeedLinks(xml);
 
+  // Supplement RSS with event pages linked from the
+  // public archive. Some current events are absent
+  // from the WordPress RSS feed.
+  const archiveUrl = new URL(sourceUrl);
+
+  if (/\/feed\/?$/i.test(archiveUrl.pathname)) {
+    archiveUrl.pathname = archiveUrl.pathname.replace(
+      /feed\/?$/i,
+      "",
+    );
+  }
+
+  try {
+    const archiveHtml = await fetchText(
+      archiveUrl.toString(),
+      "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+    );
+
+    for (
+      const link of parseArchiveEventLinks(
+        archiveHtml,
+        archiveUrl.toString(),
+      )
+    ) {
+      if (!links.includes(link)) {
+        links.push(link);
+      }
+    }
+  } catch (error) {
+    console.warn(
+      "WordPress archive discovery unavailable; using RSS links:",
+      error,
+    );
+  }
+
   if (links.length === 0) {
     return [];
   }
@@ -664,10 +849,10 @@ export async function fetchWordPressEventFeedEvents(
 
   for (const link of links) {
     events.push(
-      await parseEventPage(
+      ...(await parseEventPage(
         link,
         timeZone,
-      ),
+      )),
     );
   }
 
