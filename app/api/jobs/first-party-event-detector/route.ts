@@ -1025,6 +1025,18 @@ export async function GET(request: Request) {
         }
 
         if (candidate.sourceType === "calendar_image") {
+          /*
+           * A Spot with an established first-party source is already
+           * validated. Do not reopen primary exception triage for an
+           * unvalidated image candidate. Registered calendar-image
+           * sources remain independent and are not changed here.
+           */
+          if (
+            successfullyRegisteredVenueSource ||
+            hasPreviouslyValidatedSource
+          ) {
+            continue;
+          }
 
           /*
            * Calendar recognition is source review, not event extraction.
@@ -1749,6 +1761,7 @@ export async function GET(request: Request) {
                       : "no_source";
 
       for (const category of [
+        "calendar_image",
         "facebook",
         "browser_required",
         "html_error",
