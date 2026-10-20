@@ -260,16 +260,24 @@ function businessIdentities(html: string): Identity[] {
         continue;
       }
 
-      const floridaContext =
-        /\b(?:FL|Florida)\b/i.test(statement);
+      /*
+       * State is optional. Never infer it from the
+       * deployment location or hardcode a default.
+       * Google Places performs independent qualification.
+       */
+      const remainingText = statement.slice(
+        match.index + match[0].length
+      );
 
-      if (!floridaContext) continue;
+      const stateMatch = remainingText.match(
+        /^\s*,?\s*([A-Z]{2})\b/
+      );
 
       const identity: Identity = {
         name,
         streetAddress,
         city,
-        stateRegion: "FL",
+        stateRegion: stateMatch?.[1] ?? "",
         postalCode: null,
       };
 
