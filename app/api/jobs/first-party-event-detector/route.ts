@@ -840,9 +840,92 @@ export async function GET(request: Request) {
         detection.status === "transport_failed" &&
         /\b(?:ENOTFOUND|ENODATA)\b/i.test(detection.error ?? "");
 
+      /*
+       * Calendar-image rejection is a durable Spot/source decision.
+       * The detector may rediscover the URL, but must not classify
+       * this Spot using an association rejected by Admin.
+       */
+      const { data: rejectedCalendarFindings, error: rejectedCalendarError } =
+        await supabase
+          .from("event_harvest_detector_findings")
+          .select("source_url")
+          .eq("venue_id", venue.id)
+          .eq("category", "calendar_image")
+          .eq("status", "rejected");
+
+      if (rejectedCalendarError) {
+        throw new Error(
+          `Could not load rejected calendar associations: ${rejectedCalendarError.message}`,
+        );
+      }
+
+      const rejectedCalendarUrls = new Set(
+        (rejectedCalendarFindings ?? [])
+          .map((finding) => finding.source_url)
+          .filter((url): url is string => Boolean(url)),
+      );
+
+      /*
+       * A registered calendar belongs to its approved Spot.
+       * Other Spots must not classify that same calendar as an
+       * actionable source, even when their websites link to it.
+       */
+      const detectedCalendarUrls = [
+        ...new Set(
+          detection.detections
+            .filter((candidate) => candidate.sourceType === "calendar_image")
+            .map((candidate) => candidate.url),
+        ),
+      ];
+
+      const { data: registeredCalendarOwners, error: calendarOwnersError } =
+        detectedCalendarUrls.length > 0
+          ? await supabase
+              .from("event_harvest_sources")
+              .select("venue_id,external_source_id")
+              .eq("provider", "first_party")
+              .eq("source_type", "calendar_image")
+              .eq("is_enabled", true)
+              .in(
+                "external_source_id",
+                detectedCalendarUrls.map(
+                  (url) => `first_party:calendar_image:${url}`,
+                ),
+              )
+          : {
+              data: [] as Array<{
+                venue_id: string;
+                external_source_id: string;
+              }>,
+              error: null,
+            };
+
+      if (calendarOwnersError) {
+        throw new Error(
+          `Could not check registered calendar ownership: ${calendarOwnersError.message}`,
+        );
+      }
+
+      const calendarsOwnedByOtherSpots = new Set(
+        (registeredCalendarOwners ?? [])
+          .filter((source) => source.venue_id !== venue.id)
+          .map((source) =>
+            source.external_source_id.replace(
+              /^first_party:calendar_image:/,
+              "",
+            ),
+          ),
+      );
+
+      const isEligibleCalendar = (url: string) =>
+        !rejectedCalendarUrls.has(url) &&
+        !calendarsOwnedByOtherSpots.has(url);
+
       const calendarImageCandidate =
         detection.detections.find(
-          (candidate) => candidate.sourceType === "calendar_image",
+          (candidate) =>
+            candidate.sourceType === "calendar_image" &&
+            isEligibleCalendar(candidate.url),
         ) ?? null;
 
       let calendarImageOwnershipConflict: {
@@ -1093,6 +1176,10 @@ export async function GET(request: Request) {
         }
 
         if (candidate.sourceType === "calendar_image") {
+          if (!isEligibleCalendar(candidate.url)) {
+            continue;
+          }
+
           /*
            * A Spot with an established first-party source is already
            * validated. Do not reopen primary exception triage for an
