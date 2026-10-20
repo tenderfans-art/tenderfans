@@ -2023,6 +2023,71 @@ async function discoverWordPressCategoryEvents(
   }
 }
 
+/*
+ * Preserve the underlying network error for first-party homepage
+ * diagnostics. Node fetch often reports only "fetch failed" while
+ * the actionable DNS or socket code lives in error.cause.
+ *
+ * The extracted codes also support definitive DNS classification.
+ */
+function describeHomepageFetchError(error: unknown): string {
+  const outerMessage =
+    error instanceof Error ? error.message : String(error);
+
+  const details: string[] = [];
+  const visited = new Set<object>();
+  let current: unknown = error;
+
+  for (let depth = 0; depth < 5; depth++) {
+    if (
+      current === null ||
+      typeof current !== "object" ||
+      visited.has(current)
+    ) {
+      break;
+    }
+
+    visited.add(current);
+
+    const candidate = current as {
+      code?: unknown;
+      cause?: unknown;
+      errors?: unknown;
+    };
+
+    if (
+      typeof candidate.code === "string" &&
+      /^[A-Z][A-Z0-9_]+$/.test(candidate.code)
+    ) {
+      details.push(candidate.code);
+    }
+
+    if (
+      Array.isArray(candidate.errors)
+    ) {
+      for (const nested of candidate.errors) {
+        if (
+          nested &&
+          typeof nested === "object" &&
+          "code" in nested &&
+          typeof nested.code === "string" &&
+          /^[A-Z][A-Z0-9_]+$/.test(nested.code)
+        ) {
+          details.push(nested.code);
+        }
+      }
+    }
+
+    current = candidate.cause;
+  }
+
+  const uniqueDetails = [...new Set(details)];
+
+  return uniqueDetails.length
+    ? `${outerMessage} [${uniqueDetails.join(", ")}]`
+    : outerMessage;
+}
+
 export async function detectFirstPartySources(
   websiteUrl: string,
   venueIdentity?: RedirectVenueIdentity,
@@ -2109,10 +2174,7 @@ export async function detectFirstPartySources(
       pagesInspected: 0,
       discoveredEventPages: [],
       detections: [],
-      error:
-        homepageFetchError instanceof Error
-          ? homepageFetchError.message
-          : String(homepageFetchError),
+      error: describeHomepageFetchError(homepageFetchError),
     };
   }
 
