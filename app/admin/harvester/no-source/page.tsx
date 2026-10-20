@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import HarvesterSpotActions from "@/components/admin/HarvesterSpotActions";
 import HarvesterBulkActions from "@/components/admin/HarvesterBulkActions";
 
 type Finding = {
@@ -183,7 +182,7 @@ export default function NoSourcePage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "30px minmax(300px,2fr) 150px 190px 165px",
+                    "30px minmax(300px,2fr) 150px 190px",
                   gap: "10px",
                   padding: "0 10px",
                   fontSize: ".66rem",
@@ -220,7 +219,7 @@ export default function NoSourcePage() {
                 <span>Spot</span>
                 <span>Source</span>
                 <span>Last Seen</span>
-                <span>Actions</span>
+
               </div>
 
               {rows.map((row) => (
@@ -229,7 +228,7 @@ export default function NoSourcePage() {
                   style={{
                     display: "grid",
                     gridTemplateColumns:
-                      "30px minmax(300px,2fr) 150px 190px 165px",
+                      "30px minmax(300px,2fr) 150px 190px",
                     gap: "10px",
                     alignItems: "center",
                     padding: "7px 10px",
@@ -310,16 +309,7 @@ export default function NoSourcePage() {
                       row.last_seen_at
                     ).toLocaleString()}
                   </span>
-                                  <HarvesterSpotActions
-                    venueId={row.venue_id}
-                    venueName={row.venue_name}
-                    bucket="no_source"
-                    onComplete={(id) =>
-                      setRows((current) =>
-                        current.filter((item) => item.venue_id !== id)
-                      )
-                    }
-                  />
+
 </div>
 
 

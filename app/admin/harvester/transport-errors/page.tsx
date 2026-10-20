@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import HarvesterSpotActions from "@/components/admin/HarvesterSpotActions";
 import HarvesterBulkActions from "@/components/admin/HarvesterBulkActions";
 
 type Finding = {
@@ -137,7 +136,7 @@ export default function TransportErrorsPage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns:
-                    "30px minmax(250px,2fr) 130px minmax(180px,1fr) 120px 190px 165px",
+                    "30px minmax(250px,2fr) 130px minmax(180px,1fr) 120px 190px",
                   gap: "10px",
                   padding: "0 10px",
                   fontSize: ".66rem",
@@ -176,7 +175,7 @@ export default function TransportErrorsPage() {
                 <span>Error</span>
                 <span>Source</span>
                 <span>Last Seen</span>
-                <span>Actions</span>
+
               </div>
               {rows.map((row) => (
                 <div
@@ -184,7 +183,7 @@ export default function TransportErrorsPage() {
                   style={{
                     display: "grid",
                     gridTemplateColumns:
-                      "30px minmax(250px,2fr) 130px minmax(180px,1fr) 120px 190px 165px",
+                      "30px minmax(250px,2fr) 130px minmax(180px,1fr) 120px 190px",
                     gap: "10px",
                     alignItems: "center",
                     padding: "7px 10px",
@@ -247,16 +246,7 @@ export default function TransportErrorsPage() {
                   <span style={{ opacity: 0.65 }}>
                     {new Date(row.last_seen_at).toLocaleString()}
                   </span>
-                                  <HarvesterSpotActions
-                    venueId={row.venue_id}
-                    venueName={row.venue_name}
-                    bucket="transport"
-                    onComplete={(id) =>
-                      setRows((current) =>
-                        current.filter((item) => item.venue_id !== id)
-                      )
-                    }
-                  />
+
 </div>
 
 
