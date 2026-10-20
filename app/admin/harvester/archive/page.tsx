@@ -423,20 +423,19 @@ export default function HarvesterArchivePage() {
                   key={spot.venue_id}
                   style={{
                     display: "flex",
-                    flexDirection: "column",
-                    alignItems: "stretch",
-                    justifyContent:
-                      "space-between",
-                    gap: 10,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
                     minWidth: 0,
-                    padding: "11px 13px",
+                    padding: "7px 10px",
                     border: "1px solid #e5dfd5",
                     borderRadius: 9,
                   }}
                 >
                   <div
                     style={{
-                      flex: "1 1 240px",
+                      flex: "1 1 auto",
                       minWidth: 0,
                     }}
                   >
