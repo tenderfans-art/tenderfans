@@ -19,6 +19,8 @@ import {
 } from "@/lib/event-harvester/google-places";
 
 import { validateFirstPartySource } from "@/lib/event-harvester/first-party/validate";
+import { discoverCorporateHtmlSpots } from "@/lib/event-harvester/first-party/corporate-html-spot-discovery";
+
 
 import type { FirstPartySource } from "@/lib/event-harvester/first-party/preview";
 
@@ -1521,6 +1523,27 @@ export async function GET(request: Request) {
           validated += 1;
 
           if (ratification.source.sourceType === "html_events") {
+            /*
+             * A validated corporate HTML source may explicitly
+             * identify businesses missing from TenderFans.
+             *
+             * Discover those identities independently of source
+             * ownership. Google candidates enter Spot Review;
+             * the existing HTML ownership gates remain unchanged.
+             */
+            try {
+              await discoverCorporateHtmlSpots(
+                supabase,
+                ratification.source.sourceUrl,
+              );
+            } catch (discoveryError) {
+              console.error(
+                "Corporate HTML Spot discovery failed:",
+                ratification.source.sourceUrl,
+                discoveryError,
+              );
+            }
+
             const alreadyRegisteredHere = (previouslyValidatedSources ?? []).some(
               (existing) =>
                 existing.source_type === "html_events" &&
