@@ -97,6 +97,17 @@ const FIELD_MASK = [
   "places.regularOpeningHours.weekdayDescriptions",
 ].join(",");
 
+function normalizeGoogleReviewName(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\\u2018\\u2019\\u02BC]/g, "'")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\\s+/g, " ");
+}
+
 export async function searchGoogleVenue(
   evidence: VenueIdentity,
   options: { allowReviewCandidate?: boolean } = {},
@@ -408,7 +419,29 @@ export async function searchGoogleVenue(
     (!evidence.postalCode || best.match.evidence.postalExact === true) &&
     (!evidence.streetAddress || best.match.evidence.addressExact === true);
 
-  if (!autoQualified && !reviewCandidateQualified) {
+  /*
+   * A publisher may use a neighborhood name where Google uses
+   * the municipality. Unicode apostrophes and accents can also
+   * differ between otherwise identical business names.
+   *
+   * Permit human review only when the complete normalized name
+   * and street address match. Never change automatic qualification.
+   */
+  const localityReviewQualified =
+    options.allowReviewCandidate === true &&
+    Boolean(evidence.name && evidence.streetAddress && evidence.city) &&
+    normalizeGoogleReviewName(evidence.name) !== "" &&
+    normalizeGoogleReviewName(evidence.name) ===
+      normalizeGoogleReviewName(best.place.name) &&
+    best.match.evidence.addressExact === true &&
+    (!evidence.stateRegion || best.match.evidence.stateExact === true) &&
+    (!evidence.postalCode || best.match.evidence.postalExact === true);
+
+  if (
+    !autoQualified &&
+    !reviewCandidateQualified &&
+    !localityReviewQualified
+  ) {
     if (!uniqueAddressCandidate) {
       return null;
     }
@@ -436,6 +469,10 @@ export async function searchGoogleVenue(
       exactLocationIdentity,
       googleQualified: autoQualified,
       addressQualified,
+      localityReviewQualified,
+      localityMismatch:
+        localityReviewQualified &&
+        best.match.evidence.cityExact !== true,
       reviewOnly: !autoQualified,
     },
   };
