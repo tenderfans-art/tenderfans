@@ -409,7 +409,9 @@ export default function HarvesterArchivePage() {
             <div
               style={{
                 display: "grid",
-                gap: 7,
+                gridTemplateColumns:
+                  "repeat(2, minmax(0, 1fr))",
+                gap: 10,
               }}
             >
               {citySpots.length === 0 && (
@@ -421,11 +423,12 @@ export default function HarvesterArchivePage() {
                   key={spot.venue_id}
                   style={{
                     display: "flex",
-                    flexWrap: "wrap",
-                    alignItems: "center",
+                    flexDirection: "column",
+                    alignItems: "stretch",
                     justifyContent:
                       "space-between",
-                    gap: 12,
+                    gap: 10,
+                    minWidth: 0,
                     padding: "11px 13px",
                     border: "1px solid #e5dfd5",
                     borderRadius: 9,
