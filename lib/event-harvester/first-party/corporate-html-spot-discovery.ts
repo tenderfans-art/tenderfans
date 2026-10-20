@@ -233,8 +233,15 @@ function businessIdentities(html: string): Identity[] {
    * This is a conservative extraction pattern, not a
    * universal natural-language location parser.
    */
+  /*
+   * Extract an explicitly named business at a street address.
+   * State abbreviations are generic, not tied to Florida.
+   *
+   * Keep this conservative: a name plus a street and city
+   * must appear together in event-specific content.
+   */
   const referencePattern =
-    /\b(?:in front of|behind|at|inside|outside|next to|adjacent to)\s+(.{3,110}?)\s+at\s+(\d{1,6}\s+[\p{L}\p{N}.'’ -]{2,75}?\s+(?:St\.?|Street|Ave\.?|Avenue|Blvd\.?|Boulevard|Rd\.?|Road|Dr\.?|Drive|Ln\.?|Lane|Way|Pkwy\.?|Parkway))\s*,?\s+([A-Za-z][A-Za-z .'-]{1,50}?)(?=\s*(?:,?\s+(?:FL|Florida)\b|[.,;!?]|$))/giu;
+    /\b(?:in front of|behind|at|inside|outside|next to|adjacent to)\s+(.{3,110}?)\s+at\s+(\d{1,6}\s+[\p{L}\p{N}.'’ -]{2,75}?\s+(?:Street|St\.?|Avenue|Ave\.?|Boulevard|Blvd\.?|Road|Rd\.?|Drive|Dr\.?|Lane|Ln\.?|Parkway|Pkwy\.?|Way))\s*,?\s+([A-Za-z][A-Za-z .'-]{1,50}?)(?=\s*(?:,?\s+[A-Z]{2}\b|[.,;!?]|$))/giu;
 
   const statements = [
     plainText(content),
@@ -260,11 +267,6 @@ function businessIdentities(html: string): Identity[] {
         continue;
       }
 
-      /*
-       * State is optional. Never infer it from the
-       * deployment location or hardcode a default.
-       * Google Places performs independent qualification.
-       */
       const remainingText = statement.slice(
         match.index + match[0].length
       );
@@ -273,12 +275,18 @@ function businessIdentities(html: string): Identity[] {
         /^\s*,?\s*([A-Z]{2})\b/
       );
 
+      const postalMatch = stateMatch
+        ? remainingText.slice(stateMatch[0].length).match(
+            /^\s*,?\s*(\d{5}(?:-\d{4})?)\b/
+          )
+        : null;
+
       const identity: Identity = {
         name,
         streetAddress,
         city,
         stateRegion: stateMatch?.[1] ?? "",
-        postalCode: null,
+        postalCode: postalMatch?.[1] ?? null,
       };
 
       const key = [
@@ -303,9 +311,24 @@ export async function discoverCorporateHtmlSpots(
 ): Promise<void> {
   const page = await fetchHtml(sourceUrl);
 
-  if (!page.ok) return;
+  if (!page.ok) {
+    console.warn(
+      "[corporate-spot-discovery] fetch failed",
+      { sourceUrl, status: page.status },
+    );
+    return;
+  }
 
   const identities = businessIdentities(page.html);
+
+  console.info(
+    "[corporate-spot-discovery] extracted",
+    {
+      sourceUrl,
+      count: identities.length,
+      identities,
+    },
+  );
 
   /*
    * Cap independent Google searches per source.
@@ -329,13 +352,19 @@ export async function discoverCorporateHtmlSpots(
         { allowReviewCandidate: true },
       );
 
-      if (!google) continue;
+      if (!google) {
+        console.info(
+          "[corporate-spot-discovery] Google did not qualify",
+          { sourceUrl, identity },
+        );
+        continue;
+      }
 
       /*
        * Always enter the existing Spot Review lifecycle.
        * Do not auto-register or attach source ownership.
        */
-      await recordGoogleSpotDiscovery(supabase, {
+      const reviewStatus = await recordGoogleSpotDiscovery(supabase, {
         ...google,
         evidence: {
           ...google.evidence,
@@ -347,6 +376,16 @@ export async function discoverCorporateHtmlSpots(
           eventLocationIsNotPublisher: true,
         },
       });
+
+      console.info(
+        "[corporate-spot-discovery] Spot Review result",
+        {
+          sourceUrl,
+          business: identity.name,
+          placeId: google.place.id,
+          reviewStatus,
+        },
+      );
     } catch (error) {
       console.error(
         "Corporate HTML business discovery failed:",
