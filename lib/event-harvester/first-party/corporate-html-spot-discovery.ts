@@ -153,6 +153,139 @@ function businessIdentities(html: string): Identity[] {
     }
   }
 
+
+  /*
+   * Event-specific business references in ordinary HTML or
+   * FAQ JSON-LD. These are candidate Spot identities only.
+   *
+   * A physical event location does not establish ownership
+   * of the publishing event source.
+   *
+   * Deliberately exclude navigation/footer content. The
+   * corporate directory must not create unrelated Spots.
+   */
+  const mainMatch = html.match(
+    /<main\b[^>]*>([\s\S]*?)<\/main>/i
+  );
+
+  const content = mainMatch?.[1] ?? "";
+
+  const faqAnswers: string[] = [];
+
+  const scriptsForFaq = html.matchAll(
+    /<script\b[^>]*type\s*=\s*["']application\/ld\+json[^"']*["'][^>]*>([\s\S]*?)<\/script>/gi
+  );
+
+  function collectFaq(value: unknown): void {
+    if (Array.isArray(value)) {
+      value.forEach(collectFaq);
+      return;
+    }
+
+    if (!record(value)) return;
+
+    if (
+      value["@type"] === "Answer" &&
+      typeof value.text === "string"
+    ) {
+      faqAnswers.push(value.text);
+    }
+
+    for (const child of Object.values(value)) {
+      if (
+        child !== null &&
+        typeof child === "object"
+      ) {
+        collectFaq(child);
+      }
+    }
+  }
+
+  for (const script of scriptsForFaq) {
+    try {
+      collectFaq(JSON.parse(script[1]));
+    } catch {
+      // Invalid FAQ data cannot contribute evidence.
+    }
+  }
+
+  function plainText(markup: string): string {
+    return markup
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&nbsp;|&#160;/gi, " ")
+      .replace(/&#0*39;|&apos;/gi, "'")
+      .replace(/&rsquo;|&#8217;/gi, "’")
+      .replace(/&quot;/gi, '"')
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  /*
+   * Require a named business and street address in the
+   * same event-content statement.
+   *
+   * "In front of X at 123 Main St, City"
+   * "Behind X at 123 Main Blvd, City"
+   *
+   * This is a conservative extraction pattern, not a
+   * universal natural-language location parser.
+   */
+  const referencePattern =
+    /\b(?:in front of|behind|at|inside|outside|next to|adjacent to)\s+(.{3,110}?)\s+at\s+(\d{1,6}\s+[\p{L}\p{N}.'’ -]{2,75}?\s+(?:St\.?|Street|Ave\.?|Avenue|Blvd\.?|Boulevard|Rd\.?|Road|Dr\.?|Drive|Ln\.?|Lane|Way|Pkwy\.?|Parkway))\s*,?\s+([A-Za-z][A-Za-z .'-]{1,50}?)(?=\s*(?:,?\s+(?:FL|Florida)\b|[.,;!?]|$))/giu;
+
+  const statements = [
+    plainText(content),
+    ...faqAnswers.map(plainText),
+  ];
+
+  for (const statement of statements) {
+    for (const match of statement.matchAll(referencePattern)) {
+      const name = match[1].trim().replace(
+        /^(?:the|a|an)\s+/i,
+        ""
+      );
+
+      const streetAddress = match[2].trim();
+      const city = match[3].trim();
+
+      if (
+        !name ||
+        !streetAddress ||
+        !city ||
+        name.length > 110
+      ) {
+        continue;
+      }
+
+      const floridaContext =
+        /\b(?:FL|Florida)\b/i.test(statement);
+
+      if (!floridaContext) continue;
+
+      const identity: Identity = {
+        name,
+        streetAddress,
+        city,
+        stateRegion: "FL",
+        postalCode: null,
+      };
+
+      const key = [
+        name,
+        streetAddress,
+        city,
+      ].join("|").toLowerCase();
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        identities.push(identity);
+      }
+    }
+  }
+
   return identities;
 }
 
