@@ -1532,10 +1532,20 @@ export async function GET(request: Request) {
              * the existing HTML ownership gates remain unchanged.
              */
             try {
-              await discoverCorporateHtmlSpots(
-                supabase,
-                ratification.source.sourceUrl,
-              );
+              const discoverCorporateSpots = () =>
+                discoverCorporateHtmlSpots(
+                  supabase,
+                  ratification.source.sourceUrl,
+                );
+
+              if (process.env.TENDERFANS_TRANSPORT_PROXY_URL) {
+                await runWithTransportRecovery(
+                  process.env.TENDERFANS_TRANSPORT_PROXY_URL,
+                  discoverCorporateSpots,
+                );
+              } else {
+                await discoverCorporateSpots();
+              }
             } catch (discoveryError) {
               console.error(
                 "Corporate HTML Spot discovery failed:",
