@@ -224,36 +224,42 @@ function businessIdentities(html: string): Identity[] {
   }
 
   /*
-   * Require a named business and street address in the
-   * same event-content statement.
+   * Keep event-content statements separate. Flattening all of
+   * <main> into one string lets unrelated FAQ answers merge.
    *
-   * "In front of X at 123 Main St, City"
-   * "Behind X at 123 Main Blvd, City"
-   *
-   * This is a conservative extraction pattern, not a
-   * universal natural-language location parser.
+   * Only explicit business-at-address references qualify.
+   * Navigation and corporate location directories remain excluded.
    */
-  /*
-   * Extract an explicitly named business at a street address.
-   * State abbreviations are generic, not tied to Florida.
-   *
-   * Keep this conservative: a name plus a street and city
-   * must appear together in event-specific content.
-   */
-  const referencePattern =
-    /\b(?:in front of|behind|at|inside|outside|next to|adjacent to)\s+(.{3,110}?)\s+at\s+(\d{1,6}\s+[\p{L}\p{N}.'’ -]{2,75}?\s+(?:Street|St\.?|Avenue|Ave\.?|Boulevard|Blvd\.?|Road|Rd\.?|Drive|Dr\.?|Lane|Ln\.?|Parkway|Pkwy\.?|Way))\s*,?\s+([A-Za-z][A-Za-z .'-]{1,50}?)(?=\s*(?:,?\s+[A-Z]{2}\b|[.,;!?]|$))/giu;
+  const blockMarkup = content
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<\/(?:p|div|section|article|li|h[1-6]|br|tr|td|dd|dt)>/gi, "\n")
+    .replace(/<br\b[^>]*\/?>/gi, "\n");
 
   const statements = [
-    plainText(content),
-    ...faqAnswers.map(plainText),
-  ];
+    ...blockMarkup.split(/\n+/).map(plainText),
+    ...faqAnswers.flatMap((answer) =>
+      answer
+        .replace(/<br\b[^>]*\/?>/gi, "\n")
+        .replace(/<\/(?:p|div|li)>/gi, "\n")
+        .split(/\n+/)
+        .map(plainText)
+    ),
+  ].filter(Boolean);
+
+  /*
+   * Anchor extraction to an explicit spatial reference.
+   * A name cannot contain another address, FAQ marker,
+   * or sentence boundary.
+   */
+  const referencePattern =
+    /\b(?:in front of|behind|inside|outside|next to|adjacent to|at)\s+((?:(?!\b\d{1,6}\s+[\p{L}.'’-]+\s+(?:St\.?|Street|Ave\.?|Avenue|Blvd\.?|Boulevard|Rd\.?|Road|Dr\.?|Drive)\b)[^.!?:\n]){3,100}?)\s+at\s+(\d{1,6}\s+[\p{L}\p{N}.'’ -]{2,75}?\s+(?:Street|St\.?|Avenue|Ave\.?|Boulevard|Blvd\.?|Road|Rd\.?|Drive|Dr\.?|Lane|Ln\.?|Parkway|Pkwy\.?|Way))\s*,\s*([A-Za-z][A-Za-z .'-]{1,50}?)(?=\s*(?:,?\s+[A-Z]{2}\b|[.;!?]|$))/giu;
 
   for (const statement of statements) {
     for (const match of statement.matchAll(referencePattern)) {
-      const name = match[1].trim().replace(
-        /^(?:the|a|an)\s+/i,
-        ""
-      );
+      const name = match[1]
+        .trim()
+        .replace(/^(?:the|a|an)\s+/i, "");
 
       const streetAddress = match[2].trim();
       const city = match[3].trim();
@@ -262,31 +268,29 @@ function businessIdentities(html: string): Identity[] {
         !name ||
         !streetAddress ||
         !city ||
-        name.length > 110
+        /\d/.test(name) ||
+        /(?:^|\s)(?:Q\d+|A\d+)\b/i.test(name) ||
+        /(?:\bQ\d+\b|\bA\d+\b)/i.test(city) ||
+        /[?:]/.test(name) ||
+        name.length > 90 ||
+        city.length > 45
       ) {
         continue;
       }
 
-      const remainingText = statement.slice(
-        match.index + match[0].length
-      );
+      const remainingText =
+        statement.slice(match.index + match[0].length);
 
       const stateMatch = remainingText.match(
-        /^\s*,?\s*([A-Z]{2})\b/
+        /^\s*,?\s*([A-Z]{2})(?:\s+(\d{5}(?:-\d{4})?))?\b/
       );
-
-      const postalMatch = stateMatch
-        ? remainingText.slice(stateMatch[0].length).match(
-            /^\s*,?\s*(\d{5}(?:-\d{4})?)\b/
-          )
-        : null;
 
       const identity: Identity = {
         name,
         streetAddress,
         city,
         stateRegion: stateMatch?.[1] ?? "",
-        postalCode: postalMatch?.[1] ?? null,
+        postalCode: stateMatch?.[2] ?? null,
       };
 
       const key = [
