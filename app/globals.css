@@ -4126,6 +4126,8 @@
 
 .events-list-row-top strong{
   display:-webkit-box;
+  flex:0 1 auto;
+  max-width:60%;
   min-width:0;
   overflow:hidden;
   text-overflow:ellipsis;
