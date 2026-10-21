@@ -1196,7 +1196,7 @@ function inspectPage(
     });
   }
 
-  if (/\?format=ical\b/i.test(html) || /text\/calendar/i.test(html)) {
+  if (/href=["'][^"']+\?format=ical(?:&[^"']*)?["']/i.test(html)) {
     pushDetection(detections, {
       sourceType: "squarespace_events",
       url: pageUrl,
