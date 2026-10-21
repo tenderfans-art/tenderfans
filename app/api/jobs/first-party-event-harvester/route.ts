@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     let sourceQuery =
       supabase
         .from("event_harvest_sources")
-        .select("id, name")
+        .select("id, name, venue_id, source_type, source_url")
         .eq("provider", "first_party")
         .eq("is_enabled", true);
 
@@ -103,11 +103,78 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        const result = await ingestFirstPartySource(
-          supabase,
-          source.id,
-          { dryRun: false }
-        );
+        let result: Awaited<ReturnType<typeof ingestFirstPartySource>>;
+
+        try {
+          result = await ingestFirstPartySource(
+            supabase,
+            source.id,
+            { dryRun: false }
+          );
+        } catch (ingestError) {
+          const message = safeError(ingestError);
+
+          // Only technical calendar-image execution failures belong
+          // in Adapter Errors. Content qualification stays in its
+          // existing review/evaluation workflow.
+          const technicalCalendarFailure =
+            /calendar.image page returned HTTP \d+/i.test(message) ||
+            /calendar image asset could not be fetched as a supported image/i.test(message);
+
+          if (
+            source.source_type === "calendar_image" &&
+            source.venue_id &&
+            source.source_url &&
+            technicalCalendarFailure
+          ) {
+            const { error: findingError } = await supabase.rpc(
+              "upsert_event_harvest_detector_finding",
+              {
+                p_venue_id: source.venue_id,
+                p_category: "adapter_error",
+                p_finding_key: `adapter_error:${JSON.stringify(["calendar_image", source.source_url])}`,
+                p_detector_status: "adapter_failed",
+                p_source_type: "calendar_image",
+                p_website_url: source.source_url,
+                p_source_url: source.source_url,
+                p_fetched_url: null,
+                p_confidence: null,
+                p_evidence: [
+                  "Registered calendar-image source failed during ingestion",
+                ],
+                p_error: message,
+              }
+            );
+
+            if (findingError) {
+              throw new Error(
+                `Calendar-image Adapter Error persistence failed: ${findingError.message}; original failure: ${message}`
+              );
+            }
+          }
+
+          throw ingestError;
+        }
+
+        if (
+          source.source_type === "calendar_image" &&
+          source.venue_id &&
+          source.source_url
+        ) {
+          const { error: resolutionError } = await supabase.rpc(
+            "resolve_event_harvest_adapter_error",
+            {
+              p_venue_id: source.venue_id,
+              p_finding_key: `adapter_error:${JSON.stringify(["calendar_image", source.source_url])}`,
+            }
+          );
+
+          if (resolutionError) {
+            throw new Error(
+              `Calendar-image Adapter Error resolution failed: ${resolutionError.message}`
+            );
+          }
+        }
 
         const succeededAt = new Date().toISOString();
 

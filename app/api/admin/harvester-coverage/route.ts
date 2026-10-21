@@ -77,14 +77,15 @@ export async function GET(request: NextRequest) {
       throw new Error("Coverage tally returned no data.");
     }
 
-    const { data: activeErrors, error: errorsError } = await admin.rpc(
-      "admin_event_harvest_active_errors"
-    );
+    const { data: affectedSpotCount, error: distinctError } =
+      await admin.rpc(
+        "admin_event_harvest_adapter_error_spot_count"
+      );
 
-    if (errorsError) throw errorsError;
+    if (distinctError) throw distinctError;
 
     return NextResponse.json(
-      { ...tally, active_errors: activeErrors?.length ?? 0 },
+      { ...tally, active_errors: Number(affectedSpotCount ?? 0) },
       {
       headers: { "Cache-Control": "no-store" },
     });

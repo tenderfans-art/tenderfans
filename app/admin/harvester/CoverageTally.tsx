@@ -90,12 +90,12 @@ export default function CoverageTally() {
           <span>
             Errors:{" "}
             <Link
-              href="/admin/harvester/errors"
+              href="/admin/harvester/adapter-errors"
               style={{
                 fontWeight: 800,
                 textDecoration: "underline",
               }}
-              title="Review active detector execution errors"
+              title="Review Spots with active adapter errors"
             >
               {tally.active_errors}
             </Link>

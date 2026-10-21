@@ -477,6 +477,58 @@ export async function GET(request: Request) {
       const candidateKey = (sourceType: string, url: string) =>
         JSON.stringify([sourceType, url]);
 
+      const adapterErrorKey = (sourceType: string, url: string) =>
+        `adapter_error:${JSON.stringify([sourceType, url])}`;
+
+      const recordAdapterError = async (
+        sourceType: string,
+        sourceUrl: string,
+        message: string,
+        evidence: string[] = [],
+      ) => {
+        const { error: writeError } = await supabase.rpc(
+          "upsert_event_harvest_detector_finding",
+          {
+            p_venue_id: venue.id,
+            p_category: "adapter_error",
+            p_finding_key: adapterErrorKey(sourceType, sourceUrl),
+            p_detector_status: "adapter_error",
+            p_source_type: sourceType,
+            p_website_url: detection.websiteUrl,
+            p_source_url: sourceUrl,
+            p_fetched_url: detection.fetchedUrl,
+            p_confidence: null,
+            p_evidence: evidence,
+            p_error: message,
+          },
+        );
+
+        if (writeError) {
+          throw new Error(
+            `Could not persist ${sourceType} Adapter Error: ${writeError.message}`
+          );
+        }
+      };
+
+      const resolveAdapterError = async (
+        sourceType: string,
+        sourceUrl: string,
+      ) => {
+        const { error: resolutionError } = await supabase.rpc(
+          "resolve_event_harvest_adapter_error",
+          {
+            p_venue_id: venue.id,
+            p_finding_key: adapterErrorKey(sourceType, sourceUrl),
+          },
+        );
+
+        if (resolutionError) {
+          throw new Error(
+            `Could not resolve ${sourceType} Adapter Error: ${resolutionError.message}`
+          );
+        }
+      };
+
       let detection = await detectFirstPartySources(
         venue.website_url,
         {
@@ -490,6 +542,12 @@ export async function GET(request: Request) {
           (ref) => ref.provider_place_id,
         ),
       );
+
+      const directBrowserOutcomes = [
+        ...(detection.browserOutcomes ?? []),
+      ];
+
+      let recoveryBrowserOutcomes: typeof directBrowserOutcomes = [];
 
       /*
        * Complete direct source validation before writing findings.
@@ -604,6 +662,10 @@ export async function GET(request: Request) {
             ),
           );
 
+          recoveryBrowserOutcomes = [
+            ...(recovered.browserOutcomes ?? []),
+          ];
+
           /*
            * A newly observed unapproved redirect must still enter
            * the existing Venue Matches review workflow.
@@ -694,6 +756,39 @@ export async function GET(request: Request) {
             stage: "transport_recovery",
             error: "TENDERFANS_TRANSPORT_PROXY_URL is not configured.",
           });
+        }
+      }
+
+      /*
+       * Browser execution errors are independent of transport status.
+       * Successful execution of the same URL clears its own error;
+       * another URL's success cannot clear it.
+       */
+      const browserOutcomesByUrl = new Map<
+        string,
+        { ok: boolean; error: string | null }
+      >();
+
+      for (const outcome of [
+        ...directBrowserOutcomes,
+        ...recoveryBrowserOutcomes,
+      ]) {
+        browserOutcomesByUrl.set(outcome.url, {
+          ok: outcome.ok,
+          error: outcome.error,
+        });
+      }
+
+      for (const [url, outcome] of browserOutcomesByUrl) {
+        if (outcome.ok) {
+          await resolveAdapterError("browser_required", url);
+        } else {
+          await recordAdapterError(
+            "browser_required",
+            url,
+            outcome.error ?? "Browser execution failed",
+            ["Browser execution threw an exception"],
+          );
         }
       }
 
@@ -1018,6 +1113,15 @@ export async function GET(request: Request) {
         hasPersistedBrowserRequired =
           (browserRequiredFindings?.length ?? 0) > 0;
 
+        // Transport and browser-required findings are independent.
+        // A browser-required finding must not suppress a genuine
+        // technical transport failure for this website.
+        await recordAdapterError(
+          "transport",
+          detection.websiteUrl,
+          detection.error ?? "Website transport evaluation failed",
+        );
+
         if (!hasPersistedBrowserRequired) {
           const { error: transportFindingError } = await supabase.rpc(
             "upsert_event_harvest_detector_finding",
@@ -1044,31 +1148,18 @@ export async function GET(request: Request) {
         }
       }
 
-      if (detection.status === "detected") {
-        detected += 1;
-      }
-
-      /*
-       * Refresh HTML parsing exceptions on successful scans.
-       * Current failures are reactivated in the loop below.
-       */
       if (
         detection.status === "detected" ||
         detection.status === "no_event_source"
       ) {
-        const { error: htmlResolutionError } = await supabase.rpc(
-          "resolve_event_harvest_detector_findings",
-          {
-            p_venue_id: venue.id,
-            p_category: "html_error",
-          },
+        await resolveAdapterError(
+          "transport",
+          detection.websiteUrl,
         );
+      }
 
-        if (htmlResolutionError) {
-          throw new Error(
-            `Could not resolve previous HTML errors: ${htmlResolutionError.message}`,
-          );
-        }
+      if (detection.status === "detected") {
+        detected += 1;
       }
 
       for (const candidate of detection.detections) {
@@ -1148,6 +1239,13 @@ export async function GET(request: Request) {
         }
 
         if (candidate.sourceType === "html_error") {
+          await recordAdapterError(
+            "html_events",
+            candidate.url,
+            "HTML schedule detected but extraction failed",
+            candidate.evidence,
+          );
+
           const { error: htmlFindingError } = await supabase.rpc(
             "upsert_event_harvest_detector_finding",
             {
@@ -1177,19 +1275,6 @@ export async function GET(request: Request) {
 
         if (candidate.sourceType === "calendar_image") {
           if (!isEligibleCalendar(candidate.url)) {
-            continue;
-          }
-
-          /*
-           * A Spot with an established first-party source is already
-           * validated. Do not reopen primary exception triage for an
-           * unvalidated image candidate. Registered calendar-image
-           * sources remain independent and are not changed here.
-           */
-          if (
-            successfullyRegisteredVenueSource ||
-            hasPreviouslyValidatedSource
-          ) {
             continue;
           }
 
@@ -1385,6 +1470,20 @@ export async function GET(request: Request) {
           });
 
           if (ratification.status !== "ratified" || !ratification.source) {
+            if (
+              ratification.status === "ratification_failed" &&
+              ratification.evidence.includes(
+                "Eventbrite event identity could not be inspected"
+              )
+            ) {
+              await recordAdapterError(
+                candidate.sourceType,
+                candidate.url,
+                ratification.error,
+                ratification.evidence,
+              );
+            }
+
             failed += 1;
             failures.push({
               venueId: venue.id,
@@ -1499,13 +1598,23 @@ export async function GET(request: Request) {
                   await validateFirstPartySource(source);
 
           if (validation.status !== "validated") {
-            if (
+            const facebookCompletedWithoutSupportedSource =
               candidate.sourceType === "facebook" &&
               /Facebook Page is unofficial and has no supported event source|Facebook Page has no public Events surface|Facebook Events page is unavailable or access restricted/i.test(
                 validation.error ?? "",
-              )
-            ) {
+              );
+
+            if (facebookCompletedWithoutSupportedSource) {
+              // Preserve the established Facebook -> No Sources fallback.
+              // A completed unsupported evaluation is not a technical error.
               facebookExhausted = true;
+            } else if (validation.status === "validation_failed") {
+              await recordAdapterError(
+                candidate.sourceType,
+                candidate.url,
+                validation.error ?? "Adapter validation failed",
+                candidate.evidence,
+              );
             }
 
             failed += 1;
@@ -1519,6 +1628,13 @@ export async function GET(request: Request) {
           }
 
           validated += 1;
+
+          // Clear only this successfully reevaluated source's error.
+          // Do not clear errors from other adapters on the Spot.
+          await resolveAdapterError(
+            candidate.sourceType,
+            candidate.url,
+          );
 
           if (ratification.source.sourceType === "html_events") {
             /*
@@ -1678,6 +1794,11 @@ export async function GET(request: Request) {
           registered += 1;
           successfullyRegisteredVenueSource = true;
 
+          await resolveAdapterError(
+            candidate.sourceType,
+            candidate.url,
+          );
+
           /*
            * A successfully registered structured first-party source
            * also makes any browser-required discovery finding
@@ -1720,12 +1841,19 @@ export async function GET(request: Request) {
             }
           }
         } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+
+          // This catch also covers database registration, ownership,
+          // and finding-resolution failures. Adapter validation failures
+          // are recorded at the validation branch above. Do not classify
+          // infrastructure/administrative exceptions as adapter failures.
           failed += 1;
           failures.push({
             venueId: venue.id,
             name: venue.name,
             stage: "source",
-            error: error instanceof Error ? error.message : String(error),
+            error: message,
           });
         }
       }

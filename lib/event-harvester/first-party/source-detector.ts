@@ -92,7 +92,14 @@ export type RedirectDestinationIdentity = {
   source: "json_ld" | "website_json_ld";
 };
 
+export type BrowserExecutionOutcome = {
+  url: string;
+  ok: boolean;
+  error: string | null;
+};
+
 export type SiteDetectionResult = {
+  browserOutcomes?: BrowserExecutionOutcome[];
   challengeEvidence?: string[];
   redirectIdentities?: RedirectDestinationIdentity[];
   websiteUrl: string;
@@ -2118,6 +2125,8 @@ export async function detectFirstPartySources(
    * context. Browser evidence rejoins the existing detector pipeline;
    * no independent source classification or adapter path is introduced.
    */
+  const browserOutcomes: BrowserExecutionOutcome[] = [];
+
   const recoveryProxy = getTransportRecoveryProxy();
 
   if (
@@ -2142,6 +2151,19 @@ export async function detectFirstPartySources(
       );
 
       if (
+        browserChallenge.length === 0 &&
+        evidence.status !== null &&
+        evidence.status >= 200 &&
+        evidence.status < 400
+      ) {
+        browserOutcomes.push({
+          url: websiteUrl,
+          ok: true,
+          error: null,
+        });
+      }
+
+      if (
         browserChallenge.length > 0 ||
         (
           evidence.status !== null &&
@@ -2161,7 +2183,14 @@ export async function detectFirstPartySources(
           recoveryDetail: "Browser-assisted transport recovery",
         };
       }
-    } catch {
+    } catch (error) {
+      browserOutcomes.push({
+        url: websiteUrl,
+        ok: false,
+        error: error instanceof Error
+          ? error.message
+          : "Browser homepage recovery failed",
+      });
       // Preserve the original HTTP result if browser recovery fails.
     }
   }
@@ -2169,6 +2198,7 @@ export async function detectFirstPartySources(
   if (homepageFetchError && !homepage.ok) {
     return {
       websiteUrl,
+      browserOutcomes,
       fetchedUrl: null,
       status: "transport_failed",
       pagesInspected: 0,
@@ -2190,6 +2220,7 @@ export async function detectFirstPartySources(
   if (homepageChallenge.length > 0) {
     return {
       websiteUrl,
+      browserOutcomes,
       fetchedUrl: homepage.url,
       status: "challenge_encountered",
       challengeEvidence: homepageChallenge,
@@ -2203,6 +2234,7 @@ export async function detectFirstPartySources(
   if (!homepage.ok) {
     return {
       websiteUrl,
+      browserOutcomes,
       fetchedUrl: homepage.url,
       status:
         homepage.status === 403 ||
@@ -2244,6 +2276,7 @@ export async function detectFirstPartySources(
   ) {
     return {
       websiteUrl,
+      browserOutcomes,
       fetchedUrl: homepage.url,
       status: "external_redirect",
       redirectIdentities: extractRedirectDestinationIdentities(homepage.html),
@@ -2478,6 +2511,12 @@ export async function detectFirstPartySources(
           continue;
         }
 
+        browserOutcomes.push({
+          url: candidate.finalUrl ?? candidate.url,
+          ok: true,
+          error: null,
+        });
+
         inspectPage(
           evidence.html,
           evidence.finalUrl,
@@ -2508,7 +2547,14 @@ export async function detectFirstPartySources(
         ) {
           break;
         }
-      } catch {
+      } catch (error) {
+        browserOutcomes.push({
+          url: candidate.finalUrl ?? candidate.url,
+          ok: false,
+          error: error instanceof Error
+            ? error.message
+            : "Browser event-page evaluation failed",
+        });
         /*
          * A failed browser attempt on one discovered event surface
          * does not invalidate the HTTP detector result or prevent
@@ -2649,6 +2695,7 @@ export async function detectFirstPartySources(
 
   return {
     websiteUrl,
+    browserOutcomes,
     fetchedUrl: homepage.url,
     status: challengeOnly
       ? "challenge_encountered"

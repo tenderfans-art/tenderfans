@@ -30,27 +30,11 @@ const tools = [
     status: "OPEN",
   },
   {
-    title: "Calendar Images",
-    countRpc: "admin_event_harvest_calendar_image_findings",
+    title: "Adapter Errors",
+    countRpc: "admin_event_harvest_adapter_error_findings",
     description:
-      "Review event calendars published as images.",
-    href: "/admin/harvester/calendar-images",
-    status: "OPEN",
-  },
-  {
-    title: "HTML Errors",
-    countRpc: "admin_event_harvest_html_error_findings",
-    description:
-      "Review HTML event sources with failed or incomplete event extraction.",
-    href: "/admin/harvester/html-errors",
-    status: "OPEN",
-  },
-  {
-    title: "Facebook Adapter",
-    countRpc: "admin_event_harvest_facebook_findings",
-    description:
-      "Review Facebook-only event sources.",
-    href: "/admin/harvester/facebook",
+      "Interrupted source and adapter evaluations requiring troubleshooting.",
+    href: "/admin/harvester/adapter-errors",
     status: "OPEN",
   },
   {
@@ -59,14 +43,6 @@ const tools = [
     description:
       "Review CAPTCHA and automated-access challenges.",
     href: "/admin/harvester/challenge-encountered",
-    status: "OPEN",
-  },
-  {
-    title: "Transport Errors",
-    countRpc: "admin_event_harvest_transport_findings",
-    description:
-      "Review transport and website-access failures.",
-    href: "/admin/harvester/transport-errors",
     status: "OPEN",
   },
   {
