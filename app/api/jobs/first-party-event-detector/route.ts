@@ -782,7 +782,9 @@ export async function GET(request: Request) {
       for (const [url, outcome] of browserOutcomesByUrl) {
         if (outcome.ok) {
           await resolveAdapterError("browser_required", url);
-        } else {
+        } else if (
+          outcome.error !== "Browser navigation requires a public HTTPS URL"
+        ) {
           await recordAdapterError(
             "browser_required",
             url,
