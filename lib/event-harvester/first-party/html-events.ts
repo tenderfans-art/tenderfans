@@ -458,6 +458,142 @@ function extractDiviHtmlEvents(
   return events;
 }
 
+
+/*
+ * Generic Duda photo-gallery event cards.
+ *
+ * The published card contains a caption-title and caption-text
+ * with a weekday, month/day, and local start time.
+ *
+ * No Spot identity, domain, event title, or date is hardcoded.
+ * Missing/ambiguous years are never silently treated as confirmed.
+ */
+function extractDudaGalleryEvents(
+  html: string,
+  pageUrl: string,
+): HtmlNormalizedEvent[] {
+  if (
+    !/\bdmAPI\b/.test(html) ||
+    !/\bphotoGalleryThumbs\b/.test(html) ||
+    !/\bcaption-title\b/.test(html) ||
+    !/\bcaption-text\b/.test(html)
+  ) return [];
+
+  const weekdays = [
+    "sun", "mon", "tue", "wed", "thu", "fri", "sat",
+  ];
+  const months = [
+    "jan", "feb", "mar", "apr", "may", "jun",
+    "jul", "aug", "sep", "oct", "nov", "dec",
+  ];
+
+  const datePattern =
+    /\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:day)?,?\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(20\d{2}))?\s*[-–—]\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i;
+
+  const now = new Date();
+  const today = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  const events: HtmlNormalizedEvent[] = [];
+  const seen = new Set<string>();
+
+  const cards = html.split(
+    /<div\b[^>]*class=["'][^"']*\bphotogallery-column\b[^"']*["'][^>]*>/i,
+  ).slice(1);
+
+  for (const card of cards) {
+    if (!/\bphotoGalleryThumbs\b/.test(card)) continue;
+
+    const titleMatch = card.match(
+      /<h[2-5]\b[^>]*class=["'][^"']*\bcaption-title\b[^"']*["'][^>]*>([\s\S]*?)<\/h[2-5]>/i,
+    );
+    const dateMatch = card.match(
+      /<div\b[^>]*class=["'][^"']*\bcaption-text\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    );
+
+    if (!titleMatch || !dateMatch) continue;
+
+    const title = text(titleMatch[1]).trim();
+    const publishedDate = text(dateMatch[1]).trim();
+    const match = publishedDate.match(datePattern);
+
+    if (!title || title.length > 160 || !match) continue;
+
+    const weekday = weekdays.indexOf(match[1].slice(0, 3).toLowerCase());
+    const month = months.indexOf(match[2].slice(0, 3).toLowerCase()) + 1;
+    const day = Number(match[3]);
+    const clock = parseTime(
+      `${match[5]}:${match[6] ?? "00"}`,
+      match[7].toUpperCase(),
+    );
+
+    if (weekday < 0 || month < 1 || !clock) continue;
+
+    /*
+     * For yearless gallery captions, require the published weekday
+     * to agree with exactly one plausible upcoming calendar date.
+     * Do not guess when multiple dates qualify.
+     */
+    const years = match[4]
+      ? [Number(match[4])]
+      : [now.getUTCFullYear(), now.getUTCFullYear() + 1];
+
+    const candidates = years.filter(year => {
+      const date = new Date(Date.UTC(year, month - 1, day));
+      if (
+        date.getUTCFullYear() !== year ||
+        date.getUTCMonth() !== month - 1 ||
+        date.getUTCDate() !== day ||
+        date.getUTCDay() !== weekday
+      ) return false;
+
+      if (match[4]) return true;
+
+      const delta = date.getTime() - today;
+      return delta >= -86400000 && delta <= 370 * 86400000;
+    });
+
+    if (candidates.length !== 1) continue;
+
+    const year = candidates[0];
+    const startsAt = easternTimestamp(
+      year, month, day, clock.hour, clock.minute,
+    );
+    const key = `${title.toLowerCase()}:${startsAt}`;
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    events.push({
+      externalEventId: `html:${pageUrl}:${key}`,
+      sourceUrl: pageUrl,
+      title,
+      description: null,
+      startsAt,
+      endsAt: null,
+      allDay: false,
+      flyerUrl: null,
+      location: null,
+      venueName: null,
+      venueAddress: null,
+      rawPayload: {
+        extraction: "html_duda_gallery",
+        publishedDate,
+        publishedYear: match[4] ? year : null,
+        yearInferred: !match[4],
+        yearInference: match[4]
+          ? null
+          : "Unique upcoming date matching published weekday",
+        endTimeNotPublished: true,
+      },
+    });
+  }
+
+  return events;
+}
+
 export function extractHtmlEventsWithDiagnostics(
   html: string,
   pageUrl: string,
@@ -467,6 +603,7 @@ export function extractHtmlEventsWithDiagnostics(
 } {
   const events: HtmlNormalizedEvent[] = [
     ...extractDiviHtmlEvents(html, pageUrl),
+    ...extractDudaGalleryEvents(html, pageUrl),
   ];
 
   const announcement = extractMultidayHtmlAnnouncement(
