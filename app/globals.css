@@ -4125,9 +4125,15 @@
 }
 
 .events-list-row-top strong{
+  display:-webkit-box;
+  min-width:0;
   overflow:hidden;
   text-overflow:ellipsis;
-  white-space:nowrap;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  line-clamp:2;
   font-weight:900;
 }
 
