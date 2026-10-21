@@ -142,15 +142,13 @@ export async function signedHarvesterFetch(
   const signer = await getSigner();
   let currentUrl = url;
   const proxy = proxyUrl ? new ProxyAgent(proxyUrl) : null;
-  const timeoutSignal = proxy
-    ? AbortSignal.timeout(PROXY_TIMEOUT_MS)
-    : undefined;
+  // Bound both direct and recovery requests without changing
+  // their existing transport or redirect behavior.
+  const timeoutSignal = AbortSignal.timeout(PROXY_TIMEOUT_MS);
 
-  const signal = proxy
-    ? init.signal
-      ? AbortSignal.any([init.signal, timeoutSignal!])
-      : timeoutSignal
-    : init.signal;
+  const signal = init.signal
+    ? AbortSignal.any([init.signal, timeoutSignal])
+    : timeoutSignal;
 
   try {
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
@@ -227,6 +225,7 @@ export async function signedHarvesterFetch(
           method: "GET",
           headers: signedHeaders,
           redirect: "manual",
+          signal,
         });
 
     if (![301, 302, 303, 307, 308].includes(response.status)) {
