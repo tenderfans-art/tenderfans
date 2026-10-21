@@ -86,7 +86,7 @@ function calendarPageBusinessName(html: string): string | null {
 
 export const dynamic = "force-dynamic";
 
-const SPOT_LIMIT = 30;
+
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -255,14 +255,13 @@ export async function GET(request: Request) {
 
       if (
         requestedIds.length === 0 ||
-        requestedIds.length > SPOT_LIMIT ||
         requestedIds.some(
           (id) =>
             !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
         )
       ) {
         return NextResponse.json(
-          { error: "Recovery requires 1–30 valid venue IDs." },
+          { error: "Recovery requires at least one valid venue ID." },
           { status: 400 },
         );
       }
@@ -328,8 +327,7 @@ export async function GET(request: Request) {
     venueQuery = venueQuery
       .order("created_at", {
         ascending: false,
-      })
-      .limit(SPOT_LIMIT);
+      });
   }
 
   const { data: venues, error } = await venueQuery;
