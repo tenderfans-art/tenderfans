@@ -541,10 +541,30 @@ export async function fetchFacebookEvents(
       userAgent: USER_AGENT,
     });
 
-    let response = await page.goto(eventsUrl(sourceUrl), {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
+    const initialEventsUrl = eventsUrl(sourceUrl);
+    let response;
+
+    try {
+      response = await page.goto(initialEventsUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !error.message.includes("net::ERR_NETWORK_CHANGED")
+      ) {
+        throw error;
+      }
+
+      // Retry one transient Chromium network-change failure.
+      // All HTTP responses and access restrictions retain their
+      // existing validation behavior.
+      response = await page.goto(initialEventsUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+    }
 
     /*
      * Legacy Facebook /pages/name/numeric-id URLs may no longer
