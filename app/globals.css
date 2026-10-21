@@ -4140,12 +4140,19 @@
 }
 
 .events-list-row-top > span:last-child{
+  display:-webkit-box;
+  flex:1 1 0;
+  min-width:0;
   overflow:hidden;
   color:var(--muted);
   font-size:14px;
   font-weight:700;
   text-overflow:ellipsis;
-  white-space:nowrap;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  line-clamp:2;
 }
 
 .events-list-row-bottom{
