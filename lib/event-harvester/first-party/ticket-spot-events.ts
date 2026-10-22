@@ -27,8 +27,16 @@ function ticketSpotEventsEndpoint(value: string): boolean {
 
     return (
       url.protocol === "https:" &&
-      url.hostname === "api.geteventviewer.com" &&
-      url.pathname === "/api/v1/events"
+      (
+        (
+          url.hostname === "api.geteventviewer.com" &&
+          url.pathname === "/api/v1/events"
+        ) ||
+        (
+          url.hostname === "ticketspotapp.com" &&
+          url.pathname === "/api/api/v1/events"
+        )
+      )
     );
   } catch {
     return false;
