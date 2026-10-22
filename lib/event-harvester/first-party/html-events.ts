@@ -606,43 +606,74 @@ function extractGoogleCalendarPluginEvents(
   pageUrl: string,
 ): HtmlNormalizedEvent[] {
   if (
-    !/\btgs_event\b/i.test(html) ||
-    !/\btgse_title\b/i.test(html) ||
-    !/\btgse_date_time\b/i.test(html)
+    !html.includes("tgs_event") ||
+    !html.includes("tgse_title") ||
+    !html.includes("tgse_date_time")
   ) return [];
-
-  const cards = html.split(
-    /<div\b[^>]*class=["'][^"']*\btgs_event\b[^"']*["'][^>]*>/i,
-  ).slice(1);
 
   const events: HtmlNormalizedEvent[] = [];
   const seen = new Set<string>();
 
-  for (const card of cards) {
-    const titleMatch = card.match(
-      /<div\b[^>]*class=["'][^"']*\btgse_title\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+  /*
+   * Identify card boundaries once.
+   * Never run an open-ended search across multiple event cards.
+   */
+  const cardStartPattern =
+    /<div\b[^>]*class=["'][^"']*\btgs_event\b[^"']*["'][^>]*>/gi;
+
+  const starts = [...html.matchAll(cardStartPattern)];
+
+  if (!starts.length) return [];
+
+  function classContent(
+    card: string,
+    className: string,
+    tag: "div" | "span",
+  ): string | null {
+    const openingTag = new RegExp(
+      `<${tag}\\b[^>]*class=["'][^"']*\\b${className}\\b[^"']*["'][^>]*>`,
+      "i",
     );
 
-    const dateMatch = card.match(
-      /<div\b[^>]*class=["'][^"']*\btgse_date_time\b[^"']*["'][^>]*>[\s\S]*?<span\b[^>]*class=["'][^"']*\btgse_timerange\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i,
-    );
+    const match = openingTag.exec(card);
+    if (!match) return null;
 
-    const timeMatch = card.match(
-      /<div\b[^>]*class=["'][^"']*\btgse_time\b[^"']*["'][^>]*>[\s\S]*?<span\b[^>]*class=["'][^"']*\btgse_timerange\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i,
-    );
+    const contentStart = match.index + match[0].length;
+    const closing = card.indexOf(`</${tag}>`, contentStart);
 
-    const zoneMatch = card.match(
-      /<span\b[^>]*class=["'][^"']*\btgse_timezone\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i,
-    );
+    if (closing < 0) return null;
 
-    if (!titleMatch || !dateMatch || !timeMatch || !zoneMatch) {
-      continue;
-    }
+    return card.slice(contentStart, closing);
+  }
 
-    const title = text(titleMatch[1]).trim();
-    const publishedDate = text(dateMatch[1]).trim();
-    const publishedTime = text(timeMatch[1]).trim();
-    const timezone = text(zoneMatch[1]).trim();
+  for (let i = 0; i < starts.length; i++) {
+    const cardStart = starts[i].index! + starts[i][0].length;
+    const cardEnd = i + 1 < starts.length
+      ? starts[i + 1].index!
+      : html.length;
+
+    const card = html.slice(cardStart, cardEnd);
+
+    const titleHtml = classContent(card, "tgse_title", "div");
+    const dateHtml = classContent(card, "tgse_date_time", "div");
+    const timeHtml = classContent(card, "tgse_time", "div");
+    const zoneHtml = classContent(card, "tgse_timezone", "span");
+
+    if (
+      titleHtml === null ||
+      dateHtml === null ||
+      timeHtml === null ||
+      zoneHtml === null
+    ) continue;
+
+    const title = text(titleHtml).trim();
+    const publishedDate = text(
+      classContent(dateHtml, "tgse_timerange", "span") ?? "",
+    ).trim();
+    const publishedTime = text(
+      classContent(timeHtml, "tgse_timerange", "span") ?? "",
+    ).trim();
+    const timezone = text(zoneHtml).trim();
 
     if (!title || title.length > 160) continue;
     if (timezone !== "America/New_York") continue;
@@ -699,9 +730,7 @@ function extractGoogleCalendarPluginEvents(
       endMinute,
     );
 
-    if (
-      Date.parse(endsAt) <= Date.parse(startsAt)
-    ) continue;
+    if (Date.parse(endsAt) <= Date.parse(startsAt)) continue;
 
     const eventLinkMatch = card.match(
       /<a\b[^>]*class=["'][^"']*\btgse_readmore_link\b[^"']*["'][^>]*href=["']([^"']+)["']/i,
@@ -742,7 +771,7 @@ function extractGoogleCalendarPluginEvents(
           }
         }
       } catch {
-        // Optional event identity must not invalidate event data.
+        // Optional Google identity cannot invalidate event data.
       }
     }
 
@@ -753,12 +782,11 @@ function extractGoogleCalendarPluginEvents(
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const descriptionMatch = card.match(
-      /<div\b[^>]*class=["'][^"']*\btgse_description\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    );
+    const descriptionHtml =
+      classContent(card, "tgse_description", "div");
 
-    const description = descriptionMatch
-      ? text(descriptionMatch[1]).trim()
+    const description = descriptionHtml
+      ? text(descriptionHtml).trim()
       : "";
 
     events.push({
@@ -787,6 +815,7 @@ function extractGoogleCalendarPluginEvents(
 
   return events;
 }
+
 
 export function extractHtmlEventsWithDiagnostics(
   html: string,
