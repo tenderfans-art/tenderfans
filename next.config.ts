@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/jobs/first-party-event-detector": [
       "./node_modules/playwright-core/browsers.json",
+      "./node_modules/@sparticuz/chromium/bin/**/*",
     ],
   },
 };
