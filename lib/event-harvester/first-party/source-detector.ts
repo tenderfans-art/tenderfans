@@ -2363,6 +2363,24 @@ export async function detectFirstPartySources(
   let pagesInspected = 1;
   const encounteredChallenges: string[] = [];
 
+  /*
+   * TanStack discovery fetches and inspects compiled JS modules.
+   * Only enqueue pages with evidence of TanStack Start hydration
+   * and module loading. This is generic platform detection.
+   */
+  const tanstackEligibleUrls = new Set<string>();
+
+  const recordTanStackEligibility = (html: string, url: string) => {
+    const hasHydration = /__TSR__|__TSR|_tsr/i.test(html);
+    const hasModulePreload = /modulepreload/i.test(html);
+
+    if (hasHydration && hasModulePreload) {
+      tanstackEligibleUrls.add(url);
+    }
+  };
+
+  recordTanStackEligibility(homepage.html, homepage.url);
+
   for (const link of candidateLinks) {
     const discovered = discoveredEventPages.find(
       (page) => page.url === link.url,
@@ -2445,6 +2463,10 @@ export async function detectFirstPartySources(
       }
 
       inspectPage(page.html, page.url, detections);
+      recordTanStackEligibility(
+        page.html,
+        discovered?.finalUrl ?? page.url,
+      );
 
       pagesInspected += await inspectProviderHandoffs(
         page.html,
@@ -2603,6 +2625,7 @@ export async function detectFirstPartySources(
    *
    * A generic TanStack application is not sufficient evidence.
    */
+
   const tanstackCandidates = [
     ...new Set(
       discoveredEventPages
@@ -2614,7 +2637,8 @@ export async function detectFirstPartySources(
             page.httpStatus >= 200 &&
             page.httpStatus < 400,
         )
-        .map((page) => page.finalUrl ?? page.url),
+        .map((page) => page.finalUrl ?? page.url)
+        .filter((url) => tanstackEligibleUrls.has(url)),
     ),
   ];
 
