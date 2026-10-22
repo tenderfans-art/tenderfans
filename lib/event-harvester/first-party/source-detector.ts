@@ -2694,9 +2694,7 @@ export async function detectFirstPartySources(
    * Facebook page with a specific venue or treat it as supported.
    */
   const facebookUrl =
-    detections.length === 0
-      ? discoverFacebookUrl(homepage.html, homepage.url)
-      : null;
+    discoverFacebookUrl(homepage.html, homepage.url);
 
   if (facebookUrl) {
     pushDetection(detections, {
