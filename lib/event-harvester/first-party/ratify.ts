@@ -279,24 +279,26 @@ async function ratifyEventbrite(
       };
     }
 
+    /*
+     * An event's physical venue does not establish ownership of its
+     * organizer feed. The publisher may hold events at many Spots.
+     *
+     * Preserve the discovered organizer identity for review, but
+     * never auto-register the organizer under the physical host.
+     */
     return {
-      status: "ratified",
-      source: {
-        sourceType: "eventbrite_organizer",
-        sourceUrl: organizerUrl,
-        externalSourceId: `eventbrite:organizer:${organizerId}`,
-        config: {
-          organizer_id: organizerId,
-          venue_id: external.id,
-        },
-      },
+      status: "ratification_failed",
+      source: null,
       evidence: [
         ...detection.evidence,
-        `Eventbrite identifies physical venue "${external.name ?? "unknown"}"`,
-        `Eventbrite venue matches the TenderFans Spot within ${miles.toFixed(2)} miles`,
-        "Attributed Eventbrite event resolved to durable organizer source",
+        `Eventbrite physical venue: "${external.name ?? "unknown"}"`,
+        `Physical venue matches the TenderFans Spot within ${miles.toFixed(2)} miles`,
+        `Eventbrite organizer ID: ${organizerId}`,
+        `Eventbrite organizer URL: ${organizerUrl}`,
+        "Physical event location does not establish organizer ownership",
       ],
-      error: null,
+      error:
+        "Eventbrite organizer publisher identity requires source attribution review.",
     };
   } catch (error) {
     return {
