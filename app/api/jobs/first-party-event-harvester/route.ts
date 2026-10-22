@@ -56,6 +56,11 @@ export async function GET(request: NextRequest) {
         "source_id"
       );
 
+    const venueId =
+      request.nextUrl.searchParams.get(
+        "venue_id"
+      );
+
     let sourceQuery =
       supabase
         .from("event_harvest_sources")
@@ -66,6 +71,14 @@ export async function GET(request: NextRequest) {
     if (sourceId) {
       sourceQuery =
         sourceQuery.eq("id", sourceId);
+    } else if (venueId) {
+      sourceQuery =
+        sourceQuery
+          .eq("venue_id", venueId)
+          .order(
+            "created_at",
+            { ascending: true }
+          );
     } else {
       sourceQuery =
         sourceQuery.order(
