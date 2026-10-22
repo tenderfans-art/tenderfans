@@ -594,6 +594,200 @@ function extractDudaGalleryEvents(
   return events;
 }
 
+
+/*
+ * Events Calendar for Google (WordPress plugin).
+ *
+ * Parse only events published in first-party HTML.
+ * Google event links are metadata, not validated calendar feeds.
+ */
+function extractGoogleCalendarPluginEvents(
+  html: string,
+  pageUrl: string,
+): HtmlNormalizedEvent[] {
+  if (
+    !/\btgs_event\b/i.test(html) ||
+    !/\btgse_title\b/i.test(html) ||
+    !/\btgse_date_time\b/i.test(html)
+  ) return [];
+
+  const cards = html.split(
+    /<div\b[^>]*class=["'][^"']*\btgs_event\b[^"']*["'][^>]*>/i,
+  ).slice(1);
+
+  const events: HtmlNormalizedEvent[] = [];
+  const seen = new Set<string>();
+
+  for (const card of cards) {
+    const titleMatch = card.match(
+      /<div\b[^>]*class=["'][^"']*\btgse_title\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    );
+
+    const dateMatch = card.match(
+      /<div\b[^>]*class=["'][^"']*\btgse_date_time\b[^"']*["'][^>]*>[\s\S]*?<span\b[^>]*class=["'][^"']*\btgse_timerange\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i,
+    );
+
+    const timeMatch = card.match(
+      /<div\b[^>]*class=["'][^"']*\btgse_time\b[^"']*["'][^>]*>[\s\S]*?<span\b[^>]*class=["'][^"']*\btgse_timerange\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i,
+    );
+
+    const zoneMatch = card.match(
+      /<span\b[^>]*class=["'][^"']*\btgse_timezone\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i,
+    );
+
+    if (!titleMatch || !dateMatch || !timeMatch || !zoneMatch) {
+      continue;
+    }
+
+    const title = text(titleMatch[1]).trim();
+    const publishedDate = text(dateMatch[1]).trim();
+    const publishedTime = text(timeMatch[1]).trim();
+    const timezone = text(zoneMatch[1]).trim();
+
+    if (!title || title.length > 160) continue;
+    if (timezone !== "America/New_York") continue;
+
+    const date = publishedDate.match(
+      /^(20\d{2})-(\d{2})-(\d{2})$/,
+    );
+
+    const times = publishedTime.match(
+      /^(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})$/,
+    );
+
+    if (!date || !times) continue;
+
+    const year = Number(date[1]);
+    const month = Number(date[2]);
+    const day = Number(date[3]);
+
+    const startHour = Number(times[1]);
+    const startMinute = Number(times[2]);
+    const endHour = Number(times[3]);
+    const endMinute = Number(times[4]);
+
+    const validDate = new Date(
+      Date.UTC(year, month - 1, day),
+    );
+
+    if (
+      year < 2020 || year > 2040 ||
+      validDate.getUTCFullYear() !== year ||
+      validDate.getUTCMonth() !== month - 1 ||
+      validDate.getUTCDate() !== day ||
+      startHour > 23 || endHour > 23 ||
+      startMinute > 59 || endMinute > 59
+    ) continue;
+
+    const startsAt = easternTimestamp(
+      year, month, day, startHour, startMinute,
+    );
+
+    const overnight =
+      endHour * 60 + endMinute <
+      startHour * 60 + startMinute;
+
+    const endDate = new Date(
+      Date.UTC(year, month - 1, day + (overnight ? 1 : 0)),
+    );
+
+    const endsAt = easternTimestamp(
+      endDate.getUTCFullYear(),
+      endDate.getUTCMonth() + 1,
+      endDate.getUTCDate(),
+      endHour,
+      endMinute,
+    );
+
+    if (
+      Date.parse(endsAt) <= Date.parse(startsAt)
+    ) continue;
+
+    const eventLinkMatch = card.match(
+      /<a\b[^>]*class=["'][^"']*\btgse_readmore_link\b[^"']*["'][^>]*href=["']([^"']+)["']/i,
+    );
+
+    let googleEventId: string | null = null;
+    let googleCalendarId: string | null = null;
+    let publishedEventUrl: string | null = null;
+
+    if (eventLinkMatch) {
+      try {
+        const link = new URL(
+          decode(eventLinkMatch[1]),
+          pageUrl,
+        );
+
+        if (
+          link.protocol === "https:" &&
+          link.hostname === "www.google.com" &&
+          link.pathname === "/calendar/event"
+        ) {
+          publishedEventUrl = link.toString();
+
+          const eid = link.searchParams.get("eid");
+
+          if (eid) {
+            const decoded = Buffer.from(
+              eid.replace(/-/g, "+").replace(/_/g, "/"),
+              "base64",
+            ).toString("utf8");
+
+            const parts = decoded.split(" ", 2);
+
+            if (parts.length === 2 && parts[0] && parts[1]) {
+              googleEventId = parts[0];
+              googleCalendarId = parts[1];
+            }
+          }
+        }
+      } catch {
+        // Optional event identity must not invalidate event data.
+      }
+    }
+
+    const key = googleEventId
+      ? `${googleCalendarId}:${googleEventId}`
+      : `${title.toLowerCase()}:${startsAt}`;
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const descriptionMatch = card.match(
+      /<div\b[^>]*class=["'][^"']*\btgse_description\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    );
+
+    const description = descriptionMatch
+      ? text(descriptionMatch[1]).trim()
+      : "";
+
+    events.push({
+      externalEventId: `html:${pageUrl}:${key}`,
+      sourceUrl: pageUrl,
+      title,
+      description: description || null,
+      startsAt,
+      endsAt,
+      allDay: false,
+      flyerUrl: null,
+      location: null,
+      venueName: null,
+      venueAddress: null,
+      rawPayload: {
+        extraction: "html_google_calendar_plugin",
+        publishedDate,
+        publishedTime,
+        timezone,
+        googleEventId,
+        googleCalendarId,
+        publishedEventUrl,
+      },
+    });
+  }
+
+  return events;
+}
+
 export function extractHtmlEventsWithDiagnostics(
   html: string,
   pageUrl: string,
@@ -604,6 +798,7 @@ export function extractHtmlEventsWithDiagnostics(
   const events: HtmlNormalizedEvent[] = [
     ...extractDiviHtmlEvents(html, pageUrl),
     ...extractDudaGalleryEvents(html, pageUrl),
+    ...extractGoogleCalendarPluginEvents(html, pageUrl),
   ];
 
   const announcement = extractMultidayHtmlAnnouncement(
