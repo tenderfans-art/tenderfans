@@ -87,6 +87,59 @@ function discoverFeatureId(
   );
 }
 
+function discoverCalendarFeaturePath(
+  html: string,
+  sourceUrl: string,
+  featureId: string
+): URL {
+  const source = new URL(sourceUrl);
+  const expectedFilename =
+    `calendar_feature_${featureId}.turbo_stream`;
+
+  /*
+   * Use Bandzoogle's advertised pagination route rather than
+   * assuming that every calendar is hosted under /home/.
+   */
+  for (
+    const match of html.matchAll(
+      /href=["']([^"']+)["']/gi
+    )
+  ) {
+    try {
+      const candidate = new URL(
+        decodeHtmlText(match[1]),
+        source
+      );
+
+      if (
+        candidate.origin !== source.origin ||
+        !candidate.pathname.endsWith(
+          `/features/load/${expectedFilename}`
+        )
+      ) {
+        continue;
+      }
+
+      candidate.searchParams.delete("calendar_page");
+      return candidate;
+    } catch {
+      // Ignore malformed links.
+    }
+  }
+
+  /*
+   * Single-page calendars may not advertise pagination.
+   * Derive the fallback from the source page's own route.
+   */
+  const pathname =
+    source.pathname.replace(/\/$/, "");
+
+  return new URL(
+    `${pathname}/features/load/${expectedFilename}`,
+    source.origin
+  );
+}
+
 function discoverPageCount(
   html: string
 ): number {
@@ -252,9 +305,11 @@ export async function fetchBandzoogleEvents(
     );
   }
 
-  const source = new URL(sourceUrl);
-  const featurePath =
-    `/home/features/load/calendar_feature_${featureId}.turbo_stream`;
+  const featureUrl = discoverCalendarFeaturePath(
+    sourceHtml,
+    sourceUrl,
+    featureId
+  );
 
   const occurrences =
     new Map<string, BandzoogleOccurrence>();
@@ -271,10 +326,7 @@ export async function fetchBandzoogleEvents(
     page <= highestPage;
     page += 1
   ) {
-    const pageUrl = new URL(
-      featurePath,
-      source.origin
-    );
+    const pageUrl = new URL(featureUrl.href);
 
     pageUrl.searchParams.set(
       "calendar_page",

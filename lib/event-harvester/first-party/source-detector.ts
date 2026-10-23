@@ -912,9 +912,22 @@ function inspectPage(
       html,
     );
 
+  /*
+   * Bandzoogle event detail routes can embed the same calendar
+   * feature markup as the inventory page. They are event records,
+   * not independent calendar inventory sources.
+   *
+   * Continue inspecting these pages for every other source type.
+   */
+  const isBandzoogleEventDetailPage =
+    /\/event\/\d+\/\d+(?:\/|$)/i.test(
+      new URL(pageUrl).pathname
+    );
+
   if (
     bandzoogleCalendarMatch &&
-    hasBandzoogleOccurrence
+    hasBandzoogleOccurrence &&
+    !isBandzoogleEventDetailPage
   ) {
     pushDetection(detections, {
       sourceType: "bandzoogle_events",
