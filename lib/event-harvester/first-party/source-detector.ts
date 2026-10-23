@@ -1629,7 +1629,11 @@ export async function fetchHtml(
     }
   }
 
-  let direct: Awaited<ReturnType<typeof request>> | undefined;
+  let direct:
+    | (Awaited<ReturnType<typeof request>> & {
+        recoveryDetail?: string;
+      })
+    | undefined;
   let directError: unknown;
 
   try {
@@ -1638,24 +1642,43 @@ export async function fetchHtml(
     directError = error;
   }
 
-  // Some sites reject the harvester User-Agent with HTTP 400.
-  // During explicit transport recovery only, retry once directly
-  // with the existing browser-compatible request headers.
-  if (recoveryProxy && direct?.status === 400) {
+  /*
+   * Some sites reject the harvester request identity even though
+   * ordinary browser-compatible HTTP requests are accepted.
+   *
+   * This stage is independent of the Vultr recovery context.
+   * Never retry a response with identified challenge evidence.
+   * Preserve the existing proxy recovery stage if compatibility
+   * does not resolve the failure.
+   */
+  if (
+    direct &&
+    [400, 403].includes(direct.status) &&
+    (direct.challengeEvidence?.length ?? 0) === 0
+  ) {
     try {
       const compatible = await request(url, undefined, true);
 
-      if (compatible.ok) {
+      if (
+        compatible.ok &&
+        (compatible.challengeEvidence?.length ?? 0) === 0
+      ) {
         return compatible;
       }
 
-      return {
+      direct = {
         ...direct,
+        challengeEvidence: [
+          ...new Set([
+            ...(direct.challengeEvidence ?? []),
+            ...(compatible.challengeEvidence ?? []),
+          ]),
+        ],
         recoveryDetail:
           `Browser-header retry returned HTTP ${compatible.status}`,
       };
     } catch (error) {
-      return {
+      direct = {
         ...direct,
         recoveryDetail:
           error instanceof Error
