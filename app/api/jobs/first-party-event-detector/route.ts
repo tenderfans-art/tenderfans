@@ -635,11 +635,36 @@ export async function GET(request: Request) {
       }
 
       /*
+       * A validated source must not suppress recovery of another
+       * event surface that encountered a recoverable HTTP failure.
+       *
+       * Preserve the existing no-validated-source fallback, while
+       * also considering independent page-level transport evidence.
+       * Never bypass unapproved redirect review.
+       */
+      const hasRecoverableEventPageFailure =
+        detection.discoveredEventPages.some(
+          (page) =>
+            page.sameSite &&
+            page.fetched &&
+            page.httpStatus !== null &&
+            [403, 429, 503].includes(page.httpStatus),
+        );
+
+      const hasUnresolvedAccessChallenge =
+        (detection.challengeEvidence?.length ?? 0) > 0;
+
+      const needsVultrDiscovery =
+        !directSourceValidated ||
+        hasRecoverableEventPageFailure ||
+        hasUnresolvedAccessChallenge;
+
+      /*
        * One immediate Vultr discovery attempt, within this Spot's
        * processing cycle. Never bypass unapproved redirect review.
        */
       if (
-        !directSourceValidated &&
+        needsVultrDiscovery &&
         detection.status !== "external_redirect"
       ) {
         const proxyUrl = process.env.TENDERFANS_TRANSPORT_PROXY_URL;
