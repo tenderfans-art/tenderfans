@@ -1614,8 +1614,7 @@ export async function GET(request: Request) {
           const validation =
             cachedProbe?.validation.status === "validated"
               ? cachedProbe.validation
-              : !directSourceValidated &&
-                  detection.status !== "external_redirect" &&
+              : detection.status !== "external_redirect" &&
                   process.env.TENDERFANS_TRANSPORT_PROXY_URL
                 ? await runWithTransportRecovery(
                     process.env.TENDERFANS_TRANSPORT_PROXY_URL,
