@@ -1,3 +1,4 @@
+import { isVerificationInterstitial } from "../access-challenge";
 import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
 import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
@@ -148,7 +149,8 @@ function identifyAccessChallenge(
     path.startsWith("/cdn-cgi/challenge-platform/") ||
     /<script[^>]+cdn-cgi\/challenge-platform\//i.test(html) ||
     (/cf-chl-(?:opt|widget|token)/i.test(html) &&
-      /cloudflare|challenge-platform/i.test(html))
+      /cloudflare|challenge-platform/i.test(html)) ||
+    isVerificationInterstitial(html)
   ) {
     evidence.push("Provider: Cloudflare; challenge-platform signature");
   }
@@ -1728,11 +1730,17 @@ export async function fetchHtml(
       isChallengeResponse(direct)
     );
 
+  const verificationInterstitial =
+    direct !== null &&
+    direct !== undefined &&
+    isVerificationInterstitial(direct.html);
+
   if (
     !recoveryProxy ||
     (direct &&
       ![403, 429, 503].includes(direct.status) &&
-      !incompleteAcceptedResponse)
+      !incompleteAcceptedResponse &&
+      !verificationInterstitial)
   ) {
     if (direct) return direct;
     throw directError;
@@ -1741,7 +1749,11 @@ export async function fetchHtml(
   try {
     const recovered = await request(url, recoveryProxy);
 
-    if (recovered.ok && !isChallengeResponse(recovered)) {
+    if (
+      recovered.ok &&
+      !isChallengeResponse(recovered) &&
+      !isVerificationInterstitial(recovered.html)
+    ) {
       return {
         ...recovered,
         challengeEvidence: [
