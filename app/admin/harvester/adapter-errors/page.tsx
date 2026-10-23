@@ -22,6 +22,9 @@ type Finding = {
 
 export default function AdapterErrorsPage() {
   const [findings, setFindings] = useState<Finding[]>([]);
+  const [activeTab, setActiveTab] = useState<"tier_one" | "facebook">(
+    "tier_one"
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
@@ -89,6 +92,18 @@ export default function AdapterErrorsPage() {
     return () => { active = false; };
   }, []);
 
+  const isFacebookError = (finding: Finding) =>
+    finding.source_type === "facebook" ||
+    finding.source_type === "facebook_events";
+
+  const facebookFindings = findings.filter(isFacebookError);
+  const tierOneFindings = findings.filter(
+    (finding) => !isFacebookError(finding)
+  );
+
+  const visibleFindings =
+    activeTab === "facebook" ? facebookFindings : tierOneFindings;
+
   const spotCount = new Set(
     findings.map((finding) => finding.venue_id)
   ).size;
@@ -126,11 +141,44 @@ export default function AdapterErrorsPage() {
                 <strong>{findings.length}</strong> active failures
               </p>
 
-              {findings.length === 0 ? (
-                <p>No active Adapter Errors.</p>
+              <div
+                role="tablist"
+                aria-label="Adapter error categories"
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  margin: "20px 0",
+                }}
+              >
+                {([
+                  ["tier_one", "Tier One", tierOneFindings.length],
+                  ["facebook", "Facebook", facebookFindings.length],
+                ] as const).map(([key, label, count]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === key}
+                    onClick={() => setActiveTab(key)}
+                    style={{
+                      padding: "10px 18px",
+                      borderRadius: 8,
+                      fontWeight: activeTab === key ? 700 : 400,
+                      opacity: activeTab === key ? 1 : 0.7,
+                    }}
+                  >
+                    {label} ({count})
+                  </button>
+                ))}
+              </div>
+
+              {visibleFindings.length === 0 ? (
+                <p>No active {activeTab === "facebook"
+                  ? "Facebook"
+                  : "Tier One"} Adapter Errors.</p>
               ) : (
                 <div style={{ display: "grid", gap: 16 }}>
-                  {findings.map((finding) => (
+                  {visibleFindings.map((finding) => (
                     <article
                       key={finding.id}
                       style={{

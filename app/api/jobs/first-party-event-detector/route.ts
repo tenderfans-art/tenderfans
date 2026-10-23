@@ -1607,10 +1607,22 @@ export async function GET(request: Request) {
               );
 
             if (facebookCompletedWithoutSupportedSource) {
-              // Preserve the established Facebook -> No Sources fallback.
-              // A completed unsupported evaluation is not a technical error.
+              // Preserve Facebook -> No Sources fallback for sources
+              // that cannot be validated.
               facebookExhausted = true;
-            } else if (validation.status === "validation_failed") {
+            }
+
+            const facebookAccessRestricted =
+              candidate.sourceType === "facebook" &&
+              /Facebook Events page is unavailable or access restricted/i.test(
+                validation.error ?? "",
+              );
+
+            if (
+              validation.status === "validation_failed" &&
+              (!facebookCompletedWithoutSupportedSource ||
+                facebookAccessRestricted)
+            ) {
               await recordAdapterError(
                 candidate.sourceType,
                 candidate.url,
