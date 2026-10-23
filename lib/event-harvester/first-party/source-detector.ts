@@ -1,4 +1,5 @@
 import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
+import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -1997,17 +1998,7 @@ async function discoverWordPressCategoryEvents(
             typeof post.content?.rendered === "string"
         );
 
-        const eventLike = validPosts.filter(post => {
-          const content = `${post.title.rendered} ${post.content.rendered}`
-            .replace(/<[^>]*>/g, " ");
-
-          return (
-            /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}\b/i.test(content) &&
-            /\b(?:am|pm|music|trivia|show|performance|event|festival|party|concert)\b/i.test(content)
-          );
-        });
-
-        if (!eventLike.length) continue;
+        if (!hasParseableWordPressCategoryEvents(validPosts)) continue;
 
         pushDetection(detections, {
           sourceType: "wordpress_category_events",
@@ -2017,7 +2008,7 @@ async function discoverWordPressCategoryEvents(
           supported: true,
           evidence: [
             `WordPress category "${category.name}" contains dated event announcements`,
-            `${eventLike.length} event-like posts verified`,
+            "WordPress posts contain parseable scheduled-event evidence",
             "Timezone configuration required before harvesting",
           ],
         });

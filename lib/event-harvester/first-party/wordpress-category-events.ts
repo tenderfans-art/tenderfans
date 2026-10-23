@@ -207,6 +207,14 @@ function timestamp(
   time: Clock,
   timeZone: string,
 ): string | null {
+  // Discovery needs to verify that an event has a parseable local
+  // schedule without assuming the publisher's timezone.
+  // The sentinel is never used for ingestion or publication.
+  if (timeZone === "__qualification_only__") {
+    return new Date(Date.UTC(
+      year, month - 1, day, time.hour, time.minute,
+    )).toISOString();
+  }
   const target = Date.UTC(
     year, month - 1, day, time.hour, time.minute,
   );
@@ -696,6 +704,28 @@ allowMultiDate = true,
       },
     },
   }];
+}
+
+export function hasParseableWordPressCategoryEvents(
+  posts: unknown,
+): boolean {
+  if (!Array.isArray(posts)) return false;
+
+  return posts.some((post: WordPressPost) => {
+    if (
+      !post ||
+      !Number.isInteger(post.id) ||
+      typeof post.date !== "string" ||
+      typeof post.link !== "string" ||
+      typeof post.title?.rendered !== "string" ||
+      typeof post.content?.rendered !== "string"
+    ) return false;
+
+    return normalize(
+      post,
+      "__qualification_only__",
+    ).length > 0;
+  });
 }
 
 export async function fetchWordPressCategoryEvents(
