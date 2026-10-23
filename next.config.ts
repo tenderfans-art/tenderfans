@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
       "./node_modules/playwright-core/browsers.json",
       "./node_modules/@sparticuz/chromium/bin/**/*",
     ],
+    "/api/jobs/first-party-event-harvester": [
+      "./node_modules/playwright-core/browsers.json",
+      "./node_modules/@sparticuz/chromium/bin/**/*",
+    ],
   },
 };
 
