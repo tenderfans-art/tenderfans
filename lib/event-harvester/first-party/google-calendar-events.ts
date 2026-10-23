@@ -10,6 +10,43 @@ const GOOGLE_CALENDAR_HOSTS = new Set([
   "www.google.com",
 ]);
 
+/*
+ * Google Calendar embed URLs may encode the calendar ID in Base64.
+ * Direct calendar IDs and public ICS URLs must remain supported.
+ *
+ * Decode only when the result has the structure of a calendar ID.
+ * This avoids accidentally transforming an ordinary calendar ID.
+ */
+function normalizeGoogleCalendarId(
+  value: string,
+): string {
+  const calendarId = value.trim();
+
+  if (
+    calendarId.includes("@") ||
+    !/^[A-Za-z0-9_-]+={0,2}$/.test(calendarId)
+  ) {
+    return calendarId;
+  }
+
+  try {
+    const decoded = Buffer.from(
+      calendarId.replace(/-/g, "+").replace(/_/g, "/"),
+      "base64",
+    ).toString("utf8").trim();
+
+    if (
+      /^[^\\s@]+@[^\\s@]+$/.test(decoded)
+    ) {
+      return decoded;
+    }
+  } catch {
+    // Preserve the original calendar identity.
+  }
+
+  return calendarId;
+}
+
 function calendarIdFromGoogleUrl(
   sourceUrl: string,
 ): string | null {
@@ -44,7 +81,7 @@ function calendarIdFromGoogleUrl(
   const queryCalendarId = url.searchParams.get("src")?.trim();
 
   if (queryCalendarId) {
-    return queryCalendarId;
+    return normalizeGoogleCalendarId(queryCalendarId);
   }
 
   const pathMatch = url.pathname.match(
