@@ -36,7 +36,7 @@ function normalizeGoogleCalendarId(
     ).toString("utf8").trim();
 
     if (
-      /^[^\\s@]+@[^\\s@]+$/.test(decoded)
+      /^[^\s@]+@[^\s@]+$/.test(decoded)
     ) {
       return decoded;
     }
