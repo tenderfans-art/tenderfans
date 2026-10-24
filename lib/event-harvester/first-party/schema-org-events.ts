@@ -1,4 +1,6 @@
 import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
+import { fetchBrowserEvidence } from "./browser-transport";
+import { isVerificationInterstitial } from "../access-challenge";
 const USER_AGENT = "TenderFans Event Harvester/1.0";
 
 type JsonObject = Record<string, unknown>;
@@ -278,23 +280,98 @@ function stableEventId(
 export async function fetchSchemaOrgEvents(
   sourceUrl: string,
 ): Promise<SchemaOrgNormalizedEvent[]> {
-  const response = await recoveryFetch(sourceUrl, {
-    headers: {
-      Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
-      "User-Agent": USER_AGENT,
-    },
-    redirect: "follow",
-    cache: "no-store",
-  });
+  let finalUrl = sourceUrl;
+  let html: string | null = null;
+  let httpFailure: string | null = null;
 
-  if (!response.ok) {
-    throw new Error(
-      `Schema.org event source returned HTTP ${response.status}.`,
-    );
+  try {
+    const response = await recoveryFetch(sourceUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        "User-Agent": USER_AGENT,
+      },
+      redirect: "follow",
+      cache: "no-store",
+    });
+
+    if (response.ok) {
+      const candidateHtml = await response.text();
+
+      if (!isVerificationInterstitial(candidateHtml)) {
+        finalUrl = response.url || sourceUrl;
+        html = candidateHtml;
+      } else {
+        httpFailure = "HTTP verification challenge";
+      }
+    } else {
+      httpFailure = `HTTP ${response.status}`;
+
+      if (![403, 429, 503].includes(response.status)) {
+        throw new Error(
+          `Schema.org event source returned HTTP ${response.status}.`,
+        );
+      }
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /^Schema.org event source returned HTTP /.test(error.message)
+    ) {
+      throw error;
+    }
+
+    httpFailure =
+      error instanceof Error ? error.message : "HTTP fetch failed";
   }
 
-  const finalUrl = response.url || sourceUrl;
-  const html = await response.text();
+  if (html === null) {
+    let browserFailure: string | null = null;
+
+    try {
+      const browser = await fetchBrowserEvidence(sourceUrl);
+
+      if (browser.status !== 200) {
+        browserFailure = `HTTP ${browser.status ?? "unknown"}`;
+      } else if (isVerificationInterstitial(browser.html)) {
+        browserFailure = "browser verification challenge";
+      } else {
+        const requested = new URL(sourceUrl);
+        const destination = new URL(browser.finalUrl);
+
+        if (requested.origin !== destination.origin) {
+          browserFailure = "unapproved cross-origin browser redirect";
+        } else {
+          finalUrl = browser.finalUrl;
+          html = browser.html;
+        }
+      }
+    } catch (error) {
+      browserFailure =
+        error instanceof Error ? error.message : "browser fetch failed";
+    }
+
+    if (html === null) {
+      const failures = [
+        httpFailure ?? "HTTP failed",
+        browserFailure ?? "no usable HTML",
+      ];
+
+      const accessRestricted = failures.some(
+        (failure) =>
+          /(?:HTTP (?:403|429|503)\b|verification challenge|verification interstitial|access challenge encountered)/i.test(
+            failure,
+          ),
+      );
+
+      throw new Error(
+        `${accessRestricted
+          ? "Schema.org source access restricted"
+          : "Schema.org source unavailable"}: ` +
+        `${failures[0]}; Chromium: ${failures[1]}.`,
+      );
+    }
+  }
+
   const rawEvents = extractSchemaOrgEvents(html);
 
   const events: SchemaOrgNormalizedEvent[] = [];

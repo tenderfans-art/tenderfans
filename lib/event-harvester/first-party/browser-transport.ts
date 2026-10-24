@@ -85,6 +85,7 @@ export async function fetchBrowserEvidence(
     args: Chromium.args,
     executablePath: await Chromium.executablePath(),
     headless: true,
+    timeout: 30000,
     ...(proxy ? { proxy } : {}),
   });
 
