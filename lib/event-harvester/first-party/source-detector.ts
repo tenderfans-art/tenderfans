@@ -1231,11 +1231,15 @@ function inspectPage(
    * Tribe REST reference rather than a generic CSS selector.
    * Source validation still determines whether the API is usable.
    */
-  const hasTribeCalendarEvidence =
-    /<(?:div|section|main|article|ol|ul)\b[^>]*\b(?:id|class)=["'][^"']*\btribe-events(?:-view|-calendar|-list|-single|-event)?\b/i.test(html) ||
-    /<(?:script|link)\b[^>]*(?:src|href)=["'][^"']*\/wp-content\/plugins\/(?:the-events-calendar|events-calendar-pro)\//i.test(html) ||
+  /*
+   * Calendar markup and plugin assets establish that The Events
+   * Calendar is installed, but do not establish that its optional
+   * REST API is exposed. Require an explicit REST endpoint reference
+   * before proposing the Tribe REST adapter.
+   */
+  const hasTribeRestEvidence =
     /wp-json\/tribe\/events\/v1\/events/i.test(html);
-  if (hasTribeCalendarEvidence) {
+  if (hasTribeRestEvidence) {
     let tribeUrl = pageUrl;
 
     try {
