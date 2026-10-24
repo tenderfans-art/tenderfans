@@ -1223,11 +1223,19 @@ function inspectPage(
     });
   }
 
-  if (
-    /tribe-events/i.test(html) ||
-    /the events calendar/i.test(html) ||
-    /wp-json\/tribe\/events/i.test(html)
-  ) {
+  /*
+   * Avada and other WordPress themes may bundle Tribe-related CSS
+   * without an installed or usable Events Calendar source.
+   *
+   * Require actual calendar markup, plugin assets, or an explicit
+   * Tribe REST reference rather than a generic CSS selector.
+   * Source validation still determines whether the API is usable.
+   */
+  const hasTribeCalendarEvidence =
+    /<(?:div|section|main|article|ol|ul)\b[^>]*\b(?:id|class)=["'][^"']*\btribe-events(?:-view|-calendar|-list|-single|-event)?\b/i.test(html) ||
+    /<(?:script|link)\b[^>]*(?:src|href)=["'][^"']*\/wp-content\/plugins\/(?:the-events-calendar|events-calendar-pro)\//i.test(html) ||
+    /wp-json\/tribe\/events\/v1\/events/i.test(html);
+  if (hasTribeCalendarEvidence) {
     let tribeUrl = pageUrl;
 
     try {
