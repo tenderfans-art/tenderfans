@@ -37,7 +37,6 @@ function rpcValue<T>(data: unknown): T {
 async function ingestEvent(
   supabase: SupabaseClient,
   event: FirstPartyEventPreview,
-  bootstrap: boolean,
 ): Promise<{
   candidateId: string | null;
   canonicalEventId: string | null;
@@ -305,18 +304,12 @@ async function ingestEvent(
       };
     }
 
-    const graduationRpc = bootstrap
-      ? "bootstrap_first_party_harvest_candidate"
-      : "graduate_harvest_candidate";
+    const graduationRpc = "graduate_harvest_candidate";
 
-    const graduationArgs = bootstrap
-      ? {
-          p_candidate_id: candidateId,
-        }
-      : {
-          p_candidate_id: candidateId,
-          p_reviewed_by: null,
-        };
+    const graduationArgs = {
+      p_candidate_id: candidateId,
+      p_reviewed_by: null,
+    };
 
     const { data: graduatedData, error: graduatedError } = await supabase.rpc(
       graduationRpc,
@@ -397,15 +390,6 @@ export async function ingestFirstPartySource(
   const source = await loadFirstPartySource(supabase, sourceId);
 
   /*
-   * Source bootstrap state lives in the database.
-   *
-   * NULL means the source is still loading its initial inventory.
-   * Once bootstrapped_at is stamped, all future discoveries use
-   * normal publication and notification behavior.
-   */
-  const bootstrap = source.bootstrapped_at === null;
-
-  /*
    * Absence reconciliation compares candidate last_seen_at against
    * the instant this complete source scan began. Capture this before
    * fetching/parsing so every event observed by this run is newer.
@@ -474,7 +458,7 @@ export async function ingestFirstPartySource(
   };
 
   for (const event of preview) {
-    const ingested = await ingestEvent(supabase, event, bootstrap);
+    const ingested = await ingestEvent(supabase, event);
 
     result.processed += 1;
 
@@ -501,52 +485,18 @@ export async function ingestFirstPartySource(
   }
 
   /*
-   * Only a complete, unfiltered initial run may declare the
-   * source bootstrapped. Targeted title/limit runs intentionally
-   * leave bootstrapped_at NULL.
+   * A complete, unfiltered source scan can reconcile absences
+   * regardless of whether some observed events require review.
    *
-   * Reaching this point means every selected event completed
-   * candidate upsert, dedupe/graduation and lifecycle sync.
+   * Keep the existing TanStack exclusion.
    */
-  const completeInitialRun =
-    bootstrap &&
-    allPreview.length > 0 &&
-    options.title === undefined &&
-    options.limit === undefined &&
-    preview.length === eligiblePreview.length &&
-    result.needsReview === 0;
-
-  if (completeInitialRun) {
-    const { error: bootstrapError } = await supabase.rpc(
-      "mark_first_party_source_bootstrapped",
-      {
-        p_source_id: source.id,
-      },
-    );
-
-    if (bootstrapError) {
-      throw new Error(
-        `Could not mark first-party source bootstrapped: ${bootstrapError.message}`,
-      );
-    }
-  }
-
-  /*
-   * Only an unfiltered, unlimited, successfully completed source run
-   * is evidence that an existing candidate was absent.
-   *
-   * Bootstrap runs establish initial inventory and do not reconcile
-   * disappearance. Normal complete runs do.
-   */
-  const completeNormalRun =
-    !bootstrap &&
+  const completeSourceRun =
     source.source_type !== "tanstack_seroval_events" &&
     allPreview.length > 0 &&
     options.title === undefined &&
-    options.limit === undefined &&
-    result.needsReview === 0;
+    options.limit === undefined;
 
-  if (completeNormalRun) {
+  if (completeSourceRun) {
     const { error: reconcileError } = await supabase.rpc(
       "reconcile_first_party_source_absences",
       {
