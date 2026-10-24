@@ -23,6 +23,162 @@ type FacebookEventStub = {
   title: string;
 };
 
+type FacebookOccurrence = {
+  id: string;
+  parentId: string;
+  startTimestamp: number;
+  endTimestamp: number | null;
+};
+
+function validFacebookTimestamp(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    Number.isFinite(value * 1000) &&
+    !Number.isNaN(new Date(value * 1000).getTime())
+  );
+}
+
+/*
+ * Facebook embeds recurring occurrences in comet_neighboring_siblings.
+ * Each record must independently identify its parent and timestamp.
+ * Never associate timestamps using proximity alone.
+ */
+function extractFacebookOccurrences(
+  html: string,
+  parentId: string,
+): FacebookOccurrence[] {
+  const results = new Map<string, FacebookOccurrence>();
+  const conflicts = new Set<string>();
+  const marker = '"comet_neighboring_siblings":';
+  let cursor = 0;
+
+  while (true) {
+    const index = html.indexOf(marker, cursor);
+    if (index === -1) break;
+
+    cursor = index + marker.length;
+
+    const start = html.indexOf("[", cursor);
+    if (start === -1 || start - cursor > 30) continue;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let end = -1;
+
+    for (let i = start; i < html.length; i++) {
+      const char = html[i];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (char === "\\") {
+          escaped = true;
+        } else if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+      } else if (char === "[") {
+        depth++;
+      } else if (char === "]") {
+        depth--;
+        if (depth === 0) {
+          end = i + 1;
+          break;
+        }
+      }
+    }
+
+    if (end === -1) continue;
+
+    let records: unknown;
+
+    try {
+      records = JSON.parse(html.slice(start, end));
+    } catch {
+      continue;
+    }
+
+    if (!Array.isArray(records)) continue;
+
+    for (const raw of records) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        continue;
+      }
+
+      const record = raw as Record<string, unknown>;
+      const parent = record.parent_event;
+
+      if (
+        !parent ||
+        typeof parent !== "object" ||
+        Array.isArray(parent)
+      ) {
+        continue;
+      }
+
+      const parentRecord = parent as Record<string, unknown>;
+      const id = record.id;
+      const startTimestamp = record.start_timestamp;
+      const endTimestamp = record.end_timestamp;
+
+      if (
+        typeof id !== "string" ||
+        !/^\d+$/.test(id) ||
+        parentRecord.parent_id !== parentId ||
+        parentRecord.id !== parentId ||
+        !validFacebookTimestamp(startTimestamp)
+      ) {
+        continue;
+      }
+
+      if (
+        endTimestamp !== null &&
+        endTimestamp !== undefined &&
+        (!validFacebookTimestamp(endTimestamp) ||
+          endTimestamp <= startTimestamp)
+      ) {
+        continue;
+      }
+
+      const occurrence: FacebookOccurrence = {
+        id,
+        parentId,
+        startTimestamp,
+        endTimestamp:
+          typeof endTimestamp === "number"
+            ? endTimestamp
+            : null,
+      };
+
+      if (conflicts.has(id)) continue;
+
+      const existing = results.get(id);
+
+      // Once conflicting dates are detected, reject this ID permanently.
+      if (
+        existing &&
+        (existing.startTimestamp !== occurrence.startTimestamp ||
+          existing.endTimestamp !== occurrence.endTimestamp)
+      ) {
+        results.delete(id);
+        conflicts.add(id);
+        continue;
+      }
+
+      results.set(id, occurrence);
+    }
+  }
+
+  return [...results.values()];
+}
+
 const USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
@@ -461,11 +617,13 @@ async function fetchEventDetail(
       return null;
     }
 
-    const startTimestamp = extractTimestamp(
-      html,
-      stub.id,
-      "start_timestamp",
-    );
+    const verifiedOccurrences =
+      extractFacebookOccurrences(html, stub.id);
+
+    const startTimestamp =
+      extractTimestamp(html, stub.id, "start_timestamp") ??
+      verifiedOccurrences[0]?.startTimestamp ??
+      null;
 
     if (!startTimestamp) {
       throw new Error(
@@ -519,6 +677,9 @@ async function fetchEventDetail(
         endTimestamp: endTimestamp ?? 0,
         eventPlace,
         renderedText: text.slice(0, 5000),
+        verifiedOccurrences,
+        hasRecurrenceMarker:
+          html.includes('"comet_neighboring_siblings":'),
       },
     };
   } finally {
@@ -645,28 +806,70 @@ export async function fetchFacebookEvents(
     const stubs = await discoverEventStubs(page);
     const events: FacebookEvent[] = [];
     const now = Date.now();
+    const seenExternalIds = new Set<string>();
 
     for (const stub of stubs) {
       const event = await fetchEventDetail(page, stub);
       if (!event) continue;
 
-      const startsAt = Date.parse(event.startsAt);
-      const endsAt = event.endsAt
-        ? Date.parse(event.endsAt)
-        : null;
+      const occurrences =
+        event.rawPayload.verifiedOccurrences as
+          | FacebookOccurrence[]
+          | undefined;
 
       /*
-       * Facebook Page event listings can expose years of historical
-       * events. Keep future events and events currently in progress,
-       * but do not bootstrap completed history.
+       * Recurrence evidence is valid only when occurrence records
+       * identify this parent. A marker elsewhere in Facebook's
+       * document must not suppress an ordinary event.
        */
-      const isPast =
-        endsAt !== null && Number.isFinite(endsAt)
-          ? endsAt < now
-          : Number.isFinite(startsAt) && startsAt < now;
+      const verified = occurrences ?? [];
 
-      if (!isPast) {
-        events.push(event);
+      const candidates: FacebookEvent[] =
+        verified.length > 0
+          ? verified.map((occurrence) => ({
+              ...event,
+              externalEventId:
+                `facebook:event:${stub.id}:${occurrence.id}`,
+              sourceUrl:
+                `https://www.facebook.com/events/${stub.id}/${occurrence.id}/`,
+              startsAt: unixSecondsToIso(
+                occurrence.startTimestamp,
+              ),
+              endsAt: occurrence.endTimestamp
+                ? unixSecondsToIso(occurrence.endTimestamp)
+                : null,
+              rawPayload: {
+                ...event.rawPayload,
+                parentEventId: stub.id,
+                occurrenceId: occurrence.id,
+                startTimestamp: occurrence.startTimestamp,
+                endTimestamp: occurrence.endTimestamp,
+              },
+            }))
+          : [event];
+
+      for (const candidate of candidates) {
+        if (seenExternalIds.has(candidate.externalEventId)) continue;
+
+        const startsAt = Date.parse(candidate.startsAt);
+        const endsAt = candidate.endsAt
+          ? Date.parse(candidate.endsAt)
+          : null;
+
+        /*
+         * Facebook Page event listings can expose years of historical
+         * events. Keep future events and events currently in progress,
+         * but do not bootstrap completed history.
+         */
+        const isPast =
+          endsAt !== null && Number.isFinite(endsAt)
+            ? endsAt < now
+            : Number.isFinite(startsAt) && startsAt < now;
+
+        if (!isPast) {
+          seenExternalIds.add(candidate.externalEventId);
+          events.push(candidate);
+        }
       }
     }
 
