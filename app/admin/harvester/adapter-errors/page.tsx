@@ -104,6 +104,36 @@ export default function AdapterErrorsPage() {
   const visibleFindings =
     activeTab === "facebook" ? facebookFindings : tierOneFindings;
 
+  const failureCategory = (finding: Finding) => {
+    const message = finding.error ?? "Evaluation interrupted";
+
+    if (
+      /HTTP (403|429|503)\b|access restricted|access challenge|verification interstitial|verification challenge/i.test(
+        message
+      )
+    ) {
+      return "access_restricted";
+    }
+
+    return `message:${message}`;
+  };
+
+  const groupedFindings = new Map<string, Finding[]>();
+
+  for (const finding of visibleFindings) {
+    const key = JSON.stringify([
+      finding.venue_id,
+      finding.source_type,
+      failureCategory(finding),
+    ]);
+
+    const group = groupedFindings.get(key) ?? [];
+    group.push(finding);
+    groupedFindings.set(key, group);
+  }
+
+  const visibleGroups = Array.from(groupedFindings.values());
+
   const spotCount = new Set(
     findings.map((finding) => finding.venue_id)
   ).size;
@@ -178,9 +208,12 @@ export default function AdapterErrorsPage() {
                   : "Tier One"} Adapter Errors.</p>
               ) : (
                 <div style={{ display: "grid", gap: 16 }}>
-                  {visibleFindings.map((finding) => (
+                  {visibleGroups.map((group) => {
+                    const finding = group[0];
+
+                    return (
                     <article
-                      key={finding.id}
+                      key={group.map((item) => item.id).sort().join(":")}
                       style={{
                         padding: 18,
                         border: "1px solid rgba(20,35,45,.15)",
@@ -203,20 +236,15 @@ export default function AdapterErrorsPage() {
 
                       <p>
                         <strong>Failure:</strong>{" "}
-                        {finding.error ?? "Evaluation interrupted"}
+                        {failureCategory(finding) === "access_restricted"
+                          ? "Source access restricted"
+                          : finding.error ?? "Evaluation interrupted"}
                       </p>
 
-                      {finding.source_url && (
-                        <p>
-                          <a
-                            href={finding.source_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Source URL
-                          </a>
-                        </p>
-                      )}
+                      <p>
+                        <strong>Underlying findings:</strong>{" "}
+                        {group.length}
+                      </p>
 
                       <p>
                         <a
@@ -228,34 +256,69 @@ export default function AdapterErrorsPage() {
                         </a>
                       </p>
 
-                      <button
-                        type="button"
-                        disabled={resolvingId !== null}
-                        onClick={() => void resolveFinding(finding)}
-                        style={{ marginBottom: 16 }}
-                      >
-                        {resolvingId === finding.id
-                          ? "Resolving..."
-                          : "Resolve error"}
-                      </button>
-
                       <details>
-                        <summary>Technical details</summary>
-                        <pre style={{
-                          whiteSpace: "pre-wrap",
-                          overflowWrap: "anywhere",
-                        }}>
-                          {JSON.stringify({
-                            finding_key: finding.finding_key,
-                            fetched_url: finding.fetched_url,
-                            evidence: finding.evidence,
-                            first_seen_at: finding.first_seen_at,
-                            last_seen_at: finding.last_seen_at,
-                          }, null, 2)}
-                        </pre>
+                        <summary>
+                          View {group.length} individual{" "}
+                          {group.length === 1 ? "failure" : "failures"}
+                        </summary>
+
+                        {group.map((item) => (
+                          <div
+                            key={item.id}
+                            style={{
+                              padding: "12px 0",
+                              borderTop: "1px solid rgba(20,35,45,.12)",
+                            }}
+                          >
+                            <p>
+                              <strong>Error:</strong>{" "}
+                              {item.error ?? "Evaluation interrupted"}
+                            </p>
+
+                            {item.source_url && (
+                              <p>
+                                <a
+                                  href={item.source_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Source URL
+                                </a>
+                              </p>
+                            )}
+
+                            <button
+                              type="button"
+                              disabled={resolvingId !== null}
+                              onClick={() => void resolveFinding(item)}
+                              style={{ marginBottom: 12 }}
+                            >
+                              {resolvingId === item.id
+                                ? "Resolving..."
+                                : "Resolve this finding"}
+                            </button>
+
+                            <details>
+                              <summary>Technical details</summary>
+                              <pre style={{
+                                whiteSpace: "pre-wrap",
+                                overflowWrap: "anywhere",
+                              }}>
+                                {JSON.stringify({
+                                  finding_key: item.finding_key,
+                                  fetched_url: item.fetched_url,
+                                  evidence: item.evidence,
+                                  first_seen_at: item.first_seen_at,
+                                  last_seen_at: item.last_seen_at,
+                                }, null, 2)}
+                              </pre>
+                            </details>
+                          </div>
+                        ))}
                       </details>
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>
