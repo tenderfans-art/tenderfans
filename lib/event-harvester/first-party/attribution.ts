@@ -124,19 +124,33 @@ function publisherEvidence(
    * unresolved instead of guessing.
    */
   const match = address.match(
-    /^(.*?),\s*([^,]+),\s*([A-Za-z]{2})(?:\s+(\d{5}(?:-\d{4})?))?$/,
+    /^(.*?),\s*([^,]+),\s*([A-Za-z]{2})(?:\s+(\d{5}(?:-\d{4})?)|,\s*(\d{5}(?:-\d{4})?)(?:,\s*(?:US|USA))?)?$/,
   );
 
   if (!match) {
     return null;
   }
 
+  const streetAddress = match[1].trim();
+  const city = match[2].trim();
+  const stateRegion = match[3].trim();
+  const postalCode = match[4] ?? match[5] ?? null;
+
+  if (
+    !streetAddress ||
+    !city ||
+    /^\d{5}(?:-\d{4})?$/.test(city) ||
+    /^(?:US|USA)$/i.test(stateRegion)
+  ) {
+    return null;
+  }
+
   return {
-    name: name || match[1].trim(),
-    streetAddress: match[1].trim(),
-    city: match[2].trim(),
-    stateRegion: match[3].trim(),
-    postalCode: match[4]?.trim() ?? null,
+    name: name || streetAddress,
+    streetAddress,
+    city,
+    stateRegion,
+    postalCode,
   };
 }
 
