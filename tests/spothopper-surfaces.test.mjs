@@ -102,7 +102,7 @@ test("accessible site without calendar is unsupported", async () => {
   });
 });
 
-test("blocked calendar candidates preserve access failure", async () => {
+test("blocked speculative calendar candidates are unsupported", async () => {
   await withMockFetch({
     "https://example.test/": {
       body: site(),
@@ -115,6 +115,30 @@ test("blocked calendar candidates preserve access failure", async () => {
     "https://example.test/events": {
       body: "Forbidden",
       status: 403,
+    },
+  }, async () => {
+    await assert.rejects(
+      fetchSpotHopperEvents("https://example.test/"),
+      (error) =>
+        error instanceof SpotHopperSurfaceError &&
+        error.reason === "unsupported_surface"
+    );
+  });
+});
+
+test("blocked discovered event link preserves access failure", async () => {
+  await withMockFetch({
+    "https://example.test/": {
+      body: site('<a href="/-events">Events</a>'),
+      status: 200,
+    },
+    "https://example.test/-events": {
+      body: "Forbidden",
+      status: 403,
+    },
+    "https://example.test/events": {
+      body: site(),
+      status: 200,
     },
   }, async () => {
     await assert.rejects(

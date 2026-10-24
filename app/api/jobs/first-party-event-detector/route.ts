@@ -1655,6 +1655,15 @@ export async function GET(request: Request) {
               );
             }
 
+            if (validation.status === "rejected") {
+              // A conclusively unsupported source is not an adapter
+              // failure. Clear only its own historical error.
+              await resolveAdapterError(
+                candidate.sourceType,
+                candidate.url,
+              );
+            }
+
             failed += 1;
             failures.push({
               venueId: venue.id,

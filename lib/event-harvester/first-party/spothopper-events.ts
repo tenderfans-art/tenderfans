@@ -1294,26 +1294,44 @@ function hasEventSurface(
   );
 }
 
+type SpotHopperCandidate = {
+  url: string;
+  discovered: boolean;
+};
+
 function eventCandidates(
   sourceUrl: string,
   html: string,
-): string[] {
+): SpotHopperCandidate[] {
   const base = new URL(sourceUrl);
 
-  const urls: string[] = [];
+  const urls: SpotHopperCandidate[] = [];
 
-  const add = (value: string) => {
+  const add = (
+    value: string,
+    discovered: boolean,
+  ) => {
     try {
       const url = new URL(
         decodeHtml(value),
         base,
       );
 
-      if (
-        url.origin === base.origin &&
-        !urls.includes(url.href)
-      ) {
-        urls.push(url.href);
+      if (url.origin !== base.origin) {
+        return;
+      }
+
+      const existing = urls.find(
+        (candidate) => candidate.url === url.href,
+      );
+
+      if (existing) {
+        existing.discovered ||= discovered;
+      } else {
+        urls.push({
+          url: url.href,
+          discovered,
+        });
       }
     } catch {
       // Ignore malformed links.
@@ -1321,7 +1339,7 @@ function eventCandidates(
   };
 
   if (hasEventSurface(html)) {
-    add(sourceUrl);
+    add(sourceUrl, true);
   }
 
   for (const match of html.matchAll(
@@ -1336,12 +1354,12 @@ function eventCandidates(
         href,
       )
     ) {
-      add(href);
+      add(href, true);
     }
   }
 
-  add("/-events");
-  add("/events");
+  add("/-events", false);
+  add("/events", false);
 
   return urls;
 }
@@ -1383,20 +1401,22 @@ export async function fetchSpotHopperEvents(
   for (const candidate of candidates) {
     let html: string;
 
-    if (candidate === sourceUrl) {
+    if (candidate.url === sourceUrl) {
       html = sourceHtml;
     } else {
       try {
         html =
-          await fetchHtml(candidate);
+          await fetchHtml(candidate.url);
       } catch (error) {
-        candidateFailures.push(
-          `${candidate}: ${
-            error instanceof Error
-              ? error.message
-              : String(error)
-          }`,
-        );
+        if (candidate.discovered) {
+          candidateFailures.push(
+            `${candidate.url}: ${
+              error instanceof Error
+                ? error.message
+                : String(error)
+            }`,
+          );
+        }
         continue;
       }
     }
@@ -1405,7 +1425,7 @@ export async function fetchSpotHopperEvents(
       isSpotHopperHtml(html) &&
       hasEventSurface(html)
     ) {
-      eventUrl = candidate;
+      eventUrl = candidate.url;
       eventHtml = html;
       break;
     }
