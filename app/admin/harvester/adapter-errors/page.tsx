@@ -20,8 +20,54 @@ type Finding = {
   last_seen_at: string;
 };
 
+type TierOneSource = {
+  venue_id: string;
+  source_type: string;
+};
+
+const adapterAbbreviations: Record<string, string> = {
+  ticket_spot_events: "TS",
+  simcal_events: "SIM",
+  google_calendar: "GC",
+  beatgig_events: "BG",
+  bandzoogle_events: "BZ",
+  eventscalendar_events: "EC",
+  sociablekit_facebook_events: "SK",
+  ics: "ICS",
+  tribe_rest: "TR",
+  next_rsc_events: "RSC",
+  squarespace_events: "SQ",
+  eventbrite_organizer: "EB",
+  godaddy_menu_recurring: "GD",
+  cp_multi_view_calendar: "CP",
+  shopify_events: "SH",
+  woocommerce_events: "WC",
+  uvtix_events: "UV",
+  schema_org_events: "SO",
+  html_events: "HT",
+  pwpc_events_calendar: "PW",
+  spothopper_events: "SP",
+  google_apps_script_events: "GAS",
+  tanstack_seroval_events: "TSV",
+  eventer_events: "EV",
+  wordpress_category_events: "WPC",
+  wordpress_event_feed: "WPF",
+};
+
+function adapterAbbreviation(sourceType: string): string {
+  const fallback = sourceType
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+    .slice(0, 3);
+
+  return adapterAbbreviations[sourceType] ?? (fallback || "SRC");
+}
+
 export default function AdapterErrorsPage() {
   const [findings, setFindings] = useState<Finding[]>([]);
+  const [tierOneSources, setTierOneSources] = useState<TierOneSource[]>([]);
   const [activeTab, setActiveTab] = useState<"tier_one" | "facebook">(
     "tier_one"
   );
@@ -73,16 +119,22 @@ export default function AdapterErrorsPage() {
     let active = true;
 
     async function load() {
-      const result = await supabase.rpc(
-        "admin_event_harvest_adapter_error_findings"
-      );
+      const [result, sourcesResult] = await Promise.all([
+        supabase.rpc("admin_event_harvest_adapter_error_findings"),
+        supabase.rpc("admin_event_harvest_adapter_error_tier_one_sources"),
+      ]);
 
       if (!active) return;
 
       if (result.error) {
         setError(result.error.message);
+      } else if (sourcesResult.error) {
+        setError(sourcesResult.error.message);
       } else {
         setFindings((result.data ?? []) as Finding[]);
+        setTierOneSources(
+          (sourcesResult.data ?? []) as TierOneSource[]
+        );
       }
 
       setLoading(false);
@@ -95,6 +147,16 @@ export default function AdapterErrorsPage() {
   const isFacebookError = (finding: Finding) =>
     finding.source_type === "facebook" ||
     finding.source_type === "facebook_events";
+
+  const tierOneBySpot = new Map<string, string[]>();
+
+  for (const source of tierOneSources) {
+    const types = tierOneBySpot.get(source.venue_id) ?? [];
+    if (!types.includes(source.source_type)) {
+      types.push(source.source_type);
+    }
+    tierOneBySpot.set(source.venue_id, types);
+  }
 
   const facebookFindings = findings.filter(isFacebookError);
   const tierOneFindings = findings.filter(
@@ -249,6 +311,60 @@ export default function AdapterErrorsPage() {
                             }}
                           >
                             <strong>{finding.venue_name}</strong>
+                            {activeTab === "facebook" && (
+                              <span
+                                aria-label="Validated Tier One sources"
+                                style={{
+                                  display: "inline-flex",
+                                  flexWrap: "wrap",
+                                  alignItems: "center",
+                                  gap: 5,
+                                }}
+                              >
+                                {(tierOneBySpot.get(finding.venue_id) ?? [])
+                                  .length === 0 ? (
+                                  <span
+                                    title="No validated Tier One source"
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 5,
+                                      color: "#b42318",
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    <span aria-hidden="true">●</span>
+                                    No Tier One
+                                  </span>
+                                ) : (
+                                  (tierOneBySpot.get(finding.venue_id) ?? [])
+                                    .map((sourceType) => (
+                                      <span
+                                        key={sourceType}
+                                        title={sourceType}
+                                        aria-label={`Validated: ${sourceType}`}
+                                        style={{
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          minWidth: 24,
+                                          height: 20,
+                                          padding: "0 5px",
+                                          borderRadius: 12,
+                                          background: "#e5f5e9",
+                                          color: "#18733b",
+                                          border: "1px solid #91cba0",
+                                          fontSize: 10,
+                                          fontWeight: 800,
+                                        }}
+                                      >
+                                        {adapterAbbreviation(sourceType)}
+                                      </span>
+                                    ))
+                                )}
+                              </span>
+                            )}
                             <span style={{ opacity: 0.45 }}>|</span>
                             <span>{finding.source_type ?? "Unspecified"}</span>
                             <span style={{ opacity: 0.45 }}>|</span>
