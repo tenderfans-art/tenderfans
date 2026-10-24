@@ -257,6 +257,8 @@ export default function AdapterErrorsPage() {
                 aria-label="Adapter error categories"
                 style={{
                   display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
                   gap: 12,
                   margin: "20px 0",
                 }}
@@ -281,71 +283,67 @@ export default function AdapterErrorsPage() {
                     {label} ({count})
                   </button>
                 ))}
-              </div>
-
-              {activeTab === "facebook" && (
-                <div
-                  aria-label="Filter Facebook errors by parallel Tier One validation"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 14,
-                    marginBottom: 18,
-                  }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>
-                    Parallel Tier One:
-                  </span>
-
-                  {([
-                    ["with", "Validated", "#18733b"],
-                    ["without", "Not validated", "#b42318"],
-                  ] as const).map(([value, label, color]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-pressed={facebookSourceFilter === value}
-                      onClick={() =>
-                        setFacebookSourceFilter((current) =>
-                          current === value ? "all" : value
-                        )
-                      }
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 7,
-                        padding: "6px 10px",
-                        borderRadius: 20,
-                        border: facebookSourceFilter === value
-                          ? `2px solid ${color}`
-                          : "2px solid transparent",
-                        background: facebookSourceFilter === value
-                          ? `${color}12`
-                          : "transparent",
-                        color: "inherit",
-                        fontSize: 13,
-                        fontWeight: facebookSourceFilter === value
-                          ? 700
-                          : 500,
-                        cursor: "pointer",
-                      }}
-                    >
-                      <span
-                        aria-hidden="true"
+                {activeTab === "facebook" && (
+                  <div
+                    role="group"
+                    aria-label="Parallel Tier One validation filters"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 12,
+                      marginLeft: "auto",
+                    }}
+                  >
+                    {([
+                      ["with", "Validated", "#18733b"],
+                      ["without", "Not validated", "#b42318"],
+                    ] as const).map(([value, label, color]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        title={label}
+                        aria-label={label}
+                        aria-pressed={facebookSourceFilter === value}
+                        onClick={() =>
+                          setFacebookSourceFilter((current) =>
+                            current === value ? "all" : value
+                          )
+                        }
                         style={{
-                          display: "inline-block",
-                          width: 11,
-                          height: 11,
+                          minHeight: 32,
+                          display: "inline-flex",
+                          gap: 7,
+                          padding: "4px 10px",
+                          fontSize: 13,
+                          whiteSpace: "nowrap",
+                          alignItems: "center",
+                          justifyContent: "center",
                           borderRadius: "50%",
-                          background: color,
+                          border: facebookSourceFilter === value
+                            ? `2px solid ${color}`
+                            : "2px solid transparent",
+                          background: facebookSourceFilter === value
+                            ? `${color}12`
+                            : "transparent",
+                          cursor: "pointer",
                         }}
-                      />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
+                      >
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: color,
+                            flexShrink: 0,
+                          }}
+                        />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {visibleFindings.length === 0 ? (
                 <p>No active {activeTab === "facebook"
