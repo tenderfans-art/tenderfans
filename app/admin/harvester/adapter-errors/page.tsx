@@ -220,111 +220,132 @@ export default function AdapterErrorsPage() {
                     const finding = group[0];
 
                     return (
-                    <article
-                      key={group.map((item) => item.id).sort().join(":")}
-                      style={{
-                        padding: 18,
-                        border: "1px solid rgba(20,35,45,.15)",
-                        borderRadius: 12,
-                      }}
-                    >
-                      <h2 style={{ marginTop: 0 }}>
-                        {finding.venue_name}
-                      </h2>
-
-                      <p>
-                        <strong>Adapter:</strong>{" "}
-                        {finding.source_type ?? "Unspecified"}
-                      </p>
-
-                      <p>
-                        <strong>Status:</strong>{" "}
-                        {finding.detector_status}
-                      </p>
-
-                      <p>
-                        <strong>Failure:</strong>{" "}
-                        {failureCategory(finding) === "access_restricted"
-                          ? "Source access restricted"
-                          : finding.error ?? "Evaluation interrupted"}
-                      </p>
-
-                      <p>
-                        <a
-                          href={finding.website_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      <details
+                        key={group.map((item) => item.id).sort().join(":")}
+                        style={{
+                          border: "1px solid rgba(20,35,45,.15)",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <summary
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            padding: "9px 14px",
+                            cursor: "pointer",
+                            listStyle: "none",
+                          }}
                         >
-                          Spot website
-                        </a>
-                      </p>
-
-                      <details>
-                        <summary>View error details</summary>
-
-                        <p style={{
-                          margin: "14px 0",
-                          fontWeight: 600,
-                        }}>
-                          {group.length} error{" "}
-                          {group.length === 1 ? "instance" : "instances"}
-                        </p>
-
-                        {group.map((item) => (
-                          <div
-                            key={item.id}
+                          <span
                             style={{
-                              padding: "12px 0",
-                              borderTop: "1px solid rgba(20,35,45,.12)",
+                              display: "flex",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                              gap: 10,
+                              minWidth: 0,
                             }}
                           >
-                            <p>
-                              <strong>Error:</strong>{" "}
-                              {item.error ?? "Evaluation interrupted"}
-                            </p>
+                            <strong>{finding.venue_name}</strong>
+                            <span style={{ opacity: 0.45 }}>|</span>
+                            <span>{finding.source_type ?? "Unspecified"}</span>
+                            <span style={{ opacity: 0.45 }}>|</span>
+                            <span>
+                              {failureCategory(finding) === "access_restricted"
+                                ? "Access restricted"
+                                : finding.error ?? "Evaluation interrupted"}
+                            </span>
+                          </span>
+                          <span
+                            aria-hidden="true"
+                            style={{ flexShrink: 0, fontSize: 14 }}
+                          >
+                            ▾
+                          </span>
+                        </summary>
 
-                            {item.source_url && (
-                              <p>
-                                <a
-                                  href={item.source_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Source URL
-                                </a>
-                              </p>
-                            )}
+                        <div
+                          style={{
+                            padding: "8px 14px 14px",
+                            borderTop: "1px solid rgba(20,35,45,.10)",
+                          }}
+                        >
+                          <p>
+                            <strong>Status:</strong>{" "}
+                            {finding.detector_status}
+                          </p>
 
-                            <button
-                              type="button"
-                              disabled={resolvingId !== null}
-                              onClick={() => void resolveFinding(item)}
-                              style={{ marginBottom: 12 }}
+                          <p>
+                            <a
+                              href={finding.website_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
-                              {resolvingId === item.id
-                                ? "Resolving..."
-                                : "Resolve this finding"}
-                            </button>
+                              Spot website
+                            </a>
+                          </p>
 
-                            <details>
-                              <summary>Technical details</summary>
-                              <pre style={{
-                                whiteSpace: "pre-wrap",
-                                overflowWrap: "anywhere",
-                              }}>
-                                {JSON.stringify({
-                                  finding_key: item.finding_key,
-                                  fetched_url: item.fetched_url,
-                                  evidence: item.evidence,
-                                  first_seen_at: item.first_seen_at,
-                                  last_seen_at: item.last_seen_at,
-                                }, null, 2)}
-                              </pre>
-                            </details>
-                          </div>
-                        ))}
+                          <p style={{ fontWeight: 600 }}>
+                            {group.length} error{" "}
+                            {group.length === 1 ? "instance" : "instances"}
+                          </p>
+
+                          {group.map((item) => (
+                            <div
+                              key={item.id}
+                              style={{
+                                padding: "10px 0",
+                                borderTop: "1px solid rgba(20,35,45,.12)",
+                              }}
+                            >
+                              <p>
+                                <strong>Error:</strong>{" "}
+                                {item.error ?? "Evaluation interrupted"}
+                              </p>
+
+                              {item.source_url && (
+                                <p>
+                                  <a
+                                    href={item.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Source URL
+                                  </a>
+                                </p>
+                              )}
+
+                              <button
+                                type="button"
+                                disabled={resolvingId !== null}
+                                onClick={() => void resolveFinding(item)}
+                              >
+                                {resolvingId === item.id
+                                  ? "Resolving..."
+                                  : "Resolve this finding"}
+                              </button>
+
+                              <details style={{ marginTop: 10 }}>
+                                <summary>Technical details</summary>
+                                <pre style={{
+                                  whiteSpace: "pre-wrap",
+                                  overflowWrap: "anywhere",
+                                }}>
+                                  {JSON.stringify({
+                                    finding_key: item.finding_key,
+                                    fetched_url: item.fetched_url,
+                                    evidence: item.evidence,
+                                    first_seen_at: item.first_seen_at,
+                                    last_seen_at: item.last_seen_at,
+                                  }, null, 2)}
+                                </pre>
+                              </details>
+                            </div>
+                          ))}
+                        </div>
                       </details>
-                    </article>
                     );
                   })}
                 </div>
