@@ -1223,6 +1223,18 @@ function parseLegacyEvents(
   );
 }
 
+export class SpotHopperSurfaceError extends Error {
+  constructor(
+    public readonly reason:
+      | "unsupported_surface"
+      | "access_failed",
+    message: string,
+  ) {
+    super(message);
+    this.name = "SpotHopperSurfaceError";
+  }
+}
+
 async function fetchHtml(
   url: string,
 ): Promise<string> {
@@ -1363,6 +1375,8 @@ export async function fetchSpotHopperEvents(
       sourceHtml,
     );
 
+  const candidateFailures: string[] = [];
+
   let eventUrl: string | null = null;
   let eventHtml: string | null = null;
 
@@ -1375,7 +1389,14 @@ export async function fetchSpotHopperEvents(
       try {
         html =
           await fetchHtml(candidate);
-      } catch {
+      } catch (error) {
+        candidateFailures.push(
+          `${candidate}: ${
+            error instanceof Error
+              ? error.message
+              : String(error)
+          }`,
+        );
         continue;
       }
     }
@@ -1391,7 +1412,17 @@ export async function fetchSpotHopperEvents(
   }
 
   if (!eventUrl || !eventHtml) {
-    throw new Error(
+    if (candidateFailures.length > 0) {
+      throw new SpotHopperSurfaceError(
+        "access_failed",
+        `SpotHopper event surface could not be verified; candidate fetch failures: ${
+          candidateFailures.join("; ")
+        }`,
+      );
+    }
+
+    throw new SpotHopperSurfaceError(
+      "unsupported_surface",
       "SpotHopper site exposed no recognizable event surface",
     );
   }

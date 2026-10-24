@@ -1,4 +1,8 @@
 import {
+  SpotHopperSurfaceError,
+} from "./spothopper-events";
+
+import {
   previewFirstPartySource,
   type FirstPartyEventPreview,
   type FirstPartySource,
@@ -66,6 +70,22 @@ export async function validateFirstPartySource(
       error: null,
     };
   } catch (error) {
+    if (
+      error instanceof SpotHopperSurfaceError &&
+      error.reason === "unsupported_surface"
+    ) {
+      return {
+        status: "rejected",
+        inventory: "unknown",
+        eventCount: 0,
+        events: [],
+        evidence: [
+          "SpotHopper platform detected without a recognized public event calendar",
+        ],
+        error: error.message,
+      };
+    }
+
     return {
       status: "validation_failed",
       inventory: "unknown",
