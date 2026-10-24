@@ -1140,14 +1140,9 @@ export async function GET(request: Request) {
         hasPersistedBrowserRequired =
           (browserRequiredFindings?.length ?? 0) > 0;
 
-        // Transport and browser-required findings are independent.
-        // A browser-required finding must not suppress a genuine
-        // technical transport failure for this website.
-        await recordAdapterError(
-          "transport",
-          detection.websiteUrl,
-          detection.error ?? "Website transport evaluation failed",
-        );
+        // Homepage transport failures belong to the transport or
+        // challenge discovery queues, not to Adapter Error.
+        // Actual event-source adapter failures are tracked separately.
 
         if (!hasPersistedBrowserRequired) {
           const { error: transportFindingError } = await supabase.rpc(
@@ -1175,15 +1170,13 @@ export async function GET(request: Request) {
         }
       }
 
-      if (
-        detection.status === "detected" ||
-        detection.status === "no_event_source"
-      ) {
-        await resolveAdapterError(
-          "transport",
-          detection.websiteUrl,
-        );
-      }
+      // Retire historical homepage transport Adapter Errors regardless
+      // of the current discovery outcome. A blocked or challenged
+      // homepage is not an event-source adapter failure.
+      await resolveAdapterError(
+        "transport",
+        detection.websiteUrl,
+      );
 
       if (detection.status === "detected") {
         detected += 1;
