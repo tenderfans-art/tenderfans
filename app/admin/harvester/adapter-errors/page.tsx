@@ -104,6 +104,14 @@ export default function AdapterErrorsPage() {
   const visibleFindings =
     activeTab === "facebook" ? facebookFindings : tierOneFindings;
 
+  const tierOneSpotCount = new Set(
+    tierOneFindings.map((finding) => finding.venue_id)
+  ).size;
+
+  const facebookSpotCount = new Set(
+    facebookFindings.map((finding) => finding.venue_id)
+  ).size;
+
   const failureCategory = (finding: Finding) => {
     const message = finding.error ?? "Evaluation interrupted";
 
@@ -181,8 +189,8 @@ export default function AdapterErrorsPage() {
                 }}
               >
                 {([
-                  ["tier_one", "Tier One", tierOneFindings.length],
-                  ["facebook", "Facebook", facebookFindings.length],
+                  ["tier_one", "Tier One", tierOneSpotCount],
+                  ["facebook", "Facebook", facebookSpotCount],
                 ] as const).map(([key, label, count]) => (
                   <button
                     key={key}
@@ -242,11 +250,6 @@ export default function AdapterErrorsPage() {
                       </p>
 
                       <p>
-                        <strong>Underlying findings:</strong>{" "}
-                        {group.length}
-                      </p>
-
-                      <p>
                         <a
                           href={finding.website_url}
                           target="_blank"
@@ -257,10 +260,15 @@ export default function AdapterErrorsPage() {
                       </p>
 
                       <details>
-                        <summary>
-                          View {group.length} individual{" "}
-                          {group.length === 1 ? "failure" : "failures"}
-                        </summary>
+                        <summary>View error details</summary>
+
+                        <p style={{
+                          margin: "14px 0",
+                          fontWeight: 600,
+                        }}>
+                          {group.length} error{" "}
+                          {group.length === 1 ? "instance" : "instances"}
+                        </p>
 
                         {group.map((item) => (
                           <div
