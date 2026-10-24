@@ -490,7 +490,23 @@ export async function ingestFirstPartySource(
    *
    * Keep the existing TanStack exclusion.
    */
+  /*
+   * Bounded ICS recurrence expansion is not an authoritative
+   * full-history inventory. Missing instances outside the expansion
+   * window must never count toward cancellation.
+   *
+   * This is a temporary safety guard until reconciliation accepts
+   * explicit scan coverage. Keep existing full-inventory behavior
+   * unchanged for other adapters.
+   */
+  const boundedIcsInventory = new Set([
+    "ics",
+    "google_calendar",
+    "squarespace_events",
+  ]).has(source.source_type);
+
   const completeSourceRun =
+    !boundedIcsInventory &&
     source.source_type !== "tanstack_seroval_events" &&
     allPreview.length > 0 &&
     options.title === undefined &&
