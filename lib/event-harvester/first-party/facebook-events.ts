@@ -687,6 +687,73 @@ async function fetchEventDetail(
   }
 }
 
+/*
+ * Convert a verified recurring series into independently dated events.
+ * Ordinary events retain their existing identity and metadata.
+ */
+function expandFacebookEventCandidates(
+  stub: FacebookEventStub,
+  event: FacebookEvent,
+): FacebookEvent[] {
+  const occurrences =
+    event.rawPayload.verifiedOccurrences as
+      | FacebookOccurrence[]
+      | undefined;
+
+  const verified = occurrences ?? [];
+
+  return verified.length > 0
+    ? verified.map((occurrence) => ({
+        ...event,
+        externalEventId:
+          `facebook:event:${stub.id}:${occurrence.id}`,
+        sourceUrl:
+          `https://www.facebook.com/events/${stub.id}/${occurrence.id}/`,
+        startsAt: unixSecondsToIso(occurrence.startTimestamp),
+        endsAt: occurrence.endTimestamp
+          ? unixSecondsToIso(occurrence.endTimestamp)
+          : null,
+        rawPayload: {
+          ...event.rawPayload,
+          parentEventId: stub.id,
+          occurrenceId: occurrence.id,
+          startTimestamp: occurrence.startTimestamp,
+          endTimestamp: occurrence.endTimestamp,
+        },
+      }))
+    : [event];
+}
+
+/*
+ * Preserve ongoing and upcoming events, exclude completed history,
+ * and deduplicate across the entire Facebook source scan.
+ */
+function appendEligibleFacebookEvents(
+  candidates: FacebookEvent[],
+  events: FacebookEvent[],
+  seenExternalIds: Set<string>,
+  now: number,
+): void {
+  for (const candidate of candidates) {
+    if (seenExternalIds.has(candidate.externalEventId)) continue;
+
+    const startsAt = Date.parse(candidate.startsAt);
+    const endsAt = candidate.endsAt
+      ? Date.parse(candidate.endsAt)
+      : null;
+
+    const isPast =
+      endsAt !== null && Number.isFinite(endsAt)
+        ? endsAt < now
+        : Number.isFinite(startsAt) && startsAt < now;
+
+    if (!isPast) {
+      seenExternalIds.add(candidate.externalEventId);
+      events.push(candidate);
+    }
+  }
+}
+
 export async function fetchFacebookEvents(
   sourceUrl: string,
 ): Promise<FacebookEvent[]> {
@@ -812,65 +879,15 @@ export async function fetchFacebookEvents(
       const event = await fetchEventDetail(page, stub);
       if (!event) continue;
 
-      const occurrences =
-        event.rawPayload.verifiedOccurrences as
-          | FacebookOccurrence[]
-          | undefined;
+      const candidates =
+        expandFacebookEventCandidates(stub, event);
 
-      /*
-       * Recurrence evidence is valid only when occurrence records
-       * identify this parent. A marker elsewhere in Facebook's
-       * document must not suppress an ordinary event.
-       */
-      const verified = occurrences ?? [];
-
-      const candidates: FacebookEvent[] =
-        verified.length > 0
-          ? verified.map((occurrence) => ({
-              ...event,
-              externalEventId:
-                `facebook:event:${stub.id}:${occurrence.id}`,
-              sourceUrl:
-                `https://www.facebook.com/events/${stub.id}/${occurrence.id}/`,
-              startsAt: unixSecondsToIso(
-                occurrence.startTimestamp,
-              ),
-              endsAt: occurrence.endTimestamp
-                ? unixSecondsToIso(occurrence.endTimestamp)
-                : null,
-              rawPayload: {
-                ...event.rawPayload,
-                parentEventId: stub.id,
-                occurrenceId: occurrence.id,
-                startTimestamp: occurrence.startTimestamp,
-                endTimestamp: occurrence.endTimestamp,
-              },
-            }))
-          : [event];
-
-      for (const candidate of candidates) {
-        if (seenExternalIds.has(candidate.externalEventId)) continue;
-
-        const startsAt = Date.parse(candidate.startsAt);
-        const endsAt = candidate.endsAt
-          ? Date.parse(candidate.endsAt)
-          : null;
-
-        /*
-         * Facebook Page event listings can expose years of historical
-         * events. Keep future events and events currently in progress,
-         * but do not bootstrap completed history.
-         */
-        const isPast =
-          endsAt !== null && Number.isFinite(endsAt)
-            ? endsAt < now
-            : Number.isFinite(startsAt) && startsAt < now;
-
-        if (!isPast) {
-          seenExternalIds.add(candidate.externalEventId);
-          events.push(candidate);
-        }
-      }
+      appendEligibleFacebookEvents(
+        candidates,
+        events,
+        seenExternalIds,
+        now,
+      );
     }
 
     return events;
