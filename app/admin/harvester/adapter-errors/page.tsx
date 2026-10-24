@@ -68,6 +68,8 @@ function adapterAbbreviation(sourceType: string): string {
 export default function AdapterErrorsPage() {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [tierOneSources, setTierOneSources] = useState<TierOneSource[]>([]);
+  const [facebookSourceFilter, setFacebookSourceFilter] =
+    useState<"all" | "with" | "without">("all");
   const [activeTab, setActiveTab] = useState<"tier_one" | "facebook">(
     "tier_one"
   );
@@ -164,7 +166,16 @@ export default function AdapterErrorsPage() {
   );
 
   const visibleFindings =
-    activeTab === "facebook" ? facebookFindings : tierOneFindings;
+    activeTab === "facebook"
+      ? facebookFindings.filter((finding) => {
+          const hasParallelValidation =
+            (tierOneBySpot.get(finding.venue_id)?.length ?? 0) > 0;
+
+          return facebookSourceFilter === "all" ||
+            (facebookSourceFilter === "with" && hasParallelValidation) ||
+            (facebookSourceFilter === "without" && !hasParallelValidation);
+        })
+      : tierOneFindings;
 
   const tierOneSpotCount = new Set(
     tierOneFindings.map((finding) => finding.venue_id)
@@ -272,6 +283,70 @@ export default function AdapterErrorsPage() {
                 ))}
               </div>
 
+              {activeTab === "facebook" && (
+                <div
+                  aria-label="Filter Facebook errors by parallel Tier One validation"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 14,
+                    marginBottom: 18,
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>
+                    Parallel Tier One:
+                  </span>
+
+                  {([
+                    ["with", "Validated", "#18733b"],
+                    ["without", "Not validated", "#b42318"],
+                  ] as const).map(([value, label, color]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={facebookSourceFilter === value}
+                      onClick={() =>
+                        setFacebookSourceFilter((current) =>
+                          current === value ? "all" : value
+                        )
+                      }
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 7,
+                        padding: "6px 10px",
+                        borderRadius: 20,
+                        border: facebookSourceFilter === value
+                          ? `2px solid ${color}`
+                          : "2px solid transparent",
+                        background: facebookSourceFilter === value
+                          ? `${color}12`
+                          : "transparent",
+                        color: "inherit",
+                        fontSize: 13,
+                        fontWeight: facebookSourceFilter === value
+                          ? 700
+                          : 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          display: "inline-block",
+                          width: 11,
+                          height: 11,
+                          borderRadius: "50%",
+                          background: color,
+                        }}
+                      />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {visibleFindings.length === 0 ? (
                 <p>No active {activeTab === "facebook"
                   ? "Facebook"
@@ -311,6 +386,24 @@ export default function AdapterErrorsPage() {
                             }}
                           >
                             <strong>{finding.venue_name}</strong>
+                            <span style={{ opacity: 0.45 }}>|</span>
+                            <span>{finding.source_type ?? "Unspecified"}</span>
+                            <span style={{ opacity: 0.45 }}>|</span>
+                            <span>
+                              {failureCategory(finding) === "access_restricted"
+                                ? "Access restricted"
+                                : finding.error ?? "Evaluation interrupted"}
+                            </span>
+                          </span>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 10,
+                              marginLeft: "auto",
+                              flexShrink: 0,
+                            }}
+                          >
                             {activeTab === "facebook" && (
                               <span
                                 aria-label="Validated Tier One sources"
@@ -365,20 +458,12 @@ export default function AdapterErrorsPage() {
                                 )}
                               </span>
                             )}
-                            <span style={{ opacity: 0.45 }}>|</span>
-                            <span>{finding.source_type ?? "Unspecified"}</span>
-                            <span style={{ opacity: 0.45 }}>|</span>
-                            <span>
-                              {failureCategory(finding) === "access_restricted"
-                                ? "Access restricted"
-                                : finding.error ?? "Evaluation interrupted"}
+                            <span
+                              aria-hidden="true"
+                              style={{ fontSize: 14 }}
+                            >
+                              ▾
                             </span>
-                          </span>
-                          <span
-                            aria-hidden="true"
-                            style={{ flexShrink: 0, fontSize: 14 }}
-                          >
-                            ▾
                           </span>
                         </summary>
 
