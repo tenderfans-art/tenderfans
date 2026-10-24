@@ -1,3 +1,4 @@
+import tzLookup from "tz-lookup";
 import { fetchEventbriteEventIdentity } from "./eventbrite-organizer";
 import { venueIdentityMatch } from "../venue-identity";
 
@@ -414,7 +415,36 @@ export async function ratifyDetectedSource(
         sourceType: detection.sourceType,
         sourceUrl: detection.url,
         externalSourceId: stableExternalSourceId(detection),
-        config: {},
+        config: (() => {
+          if (detection.sourceType !== "wordpress_category_events") {
+            return {};
+          }
+
+          const { latitude, longitude } = venue;
+
+          if (
+            typeof latitude !== "number" ||
+            !Number.isFinite(latitude) ||
+            latitude < -90 ||
+            latitude > 90 ||
+            typeof longitude !== "number" ||
+            !Number.isFinite(longitude) ||
+            longitude < -180 ||
+            longitude > 180
+          ) {
+            return {};
+          }
+
+          try {
+            const timezone = tzLookup(latitude, longitude);
+            new Intl.DateTimeFormat("en-US", {
+              timeZone: timezone,
+            });
+            return { timezone };
+          } catch {
+            return {};
+          }
+        })(),
       },
       evidence: [
         ...detection.evidence,

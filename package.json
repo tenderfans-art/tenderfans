@@ -22,12 +22,14 @@
     "react-dom": "^19.2.0",
     "resend": "^6.26.0",
     "twilio": "^6.1.1",
+    "tz-lookup": "^6.1.25",
     "undici": "^8.11.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/tz-lookup": "^6.1.2",
     "typescript": "^5.7.0"
   }
 }
