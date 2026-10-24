@@ -46,6 +46,14 @@ const tools = [
     status: "OPEN",
   },
   {
+    title: "Transport Errors",
+    countRpc: "admin_event_harvest_transport_findings",
+    description:
+      "Review Spots whose websites could not be accessed during discovery.",
+    href: "/admin/harvester/transport-errors",
+    status: "OPEN",
+  },
+  {
     title: "No Sources",
     countRpc: "admin_event_harvest_no_source_findings",
     description:
