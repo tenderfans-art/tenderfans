@@ -1237,8 +1237,15 @@ function inspectPage(
    * REST API is exposed. Require an explicit REST endpoint reference
    * before proposing the Tribe REST adapter.
    */
+  /*
+   * WordPress event detail pages may advertise a REST URL for one
+   * event (/events/12345). That is not evidence that the collection
+   * endpoint (/events) is available for harvesting.
+   *
+   * Only an explicit collection URL qualifies as Tribe REST evidence.
+   */
   const hasTribeRestEvidence =
-    /wp-json\/tribe\/events\/v1\/events/i.test(html);
+    /wp-json\/tribe\/events\/v1\/events(?=[?#"'<>\s]|$)/i.test(html);
   if (hasTribeRestEvidence) {
     let tribeUrl = pageUrl;
 
