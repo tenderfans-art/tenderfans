@@ -202,41 +202,6 @@ export async function resolveFirstPartyAttribution(
   }
 
   /*
-   * A previously approved Facebook place identity is reusable
-   * across occurrences and shared Facebook sources.
-   * Only an unambiguous approval qualifies. Never infer ownership
-   * from event title, geographic proximity, or suggested Spot.
-   */
-  if (event.sourceType === "facebook_events" &&
-      facebookPlace?.facebookPlaceId) {
-    const { data: approvedPlaceRows, error: approvedPlaceError } =
-      await supabase.rpc("resolved_facebook_place_venue", {
-        p_facebook_place_id: facebookPlace.facebookPlaceId,
-      });
-
-    if (approvedPlaceError) {
-      throw new Error(
-        `Could not resolve approved Facebook place: ${approvedPlaceError.message}`,
-      );
-    }
-
-    const approvedPlace = Array.isArray(approvedPlaceRows)
-      ? approvedPlaceRows[0]
-      : null;
-
-    if (approvedPlace?.venue_id) {
-      return {
-        status: "resolved",
-        venueId: approvedPlace.venue_id,
-        confidenceScore: 1,
-        rawVenueName: event.venueName ?? facebookPlace.name,
-        rawAddress: event.venueAddress ?? event.location ?? null,
-        method: "admin_resolved",
-      };
-    }
-  }
-
-  /*
    * Reuse a human-approved Facebook place attribution across
    * occurrences. A shared source is not itself Spot ownership.
    *
