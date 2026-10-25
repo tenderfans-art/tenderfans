@@ -713,6 +713,108 @@ async function fetchEventDetail(
 }
 
 /*
+ * Facebook's neighboring siblings are a small window, not the complete
+ * recurring series. Follow verified child occurrences forward to discover
+ * further real Facebook identities and timestamps.
+ *
+ * Never synthesize occurrence IDs or dates. A child must independently
+ * identify the same parent. Keep navigation bounded.
+ */
+async function discoverFacebookSeriesOccurrences(
+  page: Page,
+  parentId: string,
+  initial: FacebookOccurrence[],
+): Promise<FacebookOccurrence[]> {
+  if (initial.length === 0) return initial;
+
+  const occurrences = new Map<string, FacebookOccurrence>();
+  const conflicts = new Set<string>();
+  const visited = new Set<string>();
+
+  const horizon = Date.now() + 12 * 7 * 24 * 60 * 60 * 1000;
+  const maxChildVisits = 12;
+
+  function merge(items: FacebookOccurrence[]): void {
+    for (const item of items) {
+      if (item.parentId !== parentId || conflicts.has(item.id)) {
+        continue;
+      }
+
+      const existing = occurrences.get(item.id);
+
+      if (
+        existing &&
+        (existing.startTimestamp !== item.startTimestamp ||
+          existing.endTimestamp !== item.endTimestamp)
+      ) {
+        occurrences.delete(item.id);
+        conflicts.add(item.id);
+        continue;
+      }
+
+      occurrences.set(item.id, item);
+    }
+  }
+
+  merge(initial);
+
+  for (let visit = 0; visit < maxChildVisits; visit += 1) {
+    const next = [...occurrences.values()]
+      .filter((item) =>
+        !visited.has(item.id) &&
+        item.startTimestamp * 1000 >= Date.now() &&
+        item.startTimestamp * 1000 <= horizon
+      )
+      .sort((a, b) =>
+        b.startTimestamp - a.startTimestamp ||
+        b.id.localeCompare(a.id)
+      )[0];
+
+    if (!next) break;
+
+    visited.add(next.id);
+
+    const url =
+      `https://www.facebook.com/events/${parentId}/${next.id}/`;
+
+    let html: string;
+
+    try {
+      const response = await page.goto(url, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+
+      if (!response?.ok()) break;
+
+      await page.waitForTimeout(750);
+      html = await page.content();
+    } catch {
+      // Keep already verified occurrences if a child is unavailable.
+      break;
+    }
+
+    const discovered = extractFacebookOccurrences(html, parentId);
+    const before = occurrences.size;
+
+    merge(discovered);
+
+    /*
+     * The newest occurrence should expose a forward-moving sibling
+     * window. If it does not, further navigation cannot establish
+     * additional verified dates from this window.
+     */
+    if (occurrences.size <= before) break;
+  }
+
+  return [...occurrences.values()]
+    .sort((a, b) =>
+      a.startTimestamp - b.startTimestamp ||
+      a.id.localeCompare(b.id)
+    );
+}
+
+/*
  * Convert a verified recurring series into independently dated events.
  * Ordinary events retain their existing identity and metadata.
  */
@@ -925,6 +1027,18 @@ export async function fetchFacebookEvents(
     for (const stub of stubs) {
       const event = await fetchEventDetail(page, stub);
       if (!event) continue;
+
+      if (
+        event.rawPayload.hasRecurrenceMarker === true &&
+        Array.isArray(event.rawPayload.verifiedOccurrences)
+      ) {
+        event.rawPayload.verifiedOccurrences =
+          await discoverFacebookSeriesOccurrences(
+            page,
+            stub.id,
+            event.rawPayload.verifiedOccurrences as FacebookOccurrence[],
+          );
+      }
 
       const candidates =
         expandFacebookEventCandidates(stub, event);
