@@ -89,6 +89,34 @@ async function ingestEvent(
     };
   }
 
+  /*
+   * An existing administrator approval may now resolve another
+   * Facebook occurrence. Retire only that occurrence's pending
+   * attribution review. Never alter rejected reviews or the
+   * event's identity, start time, or publication status here.
+   */
+  if (
+    event.sourceType === "facebook_events" &&
+    attribution.method === "admin_resolved"
+  ) {
+    const { error: reviewUpdateError } = await supabase
+      .from("event_harvest_unresolved_venues")
+      .update({
+        status: "resolved",
+        resolved_venue_id: attribution.venueId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("source_id", event.sourceId)
+      .eq("external_event_id", event.externalEventId)
+      .eq("status", "pending");
+
+    if (reviewUpdateError) {
+      throw new Error(
+        `Could not retire resolved Facebook review: ${reviewUpdateError.message}`,
+      );
+    }
+  }
+
   const resolvedFingerprint = eventFingerprint({
     venueId: attribution.venueId,
     title: event.title,

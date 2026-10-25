@@ -202,6 +202,137 @@ export async function resolveFirstPartyAttribution(
   }
 
   /*
+   * A previously approved Facebook place identity is reusable
+   * across occurrences and shared Facebook sources.
+   * Only an unambiguous approval qualifies. Never infer ownership
+   * from event title, geographic proximity, or suggested Spot.
+   */
+  if (event.sourceType === "facebook_events" &&
+      facebookPlace?.facebookPlaceId) {
+    const { data: approvedPlaceRows, error: approvedPlaceError } =
+      await supabase.rpc("resolved_facebook_place_venue", {
+        p_facebook_place_id: facebookPlace.facebookPlaceId,
+      });
+
+    if (approvedPlaceError) {
+      throw new Error(
+        `Could not resolve approved Facebook place: ${approvedPlaceError.message}`,
+      );
+    }
+
+    const approvedPlace = Array.isArray(approvedPlaceRows)
+      ? approvedPlaceRows[0]
+      : null;
+
+    if (approvedPlace?.venue_id) {
+      return {
+        status: "resolved",
+        venueId: approvedPlace.venue_id,
+        confidenceScore: 1,
+        rawVenueName: event.venueName ?? facebookPlace.name,
+        rawAddress: event.venueAddress ?? event.location ?? null,
+        method: "admin_resolved",
+      };
+    }
+  }
+
+  /*
+   * Reuse a human-approved Facebook place attribution across
+   * occurrences. A shared source is not itself Spot ownership.
+   *
+   * Require a stable place ID, explicit prior approval, agreement
+   * among all approvals, and an active destination Spot.
+   */
+  if (event.sourceType === "facebook_events" &&
+      facebookPlace?.facebookPlaceId) {
+    const placeId = facebookPlace.facebookPlaceId;
+
+    const approvedRows: Array<{
+      source_id: string;
+      resolved_venue_id: string;
+    }> = [];
+
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await supabase
+        .from("event_harvest_unresolved_venues")
+        .select("source_id,resolved_venue_id")
+        .eq("status", "resolved")
+        .contains("evidence", { facebookPlaceId: placeId })
+        .range(offset, offset + 499);
+
+      if (error) {
+        throw new Error(
+          `Could not inspect approved Facebook places: ${error.message}`,
+        );
+      }
+
+      approvedRows.push(...(data ?? []));
+
+      if (!data || data.length < 500) break;
+    }
+
+    if (approvedRows.length) {
+      const sourceIds = [
+        ...new Set(approvedRows.map((row) => row.source_id)),
+      ];
+
+      const { data: sourceRows, error: sourceError } =
+        await supabase
+          .from("event_harvest_sources")
+          .select("id,source_type")
+          .in("id", sourceIds);
+
+      if (sourceError) {
+        throw new Error(
+          `Could not verify Facebook approval sources: ${sourceError.message}`,
+        );
+      }
+
+      const facebookSourceIds = new Set(
+        (sourceRows ?? [])
+          .filter((source) => source.source_type === "facebook_events")
+          .map((source) => source.id),
+      );
+
+      const approvedVenueIds = [
+        ...new Set(
+          approvedRows
+            .filter((row) => facebookSourceIds.has(row.source_id))
+            .map((row) => row.resolved_venue_id)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+
+      if (approvedVenueIds.length === 1) {
+        const { data: approvedVenue, error: venueError } =
+          await supabase
+            .from("venues")
+            .select("id")
+            .eq("id", approvedVenueIds[0])
+            .eq("status", "active")
+            .maybeSingle();
+
+        if (venueError) {
+          throw new Error(
+            `Could not verify approved Facebook Spot: ${venueError.message}`,
+          );
+        }
+
+        if (approvedVenue) {
+          return {
+            status: "resolved",
+            venueId: approvedVenue.id,
+            confidenceScore: 1,
+            rawVenueName: facebookPlace.name ?? event.venueName ?? null,
+            rawAddress: event.venueAddress ?? event.location ?? null,
+            method: "admin_resolved",
+          };
+        }
+      }
+    }
+  }
+
+  /*
    * No structured publisher venue identity means this adapter has
    * supplied no reason to override established source ownership.
    */
