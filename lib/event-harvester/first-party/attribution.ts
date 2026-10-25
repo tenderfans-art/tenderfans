@@ -201,6 +201,75 @@ export async function resolveFirstPartyAttribution(
     };
   }
 
+
+  /*
+   * Resolve Facebook publishing identity from explicit organizers,
+   * never from the event's physical coordinates or title.
+   */
+  if (event.sourceType === "facebook_events") {
+    const rawNames = event.rawPayload?.facebookOrganizerNames;
+
+    const names =
+      Array.isArray(rawNames) &&
+      rawNames.length > 0 &&
+      rawNames.every(
+        (name): name is string =>
+          typeof name === "string" && Boolean(name.trim()),
+      )
+        ? rawNames
+        : [];
+
+    if (names.length > 0) {
+      const { data: spots, error } = await supabase
+        .from("venues")
+        .select("id,name")
+        .eq("status", "active");
+
+      if (error) {
+        throw new Error(
+          `Could not load Facebook organizer Spots: ${error.message}`,
+        );
+      }
+
+      const identities = new Set(
+        names.map(normalizeVenueMatchText).filter(Boolean),
+      );
+
+      const matches = (spots ?? []).filter(
+        (spot) =>
+          identities.has(normalizeVenueMatchText(spot.name)),
+      );
+
+      if (matches.length === 1) {
+        return {
+          status: "resolved",
+          venueId: matches[0].id,
+          confidenceScore: 1,
+          rawVenueName: matches[0].name,
+          rawAddress: event.venueAddress ?? event.location ?? null,
+          method: "existing_spot",
+        };
+      }
+
+      if (matches.length > 1) {
+        return {
+          status: "unresolved",
+          rawVenueName: names.join(" and "),
+          rawAddress: event.venueAddress ?? event.location ?? null,
+          publisherEvidence: null,
+          suggestedVenueId: null,
+          confidenceScore: null,
+          evidence: {
+            reason: "facebook_multiple_matching_organizers",
+            organizerNames: names,
+            matchedVenueIds: matches.map((spot) => spot.id),
+            sourceType: event.sourceType,
+          },
+        };
+      }
+    }
+  }
+
   /*
    * Reuse a human-approved Facebook place attribution across
    * occurrences. A shared source is not itself Spot ownership.

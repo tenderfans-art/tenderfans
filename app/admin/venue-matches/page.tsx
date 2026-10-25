@@ -574,7 +574,24 @@ export default function AdminVenueMatchesPage() {
                           {item.event_title}
                         </strong>
                       )}
-                    </div>
+
+                      {item.starts_at && (
+                        <div style={{
+                          marginTop: "4px",
+                          fontSize: "0.75rem",
+                          opacity: 0.72,
+                        }}>
+                          {new Date(item.starts_at).toLocaleString(
+                            "en-US",
+                            {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                              timeZone: "America/New_York",
+                            },
+                          )}
+                        </div>
+                      )}
+</div>
 
                     <div
                       style={{

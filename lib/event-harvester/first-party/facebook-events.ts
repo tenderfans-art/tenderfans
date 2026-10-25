@@ -592,6 +592,29 @@ function extractDescription(
     }
   }
 }
+
+/*
+ * Extract Facebook's displayed organizer names separately from the
+ * physical event place. This is evidence, not automatic ownership.
+ */
+function extractFacebookOrganizerNames(text: string): string[] {
+  const lines = text.split(/\r?\n/).map((line) => line.trim());
+  const candidates = lines
+    .filter((line) => /^Event by\s+/i.test(line))
+    .map((line) => line.replace(/^Event by\s+/i, "").trim());
+
+  if (new Set(candidates).size !== 1) return [];
+
+  const value = candidates[0] ?? "";
+  if (!value || value.length > 250) return [];
+
+  return [...new Set(
+    value.split(/\s+and\s+/i)
+      .map((name) => name.trim())
+      .filter(Boolean),
+  )];
+}
+
 async function fetchEventDetail(
   page: Page,
   stub: FacebookEventStub,
@@ -610,7 +633,8 @@ async function fetchEventDetail(
 
     await page.waitForTimeout(3000);
 
-    const text = (await pageText(page)).replace(/\s+/g, " ").trim();
+    const visibleText = await pageText(page);
+    const text = visibleText.replace(/\s+/g, " ").trim();
     const html = await page.content();
 
     if (/log in to view this 18\+ content/i.test(text)) {
@@ -676,6 +700,7 @@ async function fetchEventDetail(
         startTimestamp,
         endTimestamp: endTimestamp ?? 0,
         eventPlace,
+        facebookOrganizerNames: extractFacebookOrganizerNames(visibleText),
         renderedText: text.slice(0, 5000),
         verifiedOccurrences,
         hasRecurrenceMarker:
