@@ -44,7 +44,13 @@ const compiled = ts.transpileModule(code, {
   },
 }).outputText;
 
-const context = {};
+const context = {
+  Date: class extends Date {
+    static now() {
+      return Date.parse("2030-01-01T12:00:00Z");
+    }
+  },
+};
 vm.runInNewContext(compiled, context);
 
 const { expand, append } = context;
@@ -92,52 +98,23 @@ function event(occurrences = undefined) {
   };
 }
 
-test("expands recurring events with unique IDs and dates", () => {
+test("publishes only the next eligible recurring occurrence", () => {
   const occurrences = [
-    occurrence(
-      "111",
-      "2030-01-02T18:00:00Z",
-      "2030-01-02T20:00:00Z",
-    ),
-    occurrence(
-      "222",
-      "2030-01-09T18:00:00Z",
-      "2030-01-09T20:00:00Z",
-    ),
-    occurrence(
-      "333",
-      "2030-01-16T18:00:00Z",
-      "2030-01-16T20:00:00Z",
-    ),
+    occurrence("111", "2030-01-02T18:00:00Z"),
+    occurrence("222", "2030-01-09T18:00:00Z"),
+    occurrence("333", "2030-01-16T18:00:00Z"),
   ];
 
   const candidates = expand(stub, event(occurrences));
 
-  assert.equal(candidates.length, 3);
-
-  assert.deepEqual(
-    Array.from(candidates, (item) => item.externalEventId),
-    [
-      `facebook:event:${parentId}:111`,
-      `facebook:event:${parentId}:222`,
-      `facebook:event:${parentId}:333`,
-    ],
-  );
-
-  assert.deepEqual(
-    Array.from(candidates, (item) => item.startsAt),
-    [
-      "2030-01-02T18:00:00.000Z",
-      "2030-01-09T18:00:00.000Z",
-      "2030-01-16T18:00:00.000Z",
-    ],
-  );
-
-  assert.equal(candidates[1].rawPayload.occurrenceId, "222");
-  assert.equal(candidates[1].rawPayload.parentEventId, parentId);
+  assert.equal(candidates.length, 1);
   assert.equal(
-    candidates[1].sourceUrl,
-    `https://www.facebook.com/events/${parentId}/222/`,
+    candidates[0].externalEventId,
+    `facebook:event:${parentId}:111`,
+  );
+  assert.equal(
+    candidates[0].startsAt,
+    "2030-01-02T18:00:00.000Z",
   );
 });
 
@@ -195,7 +172,7 @@ test("keeps future and ongoing events, excludes completed history", () => {
 
   assert.deepEqual(
     Array.from(events, (item) => item.rawPayload.occurrenceId),
-    ["222", "333"],
+    ["222"],
   );
 });
 

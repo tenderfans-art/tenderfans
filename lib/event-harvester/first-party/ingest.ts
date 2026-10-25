@@ -533,8 +533,14 @@ export async function ingestFirstPartySource(
     "squarespace_events",
   ]).has(source.source_type);
 
+  /*
+   * Facebook's recurring-event inventory is not complete while
+   * occurrence expansion is bounded. Missing sibling occurrences
+   * must not be interpreted as cancellations.
+   */
   const completeSourceRun =
     !boundedIcsInventory &&
+    source.source_type !== "facebook_events" &&
     source.source_type !== "tanstack_seroval_events" &&
     allPreview.length > 0 &&
     options.title === undefined &&
