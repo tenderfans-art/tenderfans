@@ -716,37 +716,59 @@ async function fetchEventDetail(
  * Convert a verified recurring series into independently dated events.
  * Ordinary events retain their existing identity and metadata.
  */
+/*
+ * Preserve independently verified Facebook occurrences with stable
+ * parent/occurrence identities. Distinct dates remain distinct events.
+ * Repeated occurrence identities are emitted only once per expansion.
+ */
 function expandFacebookEventCandidates(
   stub: FacebookEventStub,
   event: FacebookEvent,
 ): FacebookEvent[] {
-  const occurrences =
-    event.rawPayload.verifiedOccurrences as
-      | FacebookOccurrence[]
-      | undefined;
+  const raw = event.rawPayload.verifiedOccurrences;
+  const occurrences = Array.isArray(raw)
+    ? raw as FacebookOccurrence[]
+    : [];
 
-  const verified = occurrences ?? [];
+  if (occurrences.length === 0) {
+    return [event];
+  }
 
-  return verified.length > 0
-    ? verified.map((occurrence) => ({
-        ...event,
-        externalEventId:
-          `facebook:event:${stub.id}:${occurrence.id}`,
-        sourceUrl:
-          `https://www.facebook.com/events/${stub.id}/${occurrence.id}/`,
-        startsAt: unixSecondsToIso(occurrence.startTimestamp),
-        endsAt: occurrence.endTimestamp
-          ? unixSecondsToIso(occurrence.endTimestamp)
-          : null,
-        rawPayload: {
-          ...event.rawPayload,
-          parentEventId: stub.id,
-          occurrenceId: occurrence.id,
-          startTimestamp: occurrence.startTimestamp,
-          endTimestamp: occurrence.endTimestamp,
-        },
-      }))
-    : [event];
+  const now = Date.now();
+  const seen = new Set<string>();
+
+  return occurrences
+    .filter((occurrence) => {
+      const end = occurrence.endTimestamp;
+      return (end ?? occurrence.startTimestamp) * 1000 >= now;
+    })
+    .sort((a, b) =>
+      a.startTimestamp - b.startTimestamp ||
+      a.id.localeCompare(b.id),
+    )
+    .filter((occurrence) => {
+      if (seen.has(occurrence.id)) return false;
+      seen.add(occurrence.id);
+      return true;
+    })
+    .map((occurrence) => ({
+      ...event,
+      externalEventId:
+        `facebook:event:${stub.id}:${occurrence.id}`,
+      sourceUrl:
+        `https://www.facebook.com/events/${stub.id}/${occurrence.id}/`,
+      startsAt: unixSecondsToIso(occurrence.startTimestamp),
+      endsAt: occurrence.endTimestamp
+        ? unixSecondsToIso(occurrence.endTimestamp)
+        : null,
+      rawPayload: {
+        ...event.rawPayload,
+        parentEventId: stub.id,
+        occurrenceId: occurrence.id,
+        startTimestamp: occurrence.startTimestamp,
+        endTimestamp: occurrence.endTimestamp,
+      },
+    }));
 }
 
 /*

@@ -98,23 +98,22 @@ function event(occurrences = undefined) {
   };
 }
 
-test("publishes only the next eligible recurring occurrence", () => {
+test("preserves all distinct eligible recurring occurrences", () => {
   const occurrences = [
+    occurrence("333", "2030-01-16T18:00:00Z"),
     occurrence("111", "2030-01-02T18:00:00Z"),
     occurrence("222", "2030-01-09T18:00:00Z"),
-    occurrence("333", "2030-01-16T18:00:00Z"),
   ];
 
   const candidates = expand(stub, event(occurrences));
 
-  assert.equal(candidates.length, 1);
-  assert.equal(
-    candidates[0].externalEventId,
-    `facebook:event:${parentId}:111`,
-  );
-  assert.equal(
-    candidates[0].startsAt,
-    "2030-01-02T18:00:00.000Z",
+  assert.deepEqual(
+    Array.from(candidates, (item) => item.externalEventId),
+    [
+      `facebook:event:${parentId}:111`,
+      `facebook:event:${parentId}:222`,
+      `facebook:event:${parentId}:333`,
+    ],
   );
 });
 
@@ -172,7 +171,7 @@ test("keeps future and ongoing events, excludes completed history", () => {
 
   assert.deepEqual(
     Array.from(events, (item) => item.rawPayload.occurrenceId),
-    ["222"],
+    ["222", "333"],
   );
 });
 
@@ -206,4 +205,20 @@ test("deduplicates events across repeated source records", () => {
 
   assert.equal(events.length, 1);
   assert.equal(seen.size, 1);
+});
+
+test("deduplicates repeated verified occurrence identities", () => {
+  const candidates = expand(
+    stub,
+    event([
+      occurrence("111", "2030-01-02T18:00:00Z"),
+      occurrence("111", "2030-01-02T18:00:00Z"),
+      occurrence("222", "2030-01-09T18:00:00Z"),
+    ]),
+  );
+
+  assert.deepEqual(
+    Array.from(candidates, (item) => item.rawPayload.occurrenceId),
+    ["111", "222"],
+  );
 });
