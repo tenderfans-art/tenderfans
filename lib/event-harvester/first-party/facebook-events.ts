@@ -598,18 +598,44 @@ function extractDescription(
  * physical event place. This is evidence, not automatic ownership.
  */
 function extractFacebookOrganizerNames(text: string): string[] {
-  const lines = text.split(/\r?\n/).map((line) => line.trim());
-  const candidates = lines
-    .filter((line) => /^Event by\s+/i.test(line))
-    .map((line) => line.replace(/^Event by\s+/i, "").trim());
+  /*
+   * Facebook's rendered event text may be flattened into one line.
+   * Read only explicitly labeled organizer fields, never the event
+   * title, description, physical location, or source page name.
+   */
+  const normalized = text.replace(/\s+/g, " ").trim();
+  const candidates: string[] = [];
 
-  if (new Set(candidates).size !== 1) return [];
+  const eventBy = normalized.match(
+    /\bEvent by\s+(.+?)(?=\s+\d{1,6}\s+[A-Za-z][\w.'-]*(?:\s|,)|\s+(?:Free|Tickets|Public|Host|Suggested events)\b|$)/i,
+  );
 
-  const value = candidates[0] ?? "";
-  if (!value || value.length > 250) return [];
+  if (eventBy?.[1]) {
+    candidates.push(eventBy[1].trim());
+  }
+
+  const host = normalized.match(
+    /\bHost\s+(.+?)(?=\s+Suggested events\b|$)/i,
+  );
+
+  if (host?.[1]) {
+    candidates.push(host[1].trim());
+  }
+
+  /*
+   * Conflicting explicit labels are not safe to auto-attribute.
+   * A single verified organizer can contain multiple names joined
+   * by "and"; the downstream matcher still requires a unique Spot.
+   */
+  const unique = [...new Set(candidates.filter(Boolean))];
+
+  if (unique.length !== 1 || unique[0].length > 250) {
+    return [];
+  }
 
   return [...new Set(
-    value.split(/\s+and\s+/i)
+    unique[0]
+      .split(/\s+and\s+/i)
       .map((name) => name.trim())
       .filter(Boolean),
   )];
