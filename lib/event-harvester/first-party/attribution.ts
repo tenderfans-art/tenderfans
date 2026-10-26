@@ -112,6 +112,69 @@ function publisherEvidence(
   const name = event.venueName?.trim() ?? "";
   const address = event.venueAddress?.trim() ?? "";
 
+  /*
+   * Schema.org provides structured PostalAddress fields.
+   * Preserve those fields directly instead of reconstructing
+   * them from the adapter's flattened display address.
+   *
+   * This is generic to schema.org Events, not to any Spot.
+   * The normal venue identity matcher still determines whether
+   * the resulting evidence is sufficient for auto-attribution.
+   */
+  if (event.sourceType === "schema_org_events") {
+    const rawLocation = event.rawPayload?.location;
+
+    const location =
+      rawLocation &&
+      typeof rawLocation === "object" &&
+      !Array.isArray(rawLocation)
+        ? rawLocation as Record<string, unknown>
+        : null;
+
+    const rawAddress = location?.address;
+
+    const structuredAddress =
+      rawAddress &&
+      typeof rawAddress === "object" &&
+      !Array.isArray(rawAddress)
+        ? rawAddress as Record<string, unknown>
+        : null;
+
+    const field = (key: string): string | null => {
+      const value = structuredAddress?.[key];
+      return typeof value === "string" && value.trim()
+        ? value.trim()
+        : null;
+    };
+
+    const streetAddress = field("streetAddress");
+    const city = field("addressLocality");
+    const stateRegion = field("addressRegion");
+    const postalCode = field("postalCode");
+
+    if (
+      streetAddress &&
+      city &&
+      stateRegion &&
+      /^[A-Za-z]{2}$/.test(stateRegion) &&
+      postalCode &&
+      /^\\d{5}(?:-\\d{4})?$/.test(postalCode)
+    ) {
+      return {
+        name:
+          name ||
+          (typeof location?.name === "string"
+            ? location.name.trim()
+            : "") ||
+          streetAddress,
+        streetAddress,
+        city,
+        stateRegion,
+        postalCode,
+      };
+    }
+  }
+
   if (!address) {
     return null;
   }
