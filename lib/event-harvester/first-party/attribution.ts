@@ -231,14 +231,109 @@ export async function resolveFirstPartyAttribution(
         );
       }
 
-      const identities = new Set(
-        names.map(normalizeVenueMatchText).filter(Boolean),
-      );
+      /*
+       * Facebook flattens multiple organizers into combined text.
+       * Match complete Spot names at word boundaries, not only
+       * entire organizer-field equality.
+       *
+       * A longer Facebook business name may also identify a Spot
+       * with a shorter registered name, but only when coordinates
+       * independently agree. Never use proximity alone.
+       */
+      const fields = names
+        .map(normalizeVenueMatchText)
+        .filter(Boolean);
 
-      const matches = (spots ?? []).filter(
-        (spot) =>
-          identities.has(normalizeVenueMatchText(spot.name)),
-      );
+      const containsCompleteName = (
+        field: string,
+        name: string,
+      ): boolean => {
+        if (!name) return false;
+
+        let offset = field.indexOf(name);
+
+        while (offset !== -1) {
+          const before = offset === 0 ? "" : field[offset - 1];
+          const after = field[offset + name.length] ?? "";
+
+          if (
+            (!before || !/[a-z0-9]/i.test(before)) &&
+            (!after || !/[a-z0-9]/i.test(after))
+          ) {
+            return true;
+          }
+
+          offset = field.indexOf(name, offset + 1);
+        }
+
+        return false;
+      };
+
+      const exactMatches = (spots ?? []).filter((spot) => {
+        const identity = normalizeVenueMatchText(spot.name);
+
+        return fields.some((field) =>
+          containsCompleteName(field, identity)
+        );
+      });
+
+      let matches = exactMatches;
+
+      if (matches.length === 0 && facebookPlace) {
+        const nearbyCandidates = (spots ?? []).filter((spot) =>
+          fields.some((field) => {
+            const identity = normalizeVenueMatchText(spot.name);
+
+            if (!identity) return false;
+
+            /*
+             * Require the registered Spot name followed by
+             * additional words in the Facebook organizer text.
+             */
+            return (
+              field.includes(`${identity} `) &&
+              containsCompleteName(field, identity)
+            );
+          })
+        );
+
+        if (nearbyCandidates.length > 0) {
+          const { data: located, error: locationError } =
+            await supabase
+              .from("venues")
+              .select("id,latitude,longitude")
+              .in(
+                "id",
+                nearbyCandidates.map((spot) => spot.id),
+              );
+
+          if (locationError) {
+            throw new Error(
+              `Could not verify Facebook organizer coordinates: ${locationError.message}`,
+            );
+          }
+
+          const locatedIds = new Set(
+            (located ?? [])
+              .filter((spot) =>
+                typeof spot.latitude === "number" &&
+                typeof spot.longitude === "number" &&
+                distanceMiles(
+                  facebookPlace.latitude,
+                  facebookPlace.longitude,
+                  spot.latitude,
+                  spot.longitude,
+                ) <= 0.25
+              )
+              .map((spot) => spot.id),
+          );
+
+          matches = nearbyCandidates.filter((spot) =>
+            locatedIds.has(spot.id)
+          );
+        }
+      }
+
 
       if (matches.length === 1) {
         return {
