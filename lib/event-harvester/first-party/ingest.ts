@@ -430,12 +430,43 @@ export async function ingestFirstPartySource(
    * Preserve the complete inventory for source diagnostics, but do
    * not persist broadcast-only listings as TenderFans events.
    */
-  const eligiblePreview =
-    source.source_type === "tanstack_seroval_events"
-      ? allPreview.filter(
-          (event) => classifyEventEligibility(event).eligible,
-        )
-      : allPreview;
+  /*
+   * Do not ingest completed historical occurrences.
+   *
+   * An explicit valid end time is authoritative; otherwise use
+   * the start time. This prevents expired events from generating
+   * new attribution, candidate, or Event Review writes.
+   *
+   * Preserve the full source inventory for diagnostics and
+   * absence reconciliation.
+   */
+  const eligibilityNow = Date.now();
+
+  const eligiblePreview = allPreview.filter((event) => {
+    if (
+      source.source_type === "tanstack_seroval_events" &&
+      !classifyEventEligibility(event).eligible
+    ) {
+      return false;
+    }
+
+    const startsAt = Date.parse(event.startsAt);
+
+    if (!Number.isFinite(startsAt)) {
+      return true;
+    }
+
+    const endsAt = event.endsAt
+      ? Date.parse(event.endsAt)
+      : NaN;
+
+    const completionTime =
+      Number.isFinite(endsAt) && endsAt > startsAt
+        ? endsAt
+        : startsAt;
+
+    return completionTime >= eligibilityNow;
+  });
 
   const selectedPreview = options.title
     ? eligiblePreview.filter(

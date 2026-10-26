@@ -205,12 +205,47 @@ export default function AdminVenueMatchesPage() {
         (match) => match.provider !== "website_redirect"
       )
     );
-    setUnresolved(unresolvedRows);
+    /*
+     * Expired event reviews remain preserved in the database,
+     * but should not demand administrator action.
+     *
+     * For a valid end timestamp, use the actual completion time.
+     * Otherwise, use the event start timestamp.
+     */
+    const reviewNow = Date.now();
+
+    const stillActive = (
+      startsAt: string | null,
+      endsAt?: string | null,
+    ) => {
+      if (!startsAt) return true;
+
+      const start = Date.parse(startsAt);
+      if (!Number.isFinite(start)) return true;
+
+      const end = endsAt ? Date.parse(endsAt) : NaN;
+      const completion =
+        Number.isFinite(end) && end > start ? end : start;
+
+      return completion >= reviewNow;
+    };
+
+    setUnresolved(
+      unresolvedRows.filter((item) =>
+        stillActive(item.starts_at),
+      ),
+    );
     setCalendarEvents(
-      (calendarResult.data as CalendarEventVerification[]) || [],
+      ((calendarResult.data as CalendarEventVerification[]) || [])
+        .filter((item) =>
+          stillActive(item.starts_at, item.ends_at),
+        ),
     );
     setOccurrenceReviews(
-      (occurrenceResult.data as EventOccurrenceReview[]) || [],
+      ((occurrenceResult.data as EventOccurrenceReview[]) || [])
+        .filter((item) =>
+          stillActive(item.starts_at, item.ends_at),
+        ),
     );
     setSpots(
       ((spotsResult.data as Spot[]) || []).filter(
