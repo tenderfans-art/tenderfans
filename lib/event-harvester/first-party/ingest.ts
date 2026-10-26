@@ -96,7 +96,8 @@ async function ingestEvent(
    * event's identity, start time, or publication status here.
    */
   if (
-    event.sourceType === "facebook_events"
+    event.sourceType === "facebook_events" &&
+    attribution.method === "admin_resolved"
   ) {
     const { error: reviewUpdateError } = await supabase
       .from("event_harvest_unresolved_venues")
