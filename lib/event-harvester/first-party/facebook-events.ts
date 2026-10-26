@@ -599,46 +599,30 @@ function extractDescription(
  */
 function extractFacebookOrganizerNames(text: string): string[] {
   /*
-   * Facebook's rendered event text may be flattened into one line.
-   * Read only explicitly labeled organizer fields, never the event
-   * title, description, physical location, or source page name.
+   * Preserve explicitly labeled Facebook organizer text.
+   *
+   * Rendered Facebook pages can concatenate multiple organizer
+   * links without delimiters. Business names can also contain
+   * commas and "and". Neither is a safe name separator.
+   *
+   * Matching against registered Spot identities happens later.
    */
   const normalized = text.replace(/\s+/g, " ").trim();
-  const candidates: string[] = [];
 
   const eventBy = normalized.match(
-    /\bEvent by\s+(.+?)(?=\s+\d{1,6}\s+[A-Za-z][\w.'-]*(?:\s|,)|\s+(?:Free|Tickets|Public|Host|Suggested events)\b|$)/i,
+    /\bEvent by\s+(.+?)(?=\s+(?:Public|Private)\s*[·•]|\s+Suggested events\b|$)/i,
   );
 
-  if (eventBy?.[1]) {
-    candidates.push(eventBy[1].trim());
-  }
-
-  const host = normalized.match(
-    /\bHost\s+(.+?)(?=\s+Suggested events\b|$)/i,
+  const hosts = normalized.match(
+    /\bHosts?\s+(.+?)(?=\s+Suggested events\b|$)/i,
   );
 
-  if (host?.[1]) {
-    candidates.push(host[1].trim());
-  }
+  const fields = [eventBy?.[1], hosts?.[1]]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .map((value) => value.trim())
+    .filter((value) => value.length <= 500);
 
-  /*
-   * Conflicting explicit labels are not safe to auto-attribute.
-   * A single verified organizer can contain multiple names joined
-   * by "and"; the downstream matcher still requires a unique Spot.
-   */
-  const unique = [...new Set(candidates.filter(Boolean))];
-
-  if (unique.length !== 1 || unique[0].length > 250) {
-    return [];
-  }
-
-  return [...new Set(
-    unique[0]
-      .split(/\s+and\s+/i)
-      .map((name) => name.trim())
-      .filter(Boolean),
-  )];
+  return [...new Set(fields)];
 }
 
 async function fetchEventDetail(

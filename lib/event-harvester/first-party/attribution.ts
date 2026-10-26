@@ -210,13 +210,12 @@ export async function resolveFirstPartyAttribution(
     const rawNames = event.rawPayload?.facebookOrganizerNames;
 
     const names =
-      Array.isArray(rawNames) &&
-      rawNames.length > 0 &&
-      rawNames.every(
-        (name): name is string =>
-          typeof name === "string" && Boolean(name.trim()),
-      )
-        ? rawNames
+      Array.isArray(rawNames)
+        ? rawNames.filter(
+            (name): name is string =>
+              typeof name === "string" &&
+              Boolean(name.trim()),
+          )
         : [];
 
     if (names.length > 0) {
@@ -231,14 +230,115 @@ export async function resolveFirstPartyAttribution(
         );
       }
 
-      const identities = new Set(
-        names.map(normalizeVenueMatchText).filter(Boolean),
-      );
+      /*
+       * Match complete registered Spot names against explicitly
+       * labeled organizer fields.
+       *
+       * Facebook may flatten adjacent organizer links together.
+       * Never split names on "and", commas, or arbitrary spaces.
+       * Require name boundaries and preserve ambiguity.
+       */
+      const fields = names
+        .map(normalizeVenueMatchText)
+        .filter(Boolean);
 
-      const matches = (spots ?? []).filter(
-        (spot) =>
-          identities.has(normalizeVenueMatchText(spot.name)),
-      );
+      const matches = (spots ?? []).filter((spot) => {
+        const identity = normalizeVenueMatchText(spot.name);
+
+        if (!identity) return false;
+
+        return fields.some((field) => {
+          let offset = field.indexOf(identity);
+
+          while (offset !== -1) {
+            const before = offset === 0
+              ? ""
+              : field[offset - 1];
+
+            const afterIndex = offset + identity.length;
+            const after = afterIndex >= field.length
+              ? ""
+              : field[afterIndex];
+
+            const leftBoundary =
+              !before || !/[a-z0-9]/i.test(before);
+
+            const rightBoundary =
+              !after || !/[a-z0-9]/i.test(after);
+
+            if (leftBoundary && rightBoundary) {
+              return true;
+            }
+
+            offset = field.indexOf(identity, offset + 1);
+          }
+
+          return false;
+        });
+      });
+
+      /*
+       * A different explicitly named Facebook place may be a
+       * separate publishing Spot. Preserve that identity for
+       * discovery rather than assigning sole ownership to a
+       * different registered co-host.
+       */
+      const placeName = facebookPlace?.name?.trim() ?? "";
+      const normalizedPlace = normalizeVenueMatchText(placeName);
+      const placeNamedAsOrganizer =
+        normalizedPlace !== "" &&
+        fields.some((field) => {
+          const paddedField = ` ${field} `;
+          return paddedField.includes(` ${normalizedPlace} `);
+        });
+
+      const distinctNamedPlace =
+        placeNamedAsOrganizer &&
+        !/^\\d/.test(placeName) &&
+        matches.length === 1 &&
+        normalizeVenueMatchText(matches[0].name) !== normalizedPlace;
+
+      if (distinctNamedPlace) {
+        const placeIdentity: VenueIdentity = {
+          name: placeName,
+          streetAddress: null,
+          city: null,
+          stateRegion: null,
+          postalCode: null,
+        };
+
+        const google = await searchGoogleVenue(
+          placeIdentity,
+          { allowReviewCandidate: true },
+        );
+
+        let discoveryStatus: string | null = null;
+
+        if (google) {
+          discoveryStatus = await recordGoogleSpotDiscovery(
+            supabase,
+            google,
+          );
+        }
+
+        return {
+          status: "unresolved",
+          rawVenueName: placeName,
+          rawAddress: event.venueAddress ?? event.location ?? null,
+          publisherEvidence: placeIdentity,
+          suggestedVenueId: null,
+          confidenceScore: google?.score ?? null,
+          evidence: {
+            reason: "facebook_distinct_organizer_place_requires_review",
+            organizerNames: names,
+            matchedVenueIds: matches.map((spot) => spot.id),
+            facebookPlaceId: facebookPlace?.facebookPlaceId ?? null,
+            googlePlaceId: google?.place.id ?? null,
+            googleDiscoveryStatus: discoveryStatus,
+            sourceType: event.sourceType,
+          },
+        };
+      }
 
       if (matches.length === 1) {
         return {
@@ -254,7 +354,7 @@ export async function resolveFirstPartyAttribution(
       if (matches.length > 1) {
         return {
           status: "unresolved",
-          rawVenueName: names.join(" and "),
+          rawVenueName: event.venueName ?? null,
           rawAddress: event.venueAddress ?? event.location ?? null,
           publisherEvidence: null,
           suggestedVenueId: null,
@@ -423,11 +523,13 @@ export async function resolveFirstPartyAttribution(
 
       const best = nearby[0];
 
-      const matched = nearby.find(
+      const namedPlaceMatch = nearby.find(
         (candidate: any) =>
           candidate.miles <= 0.25 &&
           candidate.nameMatch,
       );
+
+      const matched = namedPlaceMatch;
 
       if (matched) {
         return {
@@ -440,6 +542,46 @@ export async function resolveFirstPartyAttribution(
             event.location?.trim() ||
             null,
           method: "existing_spot",
+        };
+      }
+
+      const placeName = facebookPlace.name?.trim() ?? "";
+      const isNamedBusiness =
+        Boolean(placeName) &&
+        !/^\\d/.test(placeName);
+
+      if (isNamedBusiness) {
+        const placeIdentity: VenueIdentity = {
+          name: placeName,
+          streetAddress: null,
+          city: null,
+          stateRegion: null,
+          postalCode: null,
+        };
+
+        const google = await searchGoogleVenue(
+          placeIdentity,
+          { allowReviewCandidate: true },
+        );
+
+        const discoveryStatus = google
+          ? await recordGoogleSpotDiscovery(supabase, google)
+          : null;
+
+        return {
+          status: "unresolved",
+          rawVenueName: placeName,
+          rawAddress: event.venueAddress ?? event.location ?? null,
+          publisherEvidence: placeIdentity,
+          suggestedVenueId: null,
+          confidenceScore: google?.score ?? null,
+          evidence: {
+            reason: "facebook_named_place_requires_identity_review",
+            sourceType: event.sourceType,
+            facebookPlaceId: facebookPlace.facebookPlaceId,
+            googlePlaceId: google?.place.id ?? null,
+            googleDiscoveryStatus: discoveryStatus,
+          },
         };
       }
 

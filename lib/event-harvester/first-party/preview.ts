@@ -49,6 +49,7 @@ export type FirstPartySource = {
 export type FirstPartyEventPreview = {
   sourceId: string;
   sourceType: string;
+  sourceName: string;
   venueId: string | null;
   allowSourceDefaultAttribution: boolean;
   externalEventId: string;
@@ -349,6 +350,7 @@ export async function previewFirstPartySource(
   return events.map((event) => ({
     sourceId: source.id,
     sourceType: source.source_type,
+    sourceName: source.name,
     venueId: source.venue_id,
     allowSourceDefaultAttribution:
       event.rawPayload?.allowSourceDefaultAttribution !== false,
