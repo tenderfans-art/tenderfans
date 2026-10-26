@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import CalendarImagePanel from "./CalendarImagePanel";
 import SourceOwnershipPanel from "./SourceOwnershipPanel";
+import VenueSourcesPanel from "./VenueSourcesPanel";
 
-type Tab = "calendar" | "ownership";
+type Tab = "calendar" | "ownership" | "venues";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "calendar", label: "Calendar Image" },
   { id: "ownership", label: "HTML Source" },
+  { id: "venues", label: "Venue Sources" },
 ];
 
 export default function SourceReviewPage() {
@@ -79,6 +81,7 @@ export default function SourceReviewPage() {
           <div role="tabpanel">
             {activeTab === "calendar" && <CalendarImagePanel />}
             {activeTab === "ownership" && <SourceOwnershipPanel />}
+            {activeTab === "venues" && <VenueSourcesPanel />}
           </div>
         </section>
       </div>
