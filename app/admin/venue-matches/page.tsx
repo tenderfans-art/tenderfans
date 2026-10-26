@@ -99,6 +99,23 @@ type CalendarEventVerification = {
   created_at: string;
 };
 
+function matchedOrganizerSpotIds(item: UnresolvedVenue): string[] {
+  if (
+    item.evidence?.reason !==
+    "facebook_multiple_matching_organizers"
+  ) {
+    return [];
+  }
+
+  const ids = item.evidence.matchedVenueIds;
+
+  return Array.isArray(ids)
+    ? ids.filter(
+        (id): id is string => typeof id === "string",
+      )
+    : [];
+}
+
 function evidenceLabel(evidence: Record<string, unknown> | null, key: string) {
   const nested = evidence?.match_evidence;
   const comparisons =
@@ -351,9 +368,30 @@ export default function AdminVenueMatchesPage() {
         ? spots.find((spot) => spot.id === selectedId)
         : null;
 
-      result[item.id] = [
+      const organizerIds =
+        "evidence" in item
+          ? matchedOrganizerSpotIds(item)
+          : [];
+
+      const organizerChoices = organizerIds
+        .map((id) => spots.find((spot) => spot.id === id))
+        .filter((spot): spot is Spot => Boolean(spot));
+
+      const prioritized = [
         ...(selected ? [selected] : []),
-        ...filtered.filter((spot) => spot.id !== selectedId).slice(0, 5),
+        ...organizerChoices,
+      ];
+
+      const seen = new Set(prioritized.map((spot) => spot.id));
+
+      result[item.id] = [
+        ...prioritized.filter(
+          (spot, index, array) =>
+            array.findIndex((other) => other.id === spot.id) === index,
+        ),
+        ...filtered
+          .filter((spot) => !seen.has(spot.id))
+          .slice(0, 5),
       ];
     }
 
@@ -486,6 +524,10 @@ export default function AdminVenueMatchesPage() {
               {unresolved.map((item) => {
                 const busy = reviewingId === item.id;
                 const choices = spotChoices[item.id] || [];
+                const organizerIds = matchedOrganizerSpotIds(item);
+                const organizerSpots = organizerIds
+                  .map((id) => spots.find((spot) => spot.id === id))
+                  .filter((spot): spot is Spot => Boolean(spot));
 
                 return (
                   <div
@@ -566,7 +608,29 @@ export default function AdminVenueMatchesPage() {
                         fontSize: "0.88rem",
                       }}
                     >
-                      {item.suggested_venue_name ? (
+                      {organizerSpots.length > 1 ? (
+                        <div
+                          style={{
+                            display: "grid",
+                            gap: "3px",
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.72rem",
+                              opacity: 0.7,
+                            }}
+                          >
+                            Multiple organizers:
+                          </span>
+                          {organizerSpots.map((spot) => (
+                            <strong key={spot.id} title={spot.name}>
+                              {spot.name}
+                            </strong>
+                          ))}
+                        </div>
+                      ) : item.suggested_venue_name ? (
                         <strong
                           title={item.suggested_venue_name}
                           style={{
