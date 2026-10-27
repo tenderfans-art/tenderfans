@@ -929,7 +929,59 @@ export async function fetchFacebookEvents(
       userAgent: USER_AGENT,
     });
 
-    const initialEventsUrl = eventsUrl(sourceUrl);
+    /*
+     * Resolve the Page before probing its Events tab. Legacy Page URLs
+     * can resolve to a newer Page identity. Only trust a Facebook Page
+     * destination actually observed by the browser or its canonical
+     * metadata; never infer an ID from the Page's display name.
+     */
+    let resolvedSourceUrl = sourceUrl;
+    if (options.validatePageIdentity) {
+      try {
+        await page.goto(canonicalPageUrl(sourceUrl), {
+          waitUntil: "domcontentloaded",
+          timeout: 60000,
+        });
+
+        const observed = page.url();
+        const canonical = await page.locator(
+          'link[rel="canonical"]',
+        ).first().getAttribute("href").catch(() => null);
+
+        const isPageIdentity = (value: string): boolean => {
+          try {
+            const url = new URL(value, "https://www.facebook.com");
+            const host = url.hostname.toLowerCase();
+            if (host !== "facebook.com" && host !== "www.facebook.com") {
+              return false;
+            }
+            const path = url.pathname.toLowerCase();
+            return !(
+              path === "/" ||
+              path.startsWith("/login") ||
+              path.startsWith("/checkpoint") ||
+              path === "/events" ||
+              path === "/events/" ||
+              path.startsWith("/search") ||
+              path.startsWith("/groups")
+            );
+          } catch {
+            return false;
+          }
+        };
+
+        if (isPageIdentity(observed)) {
+          resolvedSourceUrl = observed;
+        } else if (canonical && isPageIdentity(canonical)) {
+          resolvedSourceUrl = new URL(canonical, observed).toString();
+        }
+      } catch {
+        // A blocked Page homepage is not proof of an identity change.
+        // The original Page Events URL still receives full validation.
+      }
+    }
+
+    const initialEventsUrl = eventsUrl(resolvedSourceUrl);
     let response;
 
     try {
