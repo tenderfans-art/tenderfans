@@ -137,6 +137,24 @@ function normalizeEvent(
 export async function fetchTicketSpotEvents(
   sourceUrl: string,
 ): Promise<FirstPartyHarvestEvent[]> {
+  // A resource-exhausted Chromium navigation may leave the browser
+  // unusable. Retry once in a fresh browser, never in the same page.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await fetchTicketSpotEventsOnce(sourceUrl);
+    } catch (error) {
+      const resourceFailure =
+        error instanceof Error &&
+        /net::ERR_INSUFFICIENT_RESOURCES/.test(error.message);
+      if (!resourceFailure || attempt === 1) throw error;
+    }
+  }
+  throw new Error("Ticket Spot browser resource recovery exhausted.");
+}
+
+async function fetchTicketSpotEventsOnce(
+  sourceUrl: string,
+): Promise<FirstPartyHarvestEvent[]> {
   const browser = await playwright.launch({
     args: Chromium.args,
     executablePath: await Chromium.executablePath(),
@@ -147,6 +165,18 @@ export async function fetchTicketSpotEvents(
     const page = await browser.newPage({
       viewport: { width: 1440, height: 1600 },
       userAgent: USER_AGENT,
+    });
+
+    // Ticket Spot data comes from its JSON widget endpoint. Avoid
+    // downloading heavyweight presentation assets during validation
+    // and harvest; leave scripts, styles, and API calls untouched.
+    await page.route("**/*", async (route) => {
+      const type = route.request().resourceType();
+      if (type === "image" || type === "font" || type === "media") {
+        await route.abort();
+      } else {
+        await route.continue();
+      }
     });
 
     const responses: unknown[] = [];
