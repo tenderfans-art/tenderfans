@@ -940,7 +940,7 @@ export async function fetchFacebookEvents(
       const redirectTrace: string[] = [];
       page.on("response", (received) => {
         const request = received.request();
-        if (!request.isNavigationRequest() || !request.isMainFrame()) return;
+        if (!request.isNavigationRequest() || request.frame() !== page.mainFrame()) return;
         if (redirectTrace.length >= 12) return;
         try {
           const url = new URL(received.url());
