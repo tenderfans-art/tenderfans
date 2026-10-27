@@ -995,9 +995,9 @@ export async function fetchFacebookEvents(
     const isGlobalEventsFeed = (value: string): boolean => {
       const destination = new URL(value);
       return (
-        /(^|\\.)facebook\\.com$/i.test(destination.hostname) &&
-        /^\\/events\\/?$/i.test(destination.pathname)
-      );
+        destination.hostname.toLowerCase() === "facebook.com" ||
+        destination.hostname.toLowerCase() === "www.facebook.com"
+      ) && destination.pathname.replace(/\/$/, "") === "/events";
     };
 
     if (options.validatePageIdentity && isGlobalEventsFeed(page.url())) {
