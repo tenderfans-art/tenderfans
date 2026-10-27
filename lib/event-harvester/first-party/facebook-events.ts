@@ -986,6 +986,39 @@ export async function fetchFacebookEvents(
 
     await page.waitForTimeout(5000);
 
+    /*
+     * Detector-only redirect resolution. Facebook can return HTTP 200
+     * for its global Events discovery feed when a Page's /events route
+     * is obsolete. Try the Page's own Events tab before rejecting it.
+     * Never accept the global feed as a validated Page source.
+     */
+    const isGlobalEventsFeed = (value: string): boolean => {
+      const destination = new URL(value);
+      return (
+        /(^|\\.)facebook\\.com$/i.test(destination.hostname) &&
+        /^\\/events\\/?$/i.test(destination.pathname)
+      );
+    };
+
+    if (options.validatePageIdentity && isGlobalEventsFeed(page.url())) {
+      const alternate = new URL(canonicalPageUrl(sourceUrl));
+      alternate.searchParams.set("sk", "events");
+
+      response = await page.goto(alternate.href, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+
+      if (!response?.ok()) {
+        throw new Error(
+          "Facebook Page Events redirected to global Events discovery feed; " +
+          `Page Events tab returned HTTP ${response?.status() ?? "unknown"}`,
+        );
+      }
+
+      await page.waitForTimeout(5000);
+    }
+
     const text = await pageText(page);
 
     /*
@@ -1009,9 +1042,8 @@ export async function fetchFacebookEvents(
 
     const currentUrl = page.url();
 
-    // Detector validation only: Facebook's global discovery feed is
-    // not evidence that the requested Page publishes these events.
-    // Harvesting does not use this validation-only check.
+    // Detector validation only: reject global discovery even after
+    // attempting to resolve the Page-specific Events tab.
     if (options.validatePageIdentity) {
       const destination = new URL(currentUrl);
       if (
