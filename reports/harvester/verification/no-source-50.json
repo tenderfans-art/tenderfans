@@ -1,0 +1,2488 @@
+[
+  {
+    "venue_id": "24b3ec36-450a-48b5-8d03-e2e0a4de5934",
+    "spot_name": "4 Play Gentlemens Lounge",
+    "website_url": "http://www.4playvip.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "c55cd7f2-86fe-4b83-8543-a5f5f3771b9c",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://4playvip.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:20:23.246902+00:00",
+        "last_seen_at": "2026-10-23T16:45:23.862257+00:00"
+      },
+      {
+        "id": "13f8d0cf-710d-4f57-bd05-d6c33934b024",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_failed",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": null,
+        "finding_key": "transport",
+        "error": "fetch failed",
+        "evidence": [],
+        "first_seen_at": "2026-10-07T02:37:58.435485+00:00",
+        "last_seen_at": "2026-10-07T02:37:59.124867+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "aeb36ff1-fc16-4288-9e66-a08b19ed9333",
+    "spot_name": "82 Degrees Bar - Grill",
+    "website_url": "https://www.thesainthotelfl.com/82degrees",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "f86f453f-8c1e-4de9-b946-b463cf49b2c5",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.thesainthotelfl.com/82degrees",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://www.thesainthotelfl.com/82degrees"
+        ],
+        "first_seen_at": "2026-10-16T17:39:25.844011+00:00",
+        "last_seen_at": "2026-10-21T01:54:14.073549+00:00"
+      },
+      {
+        "id": "2d48294e-cd5c-44e8-b05f-3c09e86cafc8",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "detected",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.thesainthotelfl.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T17:59:59.003502+00:00",
+        "last_seen_at": "2026-10-23T17:59:59.003502+00:00"
+      },
+      {
+        "id": "56ea41bd-62f6-48e4-bd3f-cdcfc183d531",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.thesainthotelfl.com/82degrees",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:08:57.673957+00:00",
+        "last_seen_at": "2026-10-14T02:31:56.357737+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "b5684939-e240-4a6a-b5f5-c7d2c2a9be17",
+    "spot_name": "Bar Mezzo",
+    "website_url": "https://barmezzo.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "c0c1961f-90bb-4bca-8196-cacd976626fd",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://barmezzo.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:01:34.512123+00:00",
+        "last_seen_at": "2026-10-23T18:01:37.130378+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "28bb06ea-2f43-4497-b053-a12846a8d14b",
+    "spot_name": "Bonefish Grill",
+    "website_url": "https://locations.bonefishgrill.com/florida/st.-petersburg/2408-tyrone-boulevard?y_source=1_MTU1MDI3ODItNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": true,
+    "findings": [
+      {
+        "id": "4992457e-13e8-4251-9ba4-324c06c36844",
+        "category": "facebook",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "facebook",
+        "source_url": "https://www.facebook.com/pages/places/121106561305741",
+        "fetched_url": "https://locations.bonefishgrill.com/florida/st.-petersburg/2408-tyrone-boulevard?y_source=1_MTU1MDI3ODItNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+        "finding_key": "facebook",
+        "error": null,
+        "evidence": [
+          "Facebook is the only potential event source discovered"
+        ],
+        "first_seen_at": "2026-10-06T15:31:08.973336+00:00",
+        "last_seen_at": "2026-10-06T20:20:13.406421+00:00"
+      },
+      {
+        "id": "4ccec91c-36d4-437f-b771-a64ee9a25718",
+        "category": "facebook",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "facebook",
+        "source_url": "https://www.facebook.com/pages/places/121106561305741",
+        "fetched_url": "https://locations.bonefishgrill.com/florida/st.-petersburg/2408-tyrone-boulevard?y_source=1_MTU1MDI3ODItNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+        "finding_key": "facebook:https://www.facebook.com/pages/places/121106561305741",
+        "error": null,
+        "evidence": [
+          "Facebook is the only potential event source discovered"
+        ],
+        "first_seen_at": "2026-10-06T04:53:20.644136+00:00",
+        "last_seen_at": "2026-10-15T01:33:49.141113+00:00"
+      },
+      {
+        "id": "447937bf-91e3-4329-a214-12f96f8a83f0",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "detected",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://locations.bonefishgrill.com/florida/st.-petersburg/2408-tyrone-boulevard?y_source=1_MTU1MDI3ODItNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-15T02:32:02.987494+00:00",
+        "last_seen_at": "2026-10-23T16:48:12.534755+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "4fedb132-0e06-40af-9fc9-42bc4af8a38d",
+    "spot_name": "Brass Monkey",
+    "website_url": "https://brassmonkeyspb.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "7095d62d-8a09-4d75-a7b0-32fb507c8e4b",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://brassmonkeyspb.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:13:48.213362+00:00",
+        "last_seen_at": "2026-10-23T17:12:07.672927+00:00"
+      },
+      {
+        "id": "db540c69-e61d-47d2-bab9-5670b1cd0485",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_failed",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": null,
+        "finding_key": "transport",
+        "error": "fetch failed",
+        "evidence": [],
+        "first_seen_at": "2026-10-07T02:47:19.727944+00:00",
+        "last_seen_at": "2026-10-07T02:47:20.386386+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "6ac87451-d051-4f3d-a9c3-4c096fbe7405",
+    "spot_name": "BRGR Kitchen & Bar - Treasure Island Beach Resort",
+    "website_url": "https://www.opalcollection.com/treasure-island/restaurants/brgr/?utm_source=google&utm_medium=listing&utm_campaign=opal+treasure+island+beach+resort+brgr",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": true,
+    "findings": [
+      {
+        "id": "0b0793a9-e201-4d34-b29c-6882a927ad77",
+        "category": "facebook",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "facebook",
+        "source_url": "https://www.facebook.com/TreasureIslandBeachResort/",
+        "fetched_url": "https://www.opalcollection.com/treasure-island/restaurants/brgr/?utm_source=google&utm_medium=listing&utm_campaign=opal+treasure+island+beach+resort+brgr",
+        "finding_key": "facebook:https://www.facebook.com/TreasureIslandBeachResort/",
+        "error": null,
+        "evidence": [
+          "Facebook is the only potential event source discovered"
+        ],
+        "first_seen_at": "2026-10-06T05:12:57.776444+00:00",
+        "last_seen_at": "2026-10-13T01:57:08.613253+00:00"
+      },
+      {
+        "id": "3585bef5-c439-4fad-a2d6-8e98935553e8",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "detected",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.opalcollection.com/treasure-island/restaurants/brgr/?utm_source=google&utm_medium=listing&utm_campaign=opal+treasure+island+beach+resort+brgr",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-13T20:56:22.985316+00:00",
+        "last_seen_at": "2026-10-23T17:26:53.184465+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "e25a0188-aa22-42a1-8bea-c6a36e274799",
+    "spot_name": "Casa Tina Mexican",
+    "website_url": "http://www.casatinas.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "adc40698-7cf6-4ee3-bad7-b2aeba25db8f",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://casatinas.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:31:37.157013+00:00",
+        "last_seen_at": "2026-10-23T18:20:20.393835+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "0ffabfce-35b9-441d-bd02-744f0d00c1d8",
+    "spot_name": "Category 36 Taphouse",
+    "website_url": "http://www.category36taphouse.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "baf3cbde-2ee6-4c81-82cc-1c5199663ad9",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.category36taphouse.com/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://www.category36taphouse.com/"
+        ],
+        "first_seen_at": "2026-10-16T16:43:50.931942+00:00",
+        "last_seen_at": "2026-10-21T17:50:53.864352+00:00"
+      },
+      {
+        "id": "4f384325-1e53-4348-94d1-0bcd16e411b7",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://category36taphouse.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T16:20:42.826016+00:00",
+        "last_seen_at": "2026-10-23T16:37:46.612511+00:00"
+      },
+      {
+        "id": "0848cf89-a46a-45ba-bd72-bdf61e3b0159",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.category36taphouse.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403; Recovery attempt: Homepage returned HTTP 403; Direct fallback returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:09:09.411148+00:00",
+        "last_seen_at": "2026-10-14T19:19:05.346239+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "39b1203c-c6d3-408c-8e81-51bf46ea3fa6",
+    "spot_name": "Central Park St Pete Food Hall",
+    "website_url": "https://www.centralparkstpete.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "92bb5b90-b340-4186-8880-89018e3253df",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://centralparkstpete.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-25T09:00:21.628394+00:00",
+        "last_seen_at": "2026-10-27T09:01:33.072526+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "bd4d4e8a-63b2-4038-a8d1-f600afb1b591",
+    "spot_name": "Coco Wood Grill",
+    "website_url": "https://cocowoodgrill.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "eb22fc19-dcf7-4809-82f6-17daca7bb499",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://cocowoodgrill.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:16:40.099095+00:00",
+        "last_seen_at": "2026-10-21T01:57:32.879498+00:00"
+      },
+      {
+        "id": "2ba9648d-d15d-4117-80d3-cb02c2a2a0e0",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_failed",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": null,
+        "finding_key": "transport",
+        "error": "fetch failed",
+        "evidence": [],
+        "first_seen_at": "2026-10-07T02:42:01.557655+00:00",
+        "last_seen_at": "2026-10-07T02:42:02.24942+00:00"
+      }
+    ],
+    "registered_sources": [
+      {
+        "id": "ff972ead-cbdd-405b-8502-02ce6d327929",
+        "provider": "first_party",
+        "source_type": "spothopper_events",
+        "external_source_id": "first_party:spothopper_events:https://cocowoodgrill.com/",
+        "is_enabled": false,
+        "config": {}
+      }
+    ],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "d40cea4c-f449-4636-9962-5970c1f54bd2",
+    "spot_name": "Crab Shack Restaurant",
+    "website_url": "http://www.crabshack.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "1727c139-abf8-4dd0-9b38-6cef6cfe474f",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://crabshack.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:20:22.532139+00:00",
+        "last_seen_at": "2026-10-23T18:12:26.651478+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "4cd9d8ef-a79b-4213-8f3c-938ab3133cbc",
+    "spot_name": "Dirty Laundry",
+    "website_url": "http://dirtylaundrystpete.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "990d5f3a-3086-43e2-bad5-6ad3b2c07abb",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.dirtylaundrystpete.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:04:23.314995+00:00",
+        "last_seen_at": "2026-10-23T17:11:01.115716+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "2992c575-7908-4349-9aa6-0088a382b0d6",
+    "spot_name": "Eddie's Bar & Grill",
+    "website_url": "http://www.eddiesbarandgrill.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "bb63259d-f045-458f-9ace-ca6c79ae4ce8",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://eddiesbarandgrill.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:27:57.763753+00:00",
+        "last_seen_at": "2026-10-23T16:48:53.717825+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "6aa3fb9d-13b3-433c-8033-4b7492027db8",
+    "spot_name": "Eddie's Bar & Grill",
+    "website_url": "http://www.eddiesbarandgrill.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "8ae048d3-7279-4882-9629-da9637deab2e",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://eddiesbarandgrill.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:27:58.93258+00:00",
+        "last_seen_at": "2026-10-23T17:26:35.518169+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "9b0a1977-f420-41f5-ae79-2918c379128a",
+    "spot_name": "Emerald Bar",
+    "website_url": "http://emerald-bar.poi.place/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "3e64db22-5bee-43c6-8e58-da7eed32c22a",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://emerald-bar.edan.io/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://emerald-bar.edan.io/"
+        ],
+        "first_seen_at": "2026-10-16T17:30:25.898043+00:00",
+        "last_seen_at": "2026-10-21T01:44:24.487918+00:00"
+      },
+      {
+        "id": "615d161b-bf47-4fc5-8600-dfaf1e2b6aaf",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "external_redirect",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://emerald-bar.edan.io/",
+        "finding_key": "no_source",
+        "error": "Website redirected from emerald-bar.poi.place to unverified cross-domain host emerald-bar.edan.io",
+        "evidence": [],
+        "first_seen_at": "2026-10-23T17:45:23.184767+00:00",
+        "last_seen_at": "2026-10-23T17:45:23.184767+00:00"
+      },
+      {
+        "id": "f5fafbcd-7443-440c-9538-7154212608ec",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://emerald-bar.edan.io/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:00:11.605756+00:00",
+        "last_seen_at": "2026-10-14T02:25:20.165389+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "0e32e351-6561-494b-a8c5-43a2f85bcae7",
+    "spot_name": "Fat Daddy's Watering Hole",
+    "website_url": "http://fat-hole.edan.io/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "79b2576a-eeb9-47e6-8a22-48b20c640bb0",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://fat-hole.edan.io/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://fat-hole.edan.io/"
+        ],
+        "first_seen_at": "2026-10-16T16:43:31.268789+00:00",
+        "last_seen_at": "2026-10-21T17:50:34.109769+00:00"
+      },
+      {
+        "id": "ab1b67f0-f159-4714-9503-da106f544820",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://fat-hole.edan.io/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T16:20:18.902639+00:00",
+        "last_seen_at": "2026-10-23T16:37:28.577914+00:00"
+      },
+      {
+        "id": "af083ca2-cb5c-4c17-9ec3-18d00484b345",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://fat-hole.edan.io/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403; Recovery attempt: Homepage returned HTTP 403; Direct fallback returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-02T02:56:57.108194+00:00",
+        "last_seen_at": "2026-10-14T19:18:44.670542+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "2bd09c0b-c51f-468f-85ed-23b4614d30c7",
+    "spot_name": "Harvey's 4th Street Grill",
+    "website_url": "http://harveys4thstreet.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "2d186b2f-6f81-4740-8b93-756e3a91fb07",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://harveys4thstreet.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:16:45.622937+00:00",
+        "last_seen_at": "2026-10-23T16:50:41.27304+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "50f5194b-34b7-4964-bf85-6b6ccf0adaea",
+    "spot_name": "Hawthorne Bottle Shoppe",
+    "website_url": "http://www.hbsforlife.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "64d22d73-db4f-4868-a655-709e386ed6a7",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://www.hbsforlife.com/product/live-music/714",
+        "fetched_url": "https://www.hbsforlife.com/",
+        "finding_key": "html_error:https://www.hbsforlife.com/product/live-music/714",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T01:53:21.922367+00:00",
+        "last_seen_at": "2026-10-16T17:10:27.392872+00:00"
+      },
+      {
+        "id": "4ef19671-a9ae-4222-8890-333d3dbd4f28",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.hbsforlife.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:20:35.359521+00:00",
+        "last_seen_at": "2026-10-23T17:12:17.469658+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "8da8d43c-d2ad-41bc-8a6b-7267d9cb7c42",
+    "spot_name": "Hog Island Fish Camp",
+    "website_url": "https://www.hogislandfishcamp.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "d2a09ab4-6332-4213-bba9-8952116fbcff",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.hogislandfishcamp.com/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://www.hogislandfishcamp.com/"
+        ],
+        "first_seen_at": "2026-10-16T17:28:37.431116+00:00",
+        "last_seen_at": "2026-10-22T09:12:56.304895+00:00"
+      },
+      {
+        "id": "669af069-805d-4150-8216-3918adce9e27",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.hogislandfishcamp.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T17:41:14.927793+00:00",
+        "last_seen_at": "2026-10-23T17:41:14.927793+00:00"
+      },
+      {
+        "id": "34b0c1af-7b9e-4784-ae87-052db4f344a5",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.hogislandfishcamp.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-02T02:56:36.439849+00:00",
+        "last_seen_at": "2026-10-14T02:23:49.364662+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "e9081cbb-d4fb-4521-aabb-e70fb34d8bff",
+    "spot_name": "in between days",
+    "website_url": "http://www.inbetweendays.co/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "8fbeea41-de95-4c4b-9dd2-4814358003fc",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.inbetweendays.co/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:03:13.700909+00:00",
+        "last_seen_at": "2026-10-23T18:21:53.904318+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "aa7075d0-05bf-458e-99f8-139986ac6f60",
+    "spot_name": "Kahuna's Bar and Grill",
+    "website_url": "http://www.kahunasbarandgrill.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "10adff64-27ce-4347-883d-034c21214ae4",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://www.kahunasbarandgrill.com/events",
+        "fetched_url": "https://www.kahunasbarandgrill.com/",
+        "finding_key": "html_error:https://www.kahunasbarandgrill.com/events",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T02:10:06.977459+00:00",
+        "last_seen_at": "2026-10-16T17:36:20.483592+00:00"
+      },
+      {
+        "id": "ef65d616-6b81-4aab-98cb-8d9abb9730a5",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://www.kahunasbarandgrill.com/",
+        "fetched_url": "https://www.kahunasbarandgrill.com/",
+        "finding_key": "html_error:https://www.kahunasbarandgrill.com/",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T02:10:06.861828+00:00",
+        "last_seen_at": "2026-10-16T17:36:20.357044+00:00"
+      },
+      {
+        "id": "969d56d2-bd2f-44ca-9012-fbe67ea6b426",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.kahunasbarandgrill.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:18:44.390623+00:00",
+        "last_seen_at": "2026-10-23T17:56:36.054028+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "798609a2-f193-418e-a959-f765c889dc0d",
+    "spot_name": "Mangosteen",
+    "website_url": "http://mangosteenfl.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "7351b97e-6985-4386-92d2-cb6fb39eec49",
+        "category": "adapter_error",
+        "status": "resolved",
+        "detector_status": "adapter_error",
+        "source_type": "spothopper_events",
+        "source_url": "https://mangosteenfl.com/",
+        "fetched_url": "https://mangosteenfl.com/",
+        "finding_key": "adapter_error:[\"spothopper_events\",\"https://mangosteenfl.com/\"]",
+        "error": "SpotHopper site exposed no recognizable event surface",
+        "evidence": [
+          "SpotHopper / SpotApps platform signature"
+        ],
+        "first_seen_at": "2026-10-23T17:35:26.61436+00:00",
+        "last_seen_at": "2026-10-23T17:35:26.61436+00:00"
+      },
+      {
+        "id": "1296fca8-1e37-4be2-91f8-f32a5d51b9dc",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "detected",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://mangosteenfl.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-24T13:21:47.234832+00:00",
+        "last_seen_at": "2026-10-24T13:21:47.234832+00:00"
+      },
+      {
+        "id": "bc0c3dfb-fbe6-4af5-901b-18a29fdedf14",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_failed",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": null,
+        "finding_key": "transport",
+        "error": "fetch failed",
+        "evidence": [],
+        "first_seen_at": "2026-10-07T02:43:18.774864+00:00",
+        "last_seen_at": "2026-10-07T02:43:18.774864+00:00"
+      }
+    ],
+    "registered_sources": [
+      {
+        "id": "758b0e18-7023-4a8f-815d-2b4497ccfabf",
+        "provider": "first_party",
+        "source_type": "spothopper_events",
+        "external_source_id": "first_party:spothopper_events:https://mangosteenfl.com/st-petersburg-mangosteen-events",
+        "is_enabled": false,
+        "config": {}
+      },
+      {
+        "id": "fca42191-68a6-44d1-84c3-ca2fb4113b0d",
+        "provider": "first_party",
+        "source_type": "spothopper_events",
+        "external_source_id": "first_party:spothopper_events:https://mangosteenfl.com/-events?source=pop_up&spot_id=95715&destination=events&promotion=halloween",
+        "is_enabled": false,
+        "config": {}
+      },
+      {
+        "id": "0be765c3-6f6e-4d1e-b0e1-46f4e4132587",
+        "provider": "first_party",
+        "source_type": "spothopper_events",
+        "external_source_id": "first_party:spothopper_events:https://mangosteenfl.com/",
+        "is_enabled": false,
+        "config": {}
+      }
+    ],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "1e7f5b61-1fa6-4ef7-91d5-c88f8dcb5835",
+    "spot_name": "Mastry'S Brewing Co",
+    "website_url": "http://www.mastrysbrewingco.com/?y_source=1_MjA1NjA2NzctNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "dac21321-7486-4a11-9aae-e078f832dcfe",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://mastrysbrewingco.com/?y_source=1_MjA1NjA2NzctNzE1LWxvY2F0aW9uLndlYnNpdGU%3D",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:04:56.63519+00:00",
+        "last_seen_at": "2026-10-23T16:42:50.116915+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "6661826a-f031-4fac-aeec-ab0ac733117b",
+    "spot_name": "Neptune Grill",
+    "website_url": "http://neptunegrillgulfport.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "1ce77dfb-863e-40cd-9936-b1ee2e8785c6",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://neptunegrillgulfport.com/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://neptunegrillgulfport.com/"
+        ],
+        "first_seen_at": "2026-10-16T17:16:38.265504+00:00",
+        "last_seen_at": "2026-10-21T01:26:18.77481+00:00"
+      },
+      {
+        "id": "ae52c61f-562b-4981-b9d1-49f894408c70",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://neptunegrillgulfport.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T17:24:33.959699+00:00",
+        "last_seen_at": "2026-10-23T17:24:33.959699+00:00"
+      },
+      {
+        "id": "34720352-ea42-496c-96e4-d7f06d38373b",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://neptunegrillgulfport.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T04:55:40.769614+00:00",
+        "last_seen_at": "2026-10-14T02:14:59.093321+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "08665062-ea7b-4948-8f35-6e288efb5d73",
+    "spot_name": "Noble Crust of St. Petersburg",
+    "website_url": "https://www.noble-crust.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "eaad0f4c-a129-451d-b180-e1f69092cdfc",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.noble-crust.com/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://www.noble-crust.com/"
+        ],
+        "first_seen_at": "2026-10-16T16:38:31.018991+00:00",
+        "last_seen_at": "2026-10-21T17:42:55.944941+00:00"
+      },
+      {
+        "id": "5d2cc722-538a-452e-b7c4-7630889a00f2",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.noble-crust.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-14T19:13:32.370384+00:00",
+        "last_seen_at": "2026-10-23T16:31:45.624109+00:00"
+      },
+      {
+        "id": "f9a3eb1d-1a73-4226-96dc-d53e0d0733e3",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.noble-crust.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:19:19.430966+00:00",
+        "last_seen_at": "2026-10-14T01:44:35.738964+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "c30d4fd0-3272-43c1-b863-d4b8c9c60152",
+    "spot_name": "Norton's Southside Sports Bar",
+    "website_url": "http://www.sportsbarclearwater.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "ef122b84-0b61-48db-9c64-1eda247ef1e5",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://sportsbarclearwater.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:28:07.493177+00:00",
+        "last_seen_at": "2026-10-23T18:06:40.274705+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "87084971-58e0-4f46-bbb6-baebf9981ba2",
+    "spot_name": "Paisano's Pizza N Pasta",
+    "website_url": "http://www.paisanospnp.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "5a612937-2023-44f0-83fc-f17e01a154b7",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://paisanospnp.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-09T14:00:12.548428+00:00",
+        "last_seen_at": "2026-10-23T17:39:59.586244+00:00"
+      },
+      {
+        "id": "78cc881c-24dd-4fc6-8ae4-f82b3a08533e",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.paisanospnp.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:18:32.546845+00:00",
+        "last_seen_at": "2026-10-13T21:02:31.905381+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "fe4d93b8-94cb-430a-8f2f-05631134f614",
+    "spot_name": "Par Bar",
+    "website_url": "http://parbarstp.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "1ef6888b-e056-4ee8-a978-bcb9923bfc24",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.parbarstp.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:04:25.242531+00:00",
+        "last_seen_at": "2026-10-23T18:34:53.136028+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "377044f0-6d56-4452-8d78-afd4f6eff420",
+    "spot_name": "Pia's Trattoria",
+    "website_url": "http://www.piastrattoria.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "c5ce32bb-e8bf-4f03-95cf-552dc134495c",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://piastrattoria.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T04:56:41.028754+00:00",
+        "last_seen_at": "2026-10-23T16:58:15.927305+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "ccecc1e1-6193-41e7-9575-aeecfeae3762",
+    "spot_name": "Pirates Pub & Grub",
+    "website_url": "https://piratespub-n-grub.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "5a665abe-4952-4c02-bccb-f8e77724c98a",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://piratespub-n-grub.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-09T14:03:22.828773+00:00",
+        "last_seen_at": "2026-10-23T18:08:22.589149+00:00"
+      },
+      {
+        "id": "6bb7b407-5375-47db-8905-76febe97326c",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://piratespub-n-grub.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:15:26.444071+00:00",
+        "last_seen_at": "2026-10-09T12:54:29.416494+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "0c38c4c9-aaba-4756-8c18-2d72859dc812",
+    "spot_name": "Right Around the Corner Arcade Bar",
+    "website_url": "https://stpetearcadebar.square.site/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "ae6a0aa6-d4c4-45cd-8af5-8b3edca96f5b",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://stpetearcadebar.square.site/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:03:11.978918+00:00",
+        "last_seen_at": "2026-10-23T16:35:15.95721+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "45029066-7adf-4e65-8f85-941580122d2b",
+    "spot_name": "Saltwater Hippie",
+    "website_url": "https://saltwaterhippie.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "0a7dde32-cf1b-4983-9eba-fb471841f906",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://www.saltwaterhippie.com/",
+        "fetched_url": "https://www.saltwaterhippie.com/",
+        "finding_key": "html_error:https://www.saltwaterhippie.com/",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T01:49:20.047695+00:00",
+        "last_seen_at": "2026-10-16T17:04:59.820721+00:00"
+      },
+      {
+        "id": "ce5daa94-db48-4d1d-a266-125049d0cbcc",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://www.saltwaterhippie.com/events",
+        "fetched_url": "https://www.saltwaterhippie.com/",
+        "finding_key": "html_error:https://www.saltwaterhippie.com/events",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T01:49:20.191696+00:00",
+        "last_seen_at": "2026-10-16T17:04:59.949017+00:00"
+      },
+      {
+        "id": "54b876a4-5331-4f70-880c-195bafd7fb80",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://www.saltwaterhippie.com/product/and-if-the-music-is-good-rectangular-decoupage-plate/ZQWAY2BDO723LGO5G6JXGI37",
+        "fetched_url": "https://www.saltwaterhippie.com/",
+        "finding_key": "html_error:https://www.saltwaterhippie.com/product/and-if-the-music-is-good-rectangular-decoupage-plate/ZQWAY2BDO723LGO5G6JXGI37",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T01:49:20.289635+00:00",
+        "last_seen_at": "2026-10-16T17:05:00.061156+00:00"
+      },
+      {
+        "id": "f016f081-e606-485d-ae36-69bc96774b16",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.saltwaterhippie.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:14:24.874691+00:00",
+        "last_seen_at": "2026-10-23T17:06:45.391782+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "c04ac3bb-f7ea-4528-a10d-3634d0408880",
+    "spot_name": "Sauvignon Wine Locker & American Trattoria",
+    "website_url": "https://www.sauvignonstpete.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "84e8904a-8e48-4629-aea4-12ea7259990f",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.sauvignonstpete.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T04:58:15.338945+00:00",
+        "last_seen_at": "2026-10-23T18:05:36.350299+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "0857507e-503e-4e82-a8f8-80e350a93ca5",
+    "spot_name": "Sculley's Seafood Restaurant",
+    "website_url": "https://www.sculleysrestaurant.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "a423cfe3-a7b7-4281-9f29-070a75adb666",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://sculleys.com/events/",
+        "fetched_url": "https://sculleys.com/",
+        "finding_key": "html_error:https://sculleys.com/events/",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-14T19:13:19.458832+00:00",
+        "last_seen_at": "2026-10-16T16:38:18.242145+00:00"
+      },
+      {
+        "id": "ad325f52-095b-4b32-9269-f0915aa73c3f",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://sculleys.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T15:53:52.578251+00:00",
+        "last_seen_at": "2026-10-23T16:31:39.743739+00:00"
+      },
+      {
+        "id": "03a5b03b-ad23-4dc8-8e44-95bdd831d92d",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_failed",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": null,
+        "finding_key": "transport",
+        "error": "fetch failed",
+        "evidence": [],
+        "first_seen_at": "2026-10-07T02:43:44.485906+00:00",
+        "last_seen_at": "2026-10-07T02:43:45.158144+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "4a2019e4-600a-4487-b2ce-8aeefbd53941",
+    "spot_name": "Simon's Pub",
+    "website_url": "https://www.simonspub.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "660d3166-01e5-417c-9ac0-008dab7dbd56",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.simonspub.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:31:15.202558+00:00",
+        "last_seen_at": "2026-10-23T17:10:40.128754+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "aa75f5ac-fdb0-48c3-b69c-9453c65d4b6e",
+    "spot_name": "Sporty's",
+    "website_url": "http://sportys.edan.io/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "1f0819f7-ae4a-4b20-972d-d297b8505d3a",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://sportys.edan.io/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://sportys.edan.io/"
+        ],
+        "first_seen_at": "2026-10-16T17:36:23.922142+00:00",
+        "last_seen_at": "2026-10-21T01:51:45.615368+00:00"
+      },
+      {
+        "id": "5a8e8acf-81da-4347-8e82-bd4c5fddb461",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://sportys.edan.io/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T17:56:40.434622+00:00",
+        "last_seen_at": "2026-10-23T17:56:40.434622+00:00"
+      },
+      {
+        "id": "406d16cc-ecca-4f03-9112-072485660a6f",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://sportys.edan.io/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:16:40.760236+00:00",
+        "last_seen_at": "2026-10-14T02:30:28.276514+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "a04a8cb2-1a5f-4a7c-8784-80acde14dc65",
+    "spot_name": "Stirling Wine",
+    "website_url": "http://www.stirlingwinedunedin.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "abc1a65e-07d3-4284-973b-2f1eda4e1b3f",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://stirlingwinedunedin.com/",
+        "fetched_url": "https://stirlingwinedunedin.com/",
+        "finding_key": "html_error:https://stirlingwinedunedin.com/",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T21:06:24.505872+00:00",
+        "last_seen_at": "2026-10-16T17:32:54.725965+00:00"
+      },
+      {
+        "id": "7c8d73e0-c48c-41b1-9be5-e917ee89f512",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://stirlingwinedunedin.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:27:52.554611+00:00",
+        "last_seen_at": "2026-10-23T17:50:21.386945+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "47c6f4e2-2607-42ac-8b20-54957015aef3",
+    "spot_name": "Sunset Grille",
+    "website_url": "https://www.facebook.com/pages/Sunset-Grill/120528214624904",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": true,
+    "findings": [
+      {
+        "id": "44d6b510-b49f-4286-abed-cb7453d548ed",
+        "category": "facebook",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "facebook",
+        "source_url": "https://www.facebook.com/pages/Sunset-Grill/120528214624904",
+        "fetched_url": "https://www.facebook.com/pages/Sunset-Grill/120528214624904",
+        "finding_key": "facebook",
+        "error": null,
+        "evidence": [
+          "Spot website points to Facebook"
+        ],
+        "first_seen_at": "2026-10-06T15:30:52.791937+00:00",
+        "last_seen_at": "2026-10-06T20:19:55.753757+00:00"
+      },
+      {
+        "id": "e749b452-edd2-4cc6-802a-ca93ae851ed6",
+        "category": "facebook",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "facebook",
+        "source_url": "https://www.facebook.com/pages/Sunset-Grill/120528214624904",
+        "fetched_url": "https://www.facebook.com/pages/Sunset-Grill/120528214624904",
+        "finding_key": "facebook:https://www.facebook.com/pages/Sunset-Grill/120528214624904",
+        "error": null,
+        "evidence": [
+          "Spot website points to Facebook"
+        ],
+        "first_seen_at": "2026-10-06T04:53:11.065493+00:00",
+        "last_seen_at": "2026-10-14T02:05:16.315372+00:00"
+      },
+      {
+        "id": "592edac1-7ac0-45fa-9578-22f63a318eed",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "detected",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.facebook.com/pages/Sunset-Grill/120528214624904",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-15T01:11:46.587492+00:00",
+        "last_seen_at": "2026-10-23T17:09:16.021949+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "78330757-5e78-4fda-b5d4-a2b4a5a9c199",
+    "spot_name": "Tampa Bay Drinkery",
+    "website_url": "https://www.instagram.com/tbdstpete/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": true,
+    "findings": [
+      {
+        "id": "efa9dc47-916f-4ac8-ac05-d391b9a15b80",
+        "category": "facebook",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "facebook",
+        "source_url": "https://www.facebook.com/docs/instagram",
+        "fetched_url": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Ftbdstpete%2F&is_from_rle",
+        "finding_key": "facebook:https://www.facebook.com/docs/instagram",
+        "error": null,
+        "evidence": [
+          "Facebook is the only potential event source discovered"
+        ],
+        "first_seen_at": "2026-10-09T12:40:15.546976+00:00",
+        "last_seen_at": "2026-10-14T02:20:04.595042+00:00"
+      },
+      {
+        "id": "dcc75bf4-f4a3-44a9-821f-21ecb9437c93",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Ftbdstpete%2F&is_from_rle",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-15T01:17:58.602875+00:00",
+        "last_seen_at": "2026-10-23T17:34:55.402121+00:00"
+      },
+      {
+        "id": "5b6251c1-69f7-4c69-b260-5a773058f031",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.instagram.com/accounts/login/?next=https%3A%2F%2Fwww.instagram.com%2Ftbdstpete%2F&is_from_rle",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 429",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:04:24.121662+00:00",
+        "last_seen_at": "2026-10-13T20:59:49.98268+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "bdaaa565-d53c-4c12-9f9d-c1b2869377ea",
+    "spot_name": "Texas Roadhouse",
+    "website_url": "https://www.texasroadhouse.com/locations/florida/st-petersburg?utm_source=listing&utm_medium=search",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "4071abb6-df7c-47bc-b80c-4fac3ba65f2a",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.texasroadhouse.com/locations/florida/st-petersburg?utm_source=listing&utm_medium=search",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://www.texasroadhouse.com/locations/florida/st-petersburg?utm_source=listing&utm_medium=search"
+        ],
+        "first_seen_at": "2026-10-16T17:42:15.858574+00:00",
+        "last_seen_at": "2026-10-21T01:57:48.674083+00:00"
+      },
+      {
+        "id": "ec70f393-82e3-46e8-b34d-b2c9e4f216b8",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "detected",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.texasroadhouse.com/locations/494-stpetersburgfl?utm_source=listing&utm_medium=search",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T18:04:28.615876+00:00",
+        "last_seen_at": "2026-10-23T18:04:28.615876+00:00"
+      },
+      {
+        "id": "f5e2abc6-f90b-4bd8-89a4-c234eb465434",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.texasroadhouse.com/locations/florida/st-petersburg?utm_source=listing&utm_medium=search",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-02T02:57:04.034947+00:00",
+        "last_seen_at": "2026-10-14T02:34:45.808929+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "833b1aaa-133c-4e76-ab89-aa68df6a2128",
+    "spot_name": "The Blu Halo St Pete",
+    "website_url": "https://www.thebluhalostpete.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "0a53a388-091c-4c1d-9ffb-5af7621e2897",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.thebluhalostpete.com/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://www.thebluhalostpete.com/"
+        ],
+        "first_seen_at": "2026-10-18T15:28:10.73373+00:00",
+        "last_seen_at": "2026-10-21T01:38:49.97934+00:00"
+      },
+      {
+        "id": "6b2449cc-c2b1-4e54-883d-97616d3b3db6",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://www.thebluhalostpete.com/",
+        "fetched_url": "https://www.thebluhalostpete.com/",
+        "finding_key": "html_error:https://www.thebluhalostpete.com/",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-16T17:26:33.61903+00:00",
+        "last_seen_at": "2026-10-16T17:26:33.61903+00:00"
+      },
+      {
+        "id": "1959dc8b-dc7a-4274-9c89-c785aa40c44d",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.thebluhalostpete.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T17:38:41.138998+00:00",
+        "last_seen_at": "2026-10-23T17:38:41.138998+00:00"
+      },
+      {
+        "id": "f41b970b-bf6f-4d75-b033-8ffeaa52a931",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.thebluhalostpete.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:24:04.040711+00:00",
+        "last_seen_at": "2026-10-14T02:22:36.55338+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "d48189d9-5b24-4860-b1de-77a975d20787",
+    "spot_name": "The Boxer Kitchen & Bar",
+    "website_url": "https://www.theboxercwb.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "ba9eb912-085a-4206-a2a0-28a48c87c95a",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.theboxercwb.com/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://www.theboxercwb.com/"
+        ],
+        "first_seen_at": "2026-10-16T09:07:55.207655+00:00",
+        "last_seen_at": "2026-10-22T09:06:55.560774+00:00"
+      },
+      {
+        "id": "72dff328-cc9a-4cb5-b82b-7927f0012edc",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://www.theboxercwb.com/",
+        "fetched_url": "https://www.theboxercwb.com/",
+        "finding_key": "html_error:https://www.theboxercwb.com/",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-16T03:11:32.844851+00:00",
+        "last_seen_at": "2026-10-16T17:48:42.765483+00:00"
+      },
+      {
+        "id": "76c79e83-e470-4e6e-8646-6c229f89d6b0",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.theboxercwb.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T18:12:33.074429+00:00",
+        "last_seen_at": "2026-10-25T09:08:21.652121+00:00"
+      },
+      {
+        "id": "0e0ef2ea-61eb-4021-a49e-af6b6683673b",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.theboxercwb.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403; Recovery attempt: Homepage returned HTTP 403; Direct fallback returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-02T02:27:52.933205+00:00",
+        "last_seen_at": "2026-10-15T09:08:04.569358+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "ef376275-d412-490e-8b01-6b8341e61a89",
+    "spot_name": "The Deep End",
+    "website_url": "https://www.thedeependclearwaterbeach.com/?scid=feed67b0-9a2f-4de1-8df6-114544116108",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "c9819866-f86f-4500-9115-1795b7f34b1f",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.thedeependclearwaterbeach.com/?scid=feed67b0-9a2f-4de1-8df6-114544116108",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:35:18.212996+00:00",
+        "last_seen_at": "2026-10-25T09:08:53.907666+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "200f276c-9ce6-48e6-be7e-b4619fea8e75",
+    "spot_name": "The Irons Club",
+    "website_url": "https://www.theironsclub.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "6484d702-c7cb-4411-8d2b-f0d297bb9601",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.theironsclub.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:04:35.567212+00:00",
+        "last_seen_at": "2026-10-23T16:42:53.954573+00:00"
+      },
+      {
+        "id": "8491840a-72e0-43a0-a232-a560e10efc1c",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_failed",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": null,
+        "finding_key": "transport",
+        "error": "fetch failed",
+        "evidence": [],
+        "first_seen_at": "2026-10-07T02:54:54.786447+00:00",
+        "last_seen_at": "2026-10-07T02:54:55.414902+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "1ce786ea-74c4-4c5f-8e47-a5d98eb25aac",
+    "spot_name": "The Reef Bar and Grill",
+    "website_url": "http://reefonmadbeach.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "6ce6a142-7090-421b-b853-b4dd4808130f",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://reefonmadbeach.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:16:15.455273+00:00",
+        "last_seen_at": "2026-10-23T16:42:15.524424+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "11ec9f6d-b0e8-4578-a42e-74077520a011",
+    "spot_name": "The Wheelhouse",
+    "website_url": "http://thewheelhousestpete.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "fec92587-2588-4479-9a7b-70a6e562a99b",
+        "category": "challenge_encountered",
+        "status": "resolved",
+        "detector_status": "challenge_encountered",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://thewheelhousestpete.com/",
+        "finding_key": "challenge_encountered",
+        "error": "Provider: Cloudflare; cf-mitigated challenge header",
+        "evidence": [
+          "Provider: Cloudflare; cf-mitigated challenge header",
+          "HTTP status: 403",
+          "Final URL: https://thewheelhousestpete.com/"
+        ],
+        "first_seen_at": "2026-10-16T16:44:01.799949+00:00",
+        "last_seen_at": "2026-10-21T17:51:14.023293+00:00"
+      },
+      {
+        "id": "ed1a10e0-7b31-4734-aa5d-d2d44f462e1c",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.thewheelhousestpete.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-23T16:21:05.426156+00:00",
+        "last_seen_at": "2026-10-23T16:38:08.20717+00:00"
+      },
+      {
+        "id": "4abf7129-eafa-49a4-9419-6866c2b4c390",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://thewheelhousestpete.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403; Recovery attempt: Homepage returned HTTP 403; Direct fallback returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T04:55:24.263467+00:00",
+        "last_seen_at": "2026-10-14T19:19:17.841054+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "031e6a96-650b-48df-88a6-2e98dae76c0c",
+    "spot_name": "Whiskey Exchange",
+    "website_url": "http://www.whiskeyexchangestpete.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "cb771714-e7d9-495c-925f-8ea77cf2de6f",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "transport_failed",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": null,
+        "finding_key": "no_source",
+        "error": "fetch failed [ENOTFOUND]",
+        "evidence": [],
+        "first_seen_at": "2026-10-19T03:34:22.285917+00:00",
+        "last_seen_at": "2026-10-23T16:28:30.072713+00:00"
+      },
+      {
+        "id": "e82314dd-597d-41c5-af10-ccbfe1a1cd50",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_failed",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": null,
+        "finding_key": "transport",
+        "error": "fetch failed [ENOTFOUND]",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:01:05.358748+00:00",
+        "last_seen_at": "2026-10-19T03:17:15.749496+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "cae3958d-6c71-4c32-9e55-88dfcd649e51",
+    "spot_name": "Whiskey Wings Saint Pete",
+    "website_url": "https://whiskeywings.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "f77316d8-6f22-42e6-84f8-0192df13d831",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://whiskeywings.com/",
+        "fetched_url": "https://whiskeywings.com/",
+        "finding_key": "html_error:https://whiskeywings.com/",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T02:49:07.969301+00:00",
+        "last_seen_at": "2026-10-16T17:45:30.822213+00:00"
+      },
+      {
+        "id": "d6dea565-3f5e-4c22-995d-15595c0a777b",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://whiskeywings.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-09T14:00:01.92957+00:00",
+        "last_seen_at": "2026-10-23T18:08:18.710796+00:00"
+      },
+      {
+        "id": "d19f73be-c64a-4c0f-9d85-0be000ffb12f",
+        "category": "transport",
+        "status": "resolved",
+        "detector_status": "transport_blocked",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://whiskeywings.com/",
+        "finding_key": "transport",
+        "error": "Homepage returned HTTP 403",
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:24:02.525193+00:00",
+        "last_seen_at": "2026-10-09T12:54:27.860147+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "9e18dbee-b687-457a-aa9e-23facd3cd6b0",
+    "spot_name": "Wicked Cantina St Pete",
+    "website_url": "https://www.wickedcantina.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "1a0acc0a-d96f-40f6-af31-dbd2e6ab3fd8",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://wickedcantina.com/",
+        "fetched_url": "https://wickedcantina.com/",
+        "finding_key": "html_error:https://wickedcantina.com/",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T02:06:41.392511+00:00",
+        "last_seen_at": "2026-10-16T17:31:53.389326+00:00"
+      },
+      {
+        "id": "5f7150e2-c7a5-4a8a-82e7-877b9fe05ecc",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://wickedcantina.com/live-music-calendar",
+        "fetched_url": "https://wickedcantina.com/",
+        "finding_key": "html_error:https://wickedcantina.com/live-music-calendar",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T02:06:41.519597+00:00",
+        "last_seen_at": "2026-10-16T17:31:53.518178+00:00"
+      },
+      {
+        "id": "31c4199a-303d-4b2d-8324-42e65f979180",
+        "category": "html_error",
+        "status": "resolved",
+        "detector_status": "detected",
+        "source_type": "html_error",
+        "source_url": "https://wickedcantina.com/t-shirts-%26-events",
+        "fetched_url": "https://wickedcantina.com/",
+        "finding_key": "html_error:https://wickedcantina.com/t-shirts-%26-events",
+        "error": "HTML schedule detected but extraction failed",
+        "evidence": [
+          "Recognizable dated HTML performance schedule",
+          "Expected performances: 0",
+          "Extracted performances: 0"
+        ],
+        "first_seen_at": "2026-10-13T02:06:41.645186+00:00",
+        "last_seen_at": "2026-10-16T17:31:53.652936+00:00"
+      },
+      {
+        "id": "50007dc1-458b-4dc1-a4bd-09edd29396a3",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://wickedcantina.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T15:31:20.791527+00:00",
+        "last_seen_at": "2026-10-23T17:47:16.573894+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  },
+  {
+    "venue_id": "5a8bf9aa-1937-48fc-9853-33bf3d9f4411",
+    "spot_name": "Wild Child",
+    "website_url": "https://www.wildchildstpete.com/",
+    "comparison_group": "NO_SOURCES_ONLY",
+    "facebook_detected": false,
+    "findings": [
+      {
+        "id": "a78a6da8-ed21-4629-8f96-669a1d8bde61",
+        "category": "no_source",
+        "status": "active",
+        "detector_status": "no_event_source",
+        "source_type": null,
+        "source_url": null,
+        "fetched_url": "https://www.wildchildstpete.com/",
+        "finding_key": "no_source",
+        "error": null,
+        "evidence": [],
+        "first_seen_at": "2026-10-06T05:04:25.892761+00:00",
+        "last_seen_at": "2026-10-23T17:15:14.25575+00:00"
+      }
+    ],
+    "registered_sources": [],
+    "audit": {
+      "status": "pending",
+      "classification": null,
+      "findings": [],
+      "proposed_action": null,
+      "verified_at": null
+    }
+  }
+]
