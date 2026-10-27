@@ -970,10 +970,19 @@ export async function fetchFacebookEvents(
           }
         };
 
-        if (isPageIdentity(observed)) {
+        /*
+         * Prefer an explicit canonical Page identity over the requested
+         * legacy URL. A successful navigation can retain the old URL
+         * while Facebook's canonical metadata points to the new Page.
+         * Never accept login, global Events, or unrelated destinations.
+         */
+        const canonicalUrl = canonical
+          ? new URL(canonical, observed).toString()
+          : null;
+        if (canonicalUrl && isPageIdentity(canonicalUrl)) {
+          resolvedSourceUrl = canonicalUrl;
+        } else if (isPageIdentity(observed)) {
           resolvedSourceUrl = observed;
-        } else if (canonical && isPageIdentity(canonical)) {
-          resolvedSourceUrl = new URL(canonical, observed).toString();
         }
       } catch {
         // A blocked Page homepage is not proof of an identity change.
@@ -1053,7 +1062,7 @@ export async function fetchFacebookEvents(
     };
 
     if (options.validatePageIdentity && isGlobalEventsFeed(page.url())) {
-      const alternate = new URL(canonicalPageUrl(sourceUrl));
+      const alternate = new URL(canonicalPageUrl(resolvedSourceUrl));
       alternate.searchParams.set("sk", "events");
 
       response = await page.goto(alternate.href, {
