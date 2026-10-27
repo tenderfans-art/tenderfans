@@ -111,6 +111,7 @@ export async function loadFirstPartySource(
 
 export async function previewFirstPartySource(
   source: FirstPartySource,
+  options: { validateFacebookPageIdentity?: boolean } = {},
 ): Promise<FirstPartyEventPreview[]> {
   if (!source.source_url) {
     throw new Error("First-party source has no source URL.");
@@ -316,7 +317,9 @@ export async function previewFirstPartySource(
   } else if (source.source_type === "tanstack_seroval_events") {
     events = await fetchTanStackSerovalEvents(source.source_url);
   } else if (source.source_type === "facebook_events") {
-    events = await fetchFacebookEvents(source.source_url);
+    events = await fetchFacebookEvents(source.source_url, {
+      validatePageIdentity: options.validateFacebookPageIdentity === true,
+    });
   } else if (source.source_type === "eventer_events") {
     const timeZone = typeof source.config?.timezone === "string"
       ? source.config.timezone : "America/New_York";
