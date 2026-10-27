@@ -1008,6 +1008,27 @@ export async function fetchFacebookEvents(
 
     const currentUrl = page.url();
 
+    /*
+     * Facebook can silently redirect an unavailable Page Events tab
+     * to its global Events discovery feed with HTTP 200.
+     *
+     * That feed contains unrelated recommended events and must never
+     * be treated as the requested Page's event inventory.
+     *
+     * Reject the scan rather than returning an empty event list,
+     * preserving the distinction between unavailable and no events.
+     */
+    const resolvedUrl = new URL(currentUrl);
+
+    if (
+      /(^|\\.)facebook\\.com$/i.test(resolvedUrl.hostname) &&
+      /^\\/events\\/?$/i.test(resolvedUrl.pathname)
+    ) {
+      throw new Error(
+        "Facebook Page Events redirected to global Events discovery feed"
+      );
+    }
+
     if (
       /facebook\.com\/(?:login|login\.php|checkpoint)(?:[/?]|$)/i.test(currentUrl)
     ) {
