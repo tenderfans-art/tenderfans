@@ -42,7 +42,9 @@ export async function validateFirstPartySource(
 ): Promise<FirstPartySourceValidation> {
   try {
     const events =
-      await previewFirstPartySource(source);
+      await previewFirstPartySource(source, {
+        validateFacebookPageIdentity: source.source_type === "facebook_events",
+      });
 
     if (events.length > 0) {
       return {
