@@ -937,6 +937,20 @@ export async function fetchFacebookEvents(
      */
     let resolvedSourceUrl = sourceUrl;
     if (options.validatePageIdentity) {
+      const redirectTrace: string[] = [];
+      page.on("response", (received) => {
+        const request = received.request();
+        if (!request.isNavigationRequest() || !request.isMainFrame()) return;
+        if (redirectTrace.length >= 12) return;
+        try {
+          const url = new URL(received.url());
+          redirectTrace.push(
+            `${received.status()} ${url.origin}${url.pathname}`,
+          );
+        } catch {
+          // Ignore malformed diagnostic URLs.
+        }
+      });
       try {
         await page.goto(canonicalPageUrl(sourceUrl), {
           waitUntil: "domcontentloaded",
@@ -984,6 +998,15 @@ export async function fetchFacebookEvents(
         } else if (isPageIdentity(observed)) {
           resolvedSourceUrl = observed;
         }
+        console.info("[facebook-page-resolution]", JSON.stringify({
+          requested: canonicalPageUrl(sourceUrl),
+          observed: new URL(observed).origin + new URL(observed).pathname,
+          canonical: canonicalUrl
+            ? new URL(canonicalUrl).origin + new URL(canonicalUrl).pathname
+            : null,
+          resolved: canonicalPageUrl(resolvedSourceUrl),
+          redirects: redirectTrace,
+        }));
       } catch {
         // A blocked Page homepage is not proof of an identity change.
         // The original Page Events URL still receives full validation.
