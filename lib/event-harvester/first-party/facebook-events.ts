@@ -1021,8 +1021,8 @@ export async function fetchFacebookEvents(
     const resolvedUrl = new URL(currentUrl);
 
     if (
-      /(^|\\.)facebook\\.com$/i.test(resolvedUrl.hostname) &&
-      /^\\/events\\/?$/i.test(resolvedUrl.pathname)
+      resolvedUrl.hostname.toLowerCase() === "www.facebook.com" &&
+      ["/events", "/events/"].includes(resolvedUrl.pathname)
     ) {
       throw new Error(
         "Facebook Page Events redirected to global Events discovery feed"
