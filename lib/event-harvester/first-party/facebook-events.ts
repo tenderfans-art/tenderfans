@@ -1015,8 +1015,8 @@ export async function fetchFacebookEvents(
     if (options.validatePageIdentity) {
       const destination = new URL(currentUrl);
       if (
-        /(^|\\.)facebook\\.com$/i.test(destination.hostname) &&
-        /^\\/events\\/?$/i.test(destination.pathname)
+        /(^|\.)facebook\.com$/i.test(destination.hostname) &&
+        /^\/events\/?$/i.test(destination.pathname)
       ) {
         throw new Error(
           "Facebook Page Events redirected to global Events discovery feed",
