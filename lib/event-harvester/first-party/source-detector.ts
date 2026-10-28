@@ -2372,7 +2372,7 @@ export async function detectFirstPartySources(
         evidence: [
           "First-party JavaScript exposes a public Supabase events inventory",
           "Public PostgREST events API returned parseable records",
-          "Recurring series are excluded until exceptions can be verified",
+          "Supported weekly recurrences are expanded; cancellation exceptions remain unverified",
         ],
       });
     }
