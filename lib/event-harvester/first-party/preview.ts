@@ -31,6 +31,7 @@ import { fetchSpotHopperEvents } from "./spothopper-events";
 import { fetchFacebookEvents } from "./facebook-events";
 import { fetchCalendarImageEvents } from "./calendar-image-events";
 import { fetchTanStackSerovalEvents } from "./tanstack-seroval-events";
+import { fetchSupabasePostgrestEvents } from "./supabase-postgrest-events";
 
 export type FirstPartySource = {
   id: string;
@@ -119,7 +120,29 @@ export async function previewFirstPartySource(
 
   let events;
 
-  if (source.source_type === "ticket_spot_events") {
+  if (source.source_type === "supabase_postgrest_events") {
+    const apiUrl = source.config?.apiUrl;
+    const anonKey = source.config?.anonKey;
+    const table = source.config?.table;
+
+    if (
+      typeof apiUrl !== "string" ||
+      typeof anonKey !== "string" ||
+      (table !== undefined && typeof table !== "string")
+    ) {
+      throw new Error(
+        "PostgREST source requires public apiUrl and anonKey configuration",
+      );
+    }
+
+    const result = await fetchSupabasePostgrestEvents({
+      apiUrl,
+      anonKey,
+      ...(typeof table === "string" ? { table } : {}),
+    });
+
+    events = result.events;
+  } else if (source.source_type === "ticket_spot_events") {
     events = await fetchTicketSpotEvents(source.source_url);
   } else if (source.source_type === "simcal_events") {
     events = await fetchSimcalEvents(source.source_url);
