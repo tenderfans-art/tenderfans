@@ -1,3 +1,4 @@
+import { inspectSquareOnline } from "./square-online-events";
 import { isVerificationInterstitial } from "../access-challenge";
 import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
 import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
@@ -28,6 +29,7 @@ export type DetectedSourceType =
   | "html_events"
   | "html_error"
   | "pwpc_events_calendar"
+  | "square_online_events"
   | "shopify_events"
   | "woocommerce_events"
   | "calendar_image"
@@ -2348,6 +2350,26 @@ export async function detectFirstPartySources(
   }
 
   inspectPage(homepage.html, homepage.url, detections);
+
+  // Square storefronts must contain actual event products.
+  // A generic Square shop is not automatically an event source.
+  try {
+    if (await inspectSquareOnline(homepage.html)) {
+      pushDetection(detections, {
+        sourceType: "square_online_events",
+        url: homepage.url,
+        confidence: "high",
+        adapterAvailable: true,
+        supported: true,
+        evidence: [
+          "Square Online storefront identified",
+          "Public catalog contains structured event products",
+        ],
+      });
+    }
+  } catch {
+    // Square catalog failure must not disrupt other adapters.
+  }
 
   /*
    * Discover public event inventories exposed by first-party

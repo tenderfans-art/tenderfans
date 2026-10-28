@@ -21,6 +21,7 @@ import { fetchUvTixEvents } from "./uvtix-events";
 import { fetchSchemaOrgEvents } from "./schema-org-events";
 import { fetchHtmlEvents } from "./html-events";
 import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
+import { fetchSquareOnlineEvents } from "./square-online-events";
 import { fetchShopifyEvents } from "./shopify-events";
 import { fetchWooCommerceEvents } from "./woocommerce-events";
 import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
@@ -263,6 +264,8 @@ export async function previewFirstPartySource(
       timeZone,
       weeksForward,
     });
+  } else if (source.source_type === "square_online_events") {
+    events = await fetchSquareOnlineEvents(source.source_url);
   } else if (source.source_type === "shopify_events") {
     const timeZone =
       typeof source.config?.timezone === "string"
