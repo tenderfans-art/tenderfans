@@ -32,6 +32,7 @@ import { fetchFacebookEvents } from "./facebook-events";
 import { fetchCalendarImageEvents } from "./calendar-image-events";
 import { fetchTanStackSerovalEvents } from "./tanstack-seroval-events";
 import { fetchSupabasePostgrestEvents } from "./supabase-postgrest-events";
+import { discoverPublicPostgrestEvents } from "./supabase-postgrest-discovery";
 
 export type FirstPartySource = {
   id: string;
@@ -126,22 +127,29 @@ export async function previewFirstPartySource(
     const table = source.config?.table;
 
     if (
-      typeof apiUrl !== "string" ||
-      typeof anonKey !== "string" ||
-      (table !== undefined && typeof table !== "string")
+      typeof apiUrl === "string" &&
+      typeof anonKey === "string"
     ) {
-      throw new Error(
-        "PostgREST source requires public apiUrl and anonKey configuration",
+      const result = await fetchSupabasePostgrestEvents({
+        apiUrl,
+        anonKey,
+        ...(typeof table === "string" ? { table } : {}),
+      });
+
+      events = result.events;
+    } else {
+      const discovered = await discoverPublicPostgrestEvents(
+        source.source_url,
       );
+
+      if (!discovered) {
+        throw new Error(
+          "Public PostgREST events inventory could not be verified",
+        );
+      }
+
+      events = discovered.inventory.events;
     }
-
-    const result = await fetchSupabasePostgrestEvents({
-      apiUrl,
-      anonKey,
-      ...(typeof table === "string" ? { table } : {}),
-    });
-
-    events = result.events;
   } else if (source.source_type === "ticket_spot_events") {
     events = await fetchTicketSpotEvents(source.source_url);
   } else if (source.source_type === "simcal_events") {

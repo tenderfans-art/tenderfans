@@ -16,8 +16,10 @@ import { fetchBrowserEvidence } from "./browser-transport";
 import { discoverCalendarImageAssets } from "./calendar-image-assets";
 import { extractHtmlEventsWithDiagnostics } from "./html-events";
 import { discoverTanStackCalendar } from "./tanstack-seroval-events";
+import { discoverPublicPostgrestEvents } from "./supabase-postgrest-discovery";
 
 export type DetectedSourceType =
+  | "supabase_postgrest_events"
   | "eventbrite_organizer"
   | "godaddy_menu_recurring"
   | "cp_multi_view_calendar"
@@ -2346,6 +2348,38 @@ export async function detectFirstPartySources(
   }
 
   inspectPage(homepage.html, homepage.url, detections);
+
+  /*
+   * Discover public event inventories exposed by first-party
+   * JavaScript applications. The discovery module verifies
+   * the API before returning a candidate.
+   *
+   * Never put the public API key in detection evidence.
+   * Ratification stores only the first-party website URL.
+   */
+  try {
+    const postgrest = await discoverPublicPostgrestEvents(
+      homepage.url,
+    );
+
+    if (postgrest) {
+      pushDetection(detections, {
+        sourceType: "supabase_postgrest_events",
+        url: homepage.url,
+        confidence: "high",
+        adapterAvailable: true,
+        supported: true,
+        evidence: [
+          "First-party JavaScript exposes a public Supabase events inventory",
+          "Public PostgREST events API returned parseable records",
+          "Recurring series are excluded until exceptions can be verified",
+        ],
+      });
+    }
+  } catch {
+    // Discovery failure must not disrupt other adapters.
+  }
+
 
   await discoverWordPressCategoryEvents(
     homepage.url,

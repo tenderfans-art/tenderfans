@@ -315,6 +315,7 @@ async function ratifyEventbrite(
 }
 
 const directlyRatifiableSourceTypes = new Set([
+  "supabase_postgrest_events",
   "godaddy_menu_recurring",
   "cp_multi_view_calendar",
   "uvtix_events",
