@@ -1,3 +1,4 @@
+import { fetchToastDigitalStorefrontEvents } from "./toast-digital-storefront";
 import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -263,6 +264,11 @@ export async function previewFirstPartySource(
     events = await fetchCpMultiViewCalendarEvents(source.source_url, {
       timeZone,
       weeksForward,
+    });
+  } else if (source.source_type === "toast_digital_storefront") {
+    events = await fetchToastDigitalStorefrontEvents(source.source_url, {
+      timeZone: typeof source.config?.timezone === "string"
+        ? source.config.timezone : "America/New_York",
     });
   } else if (source.source_type === "square_online_events") {
     events = await fetchSquareOnlineEvents(source.source_url);
