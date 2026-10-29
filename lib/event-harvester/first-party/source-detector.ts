@@ -2551,13 +2551,7 @@ export async function detectFirstPartySources(
 
         if (page.ok) {
           inspectPage(page.html, page.url, detections);
-    if (inspectToastDigitalStorefront(page.html)) {
-      pushDetection(detections, {
-        sourceType: "toast_digital_storefront", url: page.url,
-        confidence: "high", adapterAvailable: true, supported: true,
-        evidence: ["Toast Digital Storefront event page with explicit weekly schedule"],
-      });
-    }
+
         }
       } catch {
         // External UVTix discovery failure does not fail the site scan.
@@ -2594,6 +2588,16 @@ export async function detectFirstPartySources(
       }
 
       inspectPage(page.html, page.url, detections);
+      if (inspectToastDigitalStorefront(page.html)) {
+        pushDetection(detections, {
+          sourceType: "toast_digital_storefront",
+          url: page.url,
+          confidence: "high",
+          adapterAvailable: true,
+          supported: true,
+          evidence: ["Toast Digital Storefront event page with explicit weekly schedule"],
+        });
+      }
       recordTanStackEligibility(
         page.html,
         discovered?.finalUrl ?? page.url,
