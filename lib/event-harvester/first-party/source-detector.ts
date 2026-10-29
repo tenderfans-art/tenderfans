@@ -1,3 +1,4 @@
+import { inspectToastDigitalStorefront } from "./toast-digital-storefront";
 import { inspectSquareOnline } from "./square-online-events";
 import { isVerificationInterstitial } from "../access-challenge";
 import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
@@ -29,6 +30,7 @@ export type DetectedSourceType =
   | "html_events"
   | "html_error"
   | "pwpc_events_calendar"
+  | "toast_digital_storefront"
   | "square_online_events"
   | "shopify_events"
   | "woocommerce_events"
@@ -2351,6 +2353,14 @@ export async function detectFirstPartySources(
 
   inspectPage(homepage.html, homepage.url, detections);
 
+  if (inspectToastDigitalStorefront(homepage.html)) {
+    pushDetection(detections, {
+      sourceType: "toast_digital_storefront", url: homepage.url,
+      confidence: "high", adapterAvailable: true, supported: true,
+      evidence: ["Toast Digital Storefront event page with explicit weekly schedule"],
+    });
+  }
+
   // Square storefronts must contain actual event products.
   // A generic Square shop is not automatically an event source.
   try {
@@ -2541,6 +2551,13 @@ export async function detectFirstPartySources(
 
         if (page.ok) {
           inspectPage(page.html, page.url, detections);
+    if (inspectToastDigitalStorefront(page.html)) {
+      pushDetection(detections, {
+        sourceType: "toast_digital_storefront", url: page.url,
+        confidence: "high", adapterAvailable: true, supported: true,
+        evidence: ["Toast Digital Storefront event page with explicit weekly schedule"],
+      });
+    }
         }
       } catch {
         // External UVTix discovery failure does not fail the site scan.
