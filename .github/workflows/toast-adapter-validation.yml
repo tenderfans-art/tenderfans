@@ -1,0 +1,23 @@
+name: Toast adapter validation
+on:
+  push:
+    branches:
+      - feature/toast-digital-storefront-events
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: TypeScript check
+        run: npx --no-install tsc --noEmit --incremental false
+      - name: Production build
+        run: npm run build
