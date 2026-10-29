@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { ingestFirstPartySource } from "@/lib/event-harvester/first-party/ingest";
+import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
 
 export const maxDuration = 1800;
 
@@ -119,11 +120,18 @@ export async function GET(request: NextRequest) {
         let result: Awaited<ReturnType<typeof ingestFirstPartySource>>;
 
         try {
-          result = await ingestFirstPartySource(
+          const ingest = () => ingestFirstPartySource(
             supabase,
             source.id,
             { dryRun: false }
           );
+
+          const proxyUrl =
+            process.env.TENDERFANS_TRANSPORT_PROXY_URL;
+
+          result = proxyUrl
+            ? await runWithTransportRecovery(proxyUrl, ingest)
+            : await ingest();
         } catch (ingestError) {
           const message = safeError(ingestError);
 
