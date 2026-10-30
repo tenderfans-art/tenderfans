@@ -2789,18 +2789,28 @@ export async function detectFirstPartySources(
           );
         }
 
+        const allPopmenuCalendarsConfirmed =
+          popmenuUrls.size > 0 &&
+          [...popmenuUrls].every(url =>
+            detections.some(d =>
+              d.sourceType === "html_events" &&
+              d.supported &&
+              d.url === url
+            )
+          );
+
+        const otherProviderConfirmed = detections.some(
+          d =>
+            d.sourceType === "eventscalendar_events" ||
+            d.sourceType === "sociablekit_facebook_events" ||
+            d.sourceType === "google_calendar" ||
+            d.sourceType === "ticket_spot_events"
+        );
+
         if (
-          confirmedPopmenuHtml ||
-          detections.some(
-            (detection) =>
-              detection.sourceType ===
-                "eventscalendar_events" ||
-              detection.sourceType ===
-                "sociablekit_facebook_events" ||
-              detection.sourceType ===
-                "google_calendar" ||
-                detection.sourceType === "ticket_spot_events",
-          )
+          popmenuUrls.size > 0
+            ? allPopmenuCalendarsConfirmed
+            : otherProviderConfirmed
         ) {
           break;
         }
