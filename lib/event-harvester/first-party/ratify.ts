@@ -316,12 +316,14 @@ async function ratifyEventbrite(
 
 const directlyRatifiableSourceTypes = new Set([
   "supabase_postgrest_events",
+  "html_metadata_recurring",
   "godaddy_menu_recurring",
   "cp_multi_view_calendar",
   "uvtix_events",
   "schema_org_events",
   "html_events",
   "pwpc_events_calendar",
+  "toast_digital_storefront",
   "square_online_events",
   "shopify_events",
   "woocommerce_events",

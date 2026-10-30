@@ -1,3 +1,4 @@
+import { fetchToastDigitalStorefrontEvents } from "./toast-digital-storefront";
 import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -13,6 +14,7 @@ import { fetchEventsCalendarEvents } from "./eventscalendar-events";
 import { fetchSociableKitFacebookEvents } from "./sociablekit-facebook-events";
 import { fetchEventbriteOrganizerEvents } from "./eventbrite-organizer";
 import { fetchGoDaddyMenuRecurringEvents } from "./godaddy-menu-recurring";
+import { fetchHtmlMetadataRecurringEvents } from "./html-metadata-recurring";
 import { fetchCpMultiViewCalendarEvents } from "./cp-multi-view-calendar";
 import { fetchNextRscEvents } from "./next-rsc-events";
 import { fetchSquarespaceEvents } from "./squarespace-events";
@@ -234,6 +236,21 @@ export async function previewFirstPartySource(
       venueId,
       sessionHorizonDays,
     });
+  } else if (source.source_type === "html_metadata_recurring") {
+    const timeZone =
+      typeof source.config?.timezone === "string"
+        ? source.config.timezone
+        : "America/New_York";
+
+    const weeksForward =
+      typeof source.config?.weeks_forward === "number"
+        ? source.config.weeks_forward
+        : 8;
+
+    events = await fetchHtmlMetadataRecurringEvents(
+      source.source_url,
+      { timeZone, weeksForward },
+    );
   } else if (source.source_type === "godaddy_menu_recurring") {
     const timeZone =
       typeof source.config?.timezone === "string"
@@ -263,6 +280,11 @@ export async function previewFirstPartySource(
     events = await fetchCpMultiViewCalendarEvents(source.source_url, {
       timeZone,
       weeksForward,
+    });
+  } else if (source.source_type === "toast_digital_storefront") {
+    events = await fetchToastDigitalStorefrontEvents(source.source_url, {
+      timeZone: typeof source.config?.timezone === "string"
+        ? source.config.timezone : "America/New_York",
     });
   } else if (source.source_type === "square_online_events") {
     events = await fetchSquareOnlineEvents(source.source_url);

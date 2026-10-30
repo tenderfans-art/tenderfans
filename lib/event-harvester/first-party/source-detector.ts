@@ -1,4 +1,6 @@
+import { inspectToastDigitalStorefront } from "./toast-digital-storefront";
 import { inspectSquareOnline } from "./square-online-events";
+import { parseMetadataRecurringSchedule } from "./html-metadata-recurring";
 import { isVerificationInterstitial } from "../access-challenge";
 import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
 import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
@@ -22,6 +24,7 @@ import { discoverPublicPostgrestEvents } from "./supabase-postgrest-discovery";
 export type DetectedSourceType =
   | "supabase_postgrest_events"
   | "eventbrite_organizer"
+  | "html_metadata_recurring"
   | "godaddy_menu_recurring"
   | "cp_multi_view_calendar"
   | "uvtix_events"
@@ -29,6 +32,7 @@ export type DetectedSourceType =
   | "html_events"
   | "html_error"
   | "pwpc_events_calendar"
+  | "toast_digital_storefront"
   | "square_online_events"
   | "shopify_events"
   | "woocommerce_events"
@@ -1115,6 +1119,23 @@ function inspectPage(
     } catch {
       // Preserve other detection evidence.
     }
+  }
+
+  const metadataRecurring =
+    parseMetadataRecurringSchedule(html);
+
+  if (metadataRecurring.length > 0) {
+    pushDetection(detections, {
+      sourceType: "html_metadata_recurring",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Explicit recurring weekday and time ranges in HTML metadata",
+        `${metadataRecurring.length} recurring schedule item(s)`,
+      ],
+    });
   }
 
   if (hasParseableGoDaddyRecurringItems(html, pageUrl)) {
@@ -2351,6 +2372,14 @@ export async function detectFirstPartySources(
 
   inspectPage(homepage.html, homepage.url, detections);
 
+  if (inspectToastDigitalStorefront(homepage.html)) {
+    pushDetection(detections, {
+      sourceType: "toast_digital_storefront", url: homepage.url,
+      confidence: "high", adapterAvailable: true, supported: true,
+      evidence: ["Toast Digital Storefront event page with explicit weekly schedule"],
+    });
+  }
+
   // Square storefronts must contain actual event products.
   // A generic Square shop is not automatically an event source.
   try {
@@ -2541,6 +2570,7 @@ export async function detectFirstPartySources(
 
         if (page.ok) {
           inspectPage(page.html, page.url, detections);
+
         }
       } catch {
         // External UVTix discovery failure does not fail the site scan.
@@ -2577,6 +2607,16 @@ export async function detectFirstPartySources(
       }
 
       inspectPage(page.html, page.url, detections);
+      if (inspectToastDigitalStorefront(page.html)) {
+        pushDetection(detections, {
+          sourceType: "toast_digital_storefront",
+          url: page.url,
+          confidence: "high",
+          adapterAvailable: true,
+          supported: true,
+          evidence: ["Toast Digital Storefront event page with explicit weekly schedule"],
+        });
+      }
       recordTanStackEligibility(
         page.html,
         discovered?.finalUrl ?? page.url,
