@@ -747,6 +747,22 @@ function inspectObservedBrowserUrl(
   }
 }
 
+/*
+ * Popmenu renders an explicit empty inventory inside its calendar.
+ * The sitewide Apollo state alone is not calendar evidence.
+ * A static shell, challenge page, or unrelated "no events" text
+ * must never qualify as a validated source.
+ */
+function isConfirmedEmptyPopmenuCalendar(html: string): boolean {
+  return (
+    /pm-calendar-event-section-wrapper/i.test(html) &&
+    /NO\s+UPCOMING\s+EVENTS/i.test(
+      html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ")
+    ) &&
+    !/pm-calendar-event-card-wrapper/i.test(html)
+  );
+}
+
 function inspectPage(
   html: string,
   pageUrl: string,
@@ -760,8 +776,9 @@ function inspectPage(
    * resolution path; do not register an unverified source.
    */
   if (
-    /pm-calendar-event-section-wrapper|POPMENU_APOLLO_STATE/i.test(html) &&
-    !/pm-calendar-event-card-wrapper/i.test(html)
+    /pm-calendar-event-section-wrapper/i.test(html) &&
+    !/pm-calendar-event-card-wrapper/i.test(html) &&
+    !isConfirmedEmptyPopmenuCalendar(html)
   ) {
     pushDetection(detections, {
       sourceType: "browser_required",
@@ -1483,6 +1500,23 @@ function inspectPage(
       evidence: [
         "Dated event inventory extracted from first-party HTML",
         `${htmlEvents.length} normalized HTML event record(s)`,
+      ],
+    });
+  }
+
+  if (
+    isConfirmedEmptyPopmenuCalendar(html) &&
+    !htmlEvents.length
+  ) {
+    pushDetection(detections, {
+      sourceType: "html_events",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: true,
+      supported: true,
+      evidence: [
+        "Rendered Popmenu calendar with explicit empty inventory",
+        "0 upcoming events",
       ],
     });
   }
@@ -2663,9 +2697,26 @@ export async function detectFirstPartySources(
    * This keeps browser resolution bounded while preserving the existing
    * HTTP discovery path and shared provider adapters.
    */
-  const needsBrowserResolution = detections.some(
-    (detection) => detection.sourceType === "browser_required",
-  );
+  const needsBrowserResolution =
+    detections.some(
+      (detection) => detection.sourceType === "browser_required",
+    ) ||
+    (
+      !detections.some(
+        (detection) =>
+          detection.supported &&
+          detection.adapterAvailable &&
+          detection.sourceType !== "facebook",
+      ) &&
+      discoveredEventPages.some(
+        (page) =>
+          page.sameSite &&
+          page.fetched &&
+          page.httpStatus !== null &&
+          page.httpStatus >= 200 &&
+          page.httpStatus < 400,
+      )
+    );
 
   if (needsBrowserResolution) {
     const browserCandidates = discoveredEventPages.filter(
@@ -2762,7 +2813,10 @@ export async function detectFirstPartySources(
             d.sourceType === "html_events" &&
             d.supported &&
             d.url === evidence.finalUrl &&
-            /pm-calendar-event-card-wrapper/i.test(evidence.html)
+            (
+              /pm-calendar-event-card-wrapper/i.test(evidence.html) ||
+              isConfirmedEmptyPopmenuCalendar(evidence.html)
+            )
         );
 
         if (confirmedPopmenuHtml) {

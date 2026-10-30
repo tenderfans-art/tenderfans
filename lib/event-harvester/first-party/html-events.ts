@@ -1481,7 +1481,7 @@ export async function fetchHtmlEvents(
   }
 
   const isPopmenu =
-    /pm-calendar-event-section-wrapper|POPMENU_APOLLO_STATE/i
+    /pm-calendar-event-section-wrapper/i
       .test(response.html);
 
   if (isPopmenu) {
@@ -1493,6 +1493,26 @@ export async function fetchHtmlEvents(
       browser.status >= 400
     ) {
       throw new Error("Popmenu browser calendar unavailable");
+    }
+
+    const renderedCalendar =
+      /pm-calendar-event-section-wrapper/i.test(browser.html);
+
+    const confirmedEmpty =
+      renderedCalendar &&
+      /NO\s+UPCOMING\s+EVENTS/i.test(
+        browser.html
+          .replace(/<[^>]*>/g, " ")
+          .replace(/&nbsp;/gi, " ")
+      );
+
+    const hasCards =
+      /pm-calendar-event-card-wrapper/i.test(browser.html);
+
+    if (!renderedCalendar || (!hasCards && !confirmedEmpty)) {
+      throw new Error(
+        "Popmenu calendar did not render a confirmed inventory"
+      );
     }
 
     return extractHtmlEvents(
