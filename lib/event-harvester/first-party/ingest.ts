@@ -563,6 +563,7 @@ export async function ingestFirstPartySource(
     "google_calendar",
     "squarespace_events",
     "supabase_postgrest_events",
+    "html_metadata_recurring",
   ]).has(source.source_type);
 
   /*
