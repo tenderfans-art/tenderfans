@@ -1,4 +1,6 @@
 import { fetchHtml } from "./source-detector";
+import { fetchBrowserEvidence } from "./browser-transport";
+import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 
 export type HtmlNormalizedEvent = {
   externalEventId: string;
@@ -817,6 +819,373 @@ function extractGoogleCalendarPluginEvents(
 }
 
 
+
+/*
+ * Popmenu calendar cards, after client-side rendering.
+ * Only the displayed occurrence is harvested. Recurrence rules
+ * remain descriptive metadata, never synthesized occurrences.
+ */
+
+type PopmenuExtraction = {
+  events: HtmlNormalizedEvent[];
+  cardCount: number;
+  untimedCount: number;
+  placeholderCount: number;
+  invalidCount: number;
+};
+
+function extractPopmenuCalendar(
+  html: string,
+  pageUrl: string,
+): PopmenuExtraction {
+  const result: PopmenuExtraction = {
+    events: [],
+    cardCount: 0,
+    untimedCount: 0,
+    placeholderCount: 0,
+    invalidCount: 0,
+  };
+
+  if (
+    !html.includes("pm-calendar-event-card") ||
+    !html.includes("calendar-event-name")
+  ) return result;
+
+  const months = [
+    "jan", "feb", "mar", "apr", "may", "jun",
+    "jul", "aug", "sep", "oct", "nov", "dec",
+  ];
+
+  const weekdays = [
+    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
+  ];
+
+  const cards = html.split(
+    /<div\b[^>]*class=["'][^"']*\bpm-calendar-event-card-wrapper\b[^"']*["'][^>]*>/i,
+  ).slice(1);
+
+  result.cardCount = cards.length;
+
+  const seen = new Set<string>();
+  const now = new Date();
+
+  function parseClock(
+    hourText: string,
+    minuteText: string | undefined,
+    period: string,
+  ): { hour: number; minute: number } | null {
+    const hour12 = Number(hourText);
+    const minute = Number(minuteText ?? 0);
+
+    if (
+      hour12 < 1 || hour12 > 12 ||
+      minute < 0 || minute > 59
+    ) return null;
+
+    return {
+      hour: hour12 % 12 +
+        (period.toLowerCase() === "pm" ? 12 : 0),
+      minute,
+    };
+  }
+
+  function dateFor(
+    year: number,
+    month: number,
+    day: number,
+  ): Date | null {
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    return (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day
+    ) ? date : null;
+  }
+
+  for (const card of cards) {
+    const titleMatch = card.match(
+      /<h2\b[^>]*class=["'][^"']*\bcalendar-event-name\b[^"']*["'][^>]*>([\s\S]*?)<\/h2>/i,
+    );
+
+    const monthMatch = card.match(
+      /<span\b[^>]*data-testid=["']upcoming-month["'][^>]*>([\s\S]*?)<\/span>/i,
+    );
+
+    const dayMatch = card.match(
+      /<span\b[^>]*data-testid=["']upcoming-day["'][^>]*>([\s\S]*?)<\/span>/i,
+    );
+
+    const linkMatch = card.match(
+      /<a\b[^>]*href=["']([^"']*\/events\/[^"']+)["']/i,
+    );
+
+    if (!titleMatch || !monthMatch || !dayMatch || !linkMatch) {
+      result.invalidCount++;
+      continue;
+    }
+
+    const title = text(titleMatch[1]);
+    const month = months.indexOf(
+      text(monthMatch[1]).slice(0, 3).toLowerCase(),
+    ) + 1;
+    const day = Number(text(dayMatch[1]));
+
+    if (
+      !title || title.length > 160 ||
+      !month || day < 1 || day > 31
+    ) {
+      result.invalidCount++;
+      continue;
+    }
+
+    if (
+      /^(?:hold|tba|tbd|to be announced|coming soon)(?:\b|$)/i.test(title) ||
+      /\b(?:musician|performer|artist|entertainment)\s+tba\b/i.test(title)
+    ) {
+      result.placeholderCount++;
+      continue;
+    }
+
+    let eventUrl: URL;
+
+    try {
+      eventUrl = new URL(decode(linkMatch[1]), pageUrl);
+
+      if (
+        !["http:", "https:"].includes(eventUrl.protocol) ||
+        eventUrl.origin !== new URL(pageUrl).origin
+      ) {
+        result.invalidCount++;
+        continue;
+      }
+    } catch {
+      result.invalidCount++;
+      continue;
+    }
+
+    const dateTime = card.match(
+      /<p\b[^>]*data-testid=["']event-date-time["'][^>]*>([\s\S]*?)<\/p>/i,
+    );
+
+    const publishedSchedule = dateTime
+      ? text(dateTime[1])
+      : "";
+
+    const recurringMatch = card.match(
+      /<p\b[^>]*>\s*(Weekly[\s\S]*?)<\/p>/i,
+    );
+
+    const recurringSchedule = recurringMatch
+      ? text(recurringMatch[1])
+      : null;
+
+    let year: number | null = null;
+
+    const today = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+    );
+
+    for (const candidate of [
+      now.getUTCFullYear(),
+      now.getUTCFullYear() + 1,
+    ]) {
+      const date = dateFor(candidate, month, day);
+      if (!date) continue;
+
+      const distance =
+        (date.getTime() - today) / 86400000;
+
+      if (distance >= -1 && distance <= 370) {
+        year = candidate;
+        break;
+      }
+    }
+
+    if (year === null) {
+      result.invalidCount++;
+      continue;
+    }
+
+    const occurrence = dateFor(year, month, day)!;
+
+    // Weekly day names must agree with the displayed occurrence.
+    if (recurringSchedule) {
+      const dayExpression = recurringSchedule.match(
+        /^Weekly\s+((?:(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:\/)?)+)\b/i,
+      );
+
+      if (dayExpression) {
+        const allowed = dayExpression[1]
+          .split("/")
+          .map(value => value.slice(0, 3).toLowerCase());
+
+        if (
+          !allowed.includes(
+            weekdays[occurrence.getUTCDay()].toLowerCase(),
+          )
+        ) {
+          result.invalidCount++;
+          continue;
+        }
+      }
+    }
+
+    const publishedStart = publishedSchedule.match(
+      /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,\s+[A-Za-z]+\s+\d{1,2},\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i,
+    );
+
+    const recurringTimes = recurringSchedule?.match(
+      /\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)(?:\s*[-–—]\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm))?/i,
+    );
+
+    const startMatch = publishedStart ?? recurringTimes;
+
+    if (!startMatch) {
+      result.untimedCount++;
+      continue;
+    }
+
+    const startClock = parseClock(
+      startMatch[1],
+      startMatch[2],
+      startMatch[3],
+    );
+
+    if (!startClock) {
+      result.invalidCount++;
+      continue;
+    }
+
+    const startsAt = easternTimestamp(
+      year, month, day,
+      startClock.hour, startClock.minute,
+    );
+
+    let endsAt: string | null = null;
+
+    /*
+     * For recurring events, the published date range describes
+     * the series, not a single performance's end date.
+     */
+    if (recurringTimes?.[4]) {
+      const endClock = parseClock(
+        recurringTimes[4],
+        recurringTimes[5],
+        recurringTimes[6],
+      );
+
+      if (endClock) {
+        const startMinutes =
+          startClock.hour * 60 + startClock.minute;
+
+        const endMinutes =
+          endClock.hour * 60 + endClock.minute;
+
+        const endDate = new Date(Date.UTC(
+          year, month - 1,
+          day + (endMinutes <= startMinutes ? 1 : 0),
+        ));
+
+        endsAt = easternTimestamp(
+          endDate.getUTCFullYear(),
+          endDate.getUTCMonth() + 1,
+          endDate.getUTCDate(),
+          endClock.hour,
+          endClock.minute,
+        );
+      }
+    } else if (!recurringSchedule) {
+      /*
+       * A one-time event may publish a full start/end date.
+       * Its structured time takes priority over the title.
+       */
+      const endMatch = publishedSchedule.match(
+        /[-–—]\s*(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,\s+)?([A-Za-z]+)\s+(\d{1,2}),\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i,
+      );
+
+      if (endMatch) {
+        const endMonth = months.indexOf(
+          endMatch[1].slice(0, 3).toLowerCase(),
+        ) + 1;
+
+        const endDay = Number(endMatch[2]);
+        const endClock = parseClock(
+          endMatch[3], endMatch[4], endMatch[5],
+        );
+
+        const endYear =
+          endMonth < month ? year + 1 : year;
+
+        if (
+          endClock &&
+          dateFor(endYear, endMonth, endDay)
+        ) {
+          endsAt = easternTimestamp(
+            endYear, endMonth, endDay,
+            endClock.hour, endClock.minute,
+          );
+        }
+      }
+    }
+
+    if (endsAt) {
+      const duration =
+        Date.parse(endsAt) - Date.parse(startsAt);
+
+      if (duration <= 0 || duration > 86400000) {
+        endsAt = null;
+      }
+    }
+
+    const key = `${eventUrl.toString()}:${startsAt}`;
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const tags = [
+      ...card.matchAll(
+        /<div\b[^>]*class=["'][^"']*\bpm-calendar-event-tag\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi,
+      ),
+    ].map(match => text(match[1])).filter(Boolean);
+
+    result.events.push({
+      externalEventId: `html:popmenu:${key}`,
+      sourceUrl: eventUrl.toString(),
+      title,
+      description: [
+        publishedSchedule,
+        recurringSchedule,
+      ].filter(Boolean).join("\n") || null,
+      startsAt,
+      endsAt,
+      allDay: false,
+      flyerUrl: null,
+      location: null,
+      venueName: null,
+      venueAddress: null,
+      rawPayload: {
+        extraction: "html_popmenu_calendar",
+        calendarUrl: pageUrl,
+        publishedSchedule,
+        recurringSchedule,
+        tags,
+      },
+    });
+  }
+
+  return result;
+}
+
+function extractPopmenuCalendarEvents(
+  html: string,
+  pageUrl: string,
+): HtmlNormalizedEvent[] {
+  return extractPopmenuCalendar(html, pageUrl).events;
+}
+
 export function extractHtmlEventsWithDiagnostics(
   html: string,
   pageUrl: string,
@@ -828,6 +1197,7 @@ export function extractHtmlEventsWithDiagnostics(
     ...extractDiviHtmlEvents(html, pageUrl),
     ...extractDudaGalleryEvents(html, pageUrl),
     ...extractGoogleCalendarPluginEvents(html, pageUrl),
+    ...extractPopmenuCalendarEvents(html, pageUrl),
   ];
 
   const announcement = extractMultidayHtmlAnnouncement(
@@ -841,6 +1211,33 @@ export function extractHtmlEventsWithDiagnostics(
 
   const errors: string[] = [];
   let expectedPerformances = 0;
+
+  const popmenu = extractPopmenuCalendar(html, pageUrl);
+
+  if (popmenu.cardCount > 0) {
+    expectedPerformances =
+      popmenu.cardCount -
+      popmenu.untimedCount -
+      popmenu.placeholderCount;
+
+    if (popmenu.untimedCount > 0) {
+      errors.push(
+        `Popmenu: ${popmenu.untimedCount} untimed calendar entries`,
+      );
+    }
+
+    if (popmenu.placeholderCount > 0) {
+      errors.push(
+        `Popmenu: ${popmenu.placeholderCount} unpublished placeholders`,
+      );
+    }
+
+    if (popmenu.invalidCount > 0) {
+      errors.push(
+        `Popmenu: ${popmenu.invalidCount} invalid calendar cards`,
+      );
+    }
+  }
 
   const article =
     html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ??
@@ -1080,6 +1477,27 @@ export async function fetchHtmlEvents(
     throw new Error(
       `HTML event source returned HTTP ${response.status}. ` +
       (response.recoveryDetail ?? "")
+    );
+  }
+
+  const isPopmenu =
+    /pm-calendar-event-section-wrapper|POPMENU_APOLLO_STATE/i
+      .test(response.html);
+
+  if (isPopmenu) {
+    const browser = await fetchBrowserEvidence(sourceUrl, getTransportRecoveryProxy());
+
+    if (
+      browser.status === null ||
+      browser.status < 200 ||
+      browser.status >= 400
+    ) {
+      throw new Error("Popmenu browser calendar unavailable");
+    }
+
+    return extractHtmlEvents(
+      browser.html,
+      browser.finalUrl,
     );
   }
 

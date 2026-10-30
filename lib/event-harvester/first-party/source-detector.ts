@@ -755,6 +755,25 @@ function inspectPage(
   const lower = html.toLowerCase();
 
   /*
+   * Popmenu's static calendar shell does not contain the
+   * client-rendered event cards. Use the existing browser
+   * resolution path; do not register an unverified source.
+   */
+  if (
+    /pm-calendar-event-section-wrapper|POPMENU_APOLLO_STATE/i.test(html) &&
+    !/pm-calendar-event-card-wrapper/i.test(html)
+  ) {
+    pushDetection(detections, {
+      sourceType: "browser_required",
+      url: pageUrl,
+      confidence: "high",
+      adapterAvailable: false,
+      supported: false,
+      evidence: ["Popmenu calendar requires client-side rendering"],
+    });
+  }
+
+  /*
    * Ticket Spot embeds its Wix event viewer on first-party pages.
    * The widget loads event inventory through its authenticated
    * runtime API. Preserve the first-party page as the source URL;
@@ -2658,7 +2677,46 @@ export async function detectFirstPartySources(
         page.httpStatus < 400,
     );
 
-    for (const candidate of browserCandidates) {
+    const popmenuUrls = new Set(
+      detections
+        .filter(d =>
+          d.sourceType === "browser_required" &&
+          d.evidence.includes(
+            "Popmenu calendar requires client-side rendering"
+          )
+        )
+        .map(d => d.url)
+    );
+
+    /*
+     * Popmenu calendar shells need browser rendering.
+     * Include the homepage when it contains a calendar, and
+     * prioritize discovered Popmenu calendar pages.
+     *
+     * Preserve the existing candidate list for other adapters.
+     */
+    const popmenuHomepageCandidate =
+      popmenuUrls.has(homepage.url)
+        ? [{
+            url: homepage.url,
+            finalUrl: homepage.url,
+            sameSite: true,
+            fetched: true,
+            httpStatus: 200,
+          }]
+        : [];
+
+    const orderedBrowserCandidates = [
+      ...popmenuHomepageCandidate,
+      ...browserCandidates,
+    ];
+
+    orderedBrowserCandidates.sort((a, b) =>
+      Number(popmenuUrls.has(b.finalUrl ?? b.url)) -
+      Number(popmenuUrls.has(a.finalUrl ?? a.url))
+    );
+
+    for (const candidate of orderedBrowserCandidates) {
       try {
         const evidence = await fetchBrowserEvidence(
           candidate.finalUrl ?? candidate.url,
@@ -2699,6 +2757,28 @@ export async function detectFirstPartySources(
           detections,
         );
 
+        const confirmedPopmenuHtml = detections.some(
+          d =>
+            d.sourceType === "html_events" &&
+            d.supported &&
+            d.url === evidence.finalUrl &&
+            /pm-calendar-event-card-wrapper/i.test(evidence.html)
+        );
+
+        if (confirmedPopmenuHtml) {
+          for (let i = detections.length - 1; i >= 0; i--) {
+            if (
+              detections[i].sourceType === "browser_required" &&
+              detections[i].url === evidence.finalUrl &&
+              detections[i].evidence.includes(
+                "Popmenu calendar requires client-side rendering"
+              )
+            ) {
+              detections.splice(i, 1);
+            }
+          }
+        }
+
         for (const observedUrl of [
           ...evidence.iframeUrls,
           ...evidence.observedUrls,
@@ -2710,6 +2790,7 @@ export async function detectFirstPartySources(
         }
 
         if (
+          confirmedPopmenuHtml ||
           detections.some(
             (detection) =>
               detection.sourceType ===
