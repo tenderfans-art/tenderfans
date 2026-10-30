@@ -1,3 +1,4 @@
+import { fetchGoTonightEvents } from "./gotonight-events";
 import { fetchToastDigitalStorefrontEvents } from "./toast-digital-storefront";
 import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -323,6 +324,13 @@ export async function previewFirstPartySource(
     });
   } else if (source.source_type === "schema_org_events") {
     events = await fetchSchemaOrgEvents(source.source_url);
+  } else if (source.source_type === "gotonight_events") {
+    events = await fetchGoTonightEvents(source.source_url, {
+      timeZone:
+        typeof source.config?.timezone === "string"
+          ? source.config.timezone
+          : undefined,
+    });
   } else if (source.source_type === "html_events") {
     events = await fetchHtmlEvents(source.source_url);
   } else if (source.source_type === "pwpc_events_calendar") {

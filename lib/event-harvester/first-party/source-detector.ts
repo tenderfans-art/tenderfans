@@ -1,3 +1,4 @@
+import { isGoTonightProfileUrl } from "./gotonight-events";
 import { inspectToastDigitalStorefront } from "./toast-digital-storefront";
 import { inspectSquareOnline } from "./square-online-events";
 import { parseMetadataRecurringSchedule } from "./html-metadata-recurring";
@@ -23,6 +24,7 @@ import { discoverPublicPostgrestEvents } from "./supabase-postgrest-discovery";
 
 export type DetectedSourceType =
   | "supabase_postgrest_events"
+  | "gotonight_events"
   | "eventbrite_organizer"
   | "html_metadata_recurring"
   | "godaddy_menu_recurring"
@@ -268,7 +270,7 @@ function discoverLinks(
     const text = stripTags(match[3]);
 
     const knownEventProvider =
-      /(?:eventbrite\.com|uvtix\.com|urvenue\.com)/i.test(url);
+      (/(?:eventbrite\.com|uvtix\.com|urvenue\.com)/i.test(url) || isGoTonightProfileUrl(url));
 
     if (EVENT_HINT.test(text) || EVENT_HINT.test(url) || knownEventProvider) {
       links.set(url, { url, text });
@@ -2522,6 +2524,7 @@ export async function detectFirstPartySources(
   const primaryLinks = discoverLinks(homepage.html, homepage.url).filter(
     (link) =>
       sameSite(link.url, homepage.url) ||
+      isGoTonightProfileUrl(link.url) ||
       /eventbrite\.com/i.test(link.url) ||
       /uvtix\.com/i.test(link.url),
   );
@@ -2582,6 +2585,21 @@ export async function detectFirstPartySources(
       (page) => page.url === link.url,
     );
     if (link.url === homepage.url) {
+      continue;
+    }
+
+    if (isGoTonightProfileUrl(link.url)) {
+      pushDetection(detections, {
+        sourceType: "gotonight_events",
+        url: link.url,
+        confidence: "high",
+        adapterAvailable: true,
+        supported: true,
+        evidence: [
+          "Official Spot website links to GoTonight venue profile",
+          "GoTonight venue inventory is supported by the shared adapter",
+        ],
+      });
       continue;
     }
 

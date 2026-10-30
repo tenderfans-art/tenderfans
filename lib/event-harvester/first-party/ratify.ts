@@ -315,6 +315,7 @@ async function ratifyEventbrite(
 }
 
 const directlyRatifiableSourceTypes = new Set([
+  "gotonight_events",
   "supabase_postgrest_events",
   "html_metadata_recurring",
   "godaddy_menu_recurring",
