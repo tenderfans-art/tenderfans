@@ -45,70 +45,23 @@ export function discoverCalendarImageAssets(
   html: string,
   pageUrl: string,
 ): string[] {
+  const matches = [
+    ...html.matchAll(
+      /(?:src|data-src|data-srclazy)=["']([^"']*(?:(?:wp-content\/uploads|\/uploads\/)|img1\.wsimg\.com\/isteam\/)[^"']*(?:calendar|entertainment|live(?:%20|[-_ ])?music|events?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?[0-9]{2,4}|(?:^|[-_\/])(?:0?[1-9]|1[0-2])[-_](?:20[0-9]{2}))[^"']*\.(?:jpe?g|png|webp)(?:(?:\/:\/)[^"']*|\?[^"']*)?)["']/gi,
+    ),
+  ];
+
   const urls = new Set<string>();
 
-  /*
-   * Calendar identity is based on the uploaded asset,
-   * not its website builder, CDN, or hosting provider.
-   *
-   * Keep ordinary event flyers and promotional photos
-   * out of the calendar-image review pipeline.
-   */
-  const calendarIdentity =
-    /(?:calendar|schedule|lineup)/i;
+  for (const match of matches) {
+    const normalized = normalizeAssetUrl(
+      match[1],
+      pageUrl,
+    );
 
-  const supportedImage =
-    /\.(?:jpe?g|png|webp)(?:$|[?#])/i;
-
-  const candidates: string[] = [];
-
-  // Standard and lazy-loaded image attributes.
-  for (const match of html.matchAll(
-    /\b(?:src|data-src|data-srclazy|data-lazy-src|data-original|poster)=["']([^"']+)["']/gi,
-  )) {
-    candidates.push(match[1]);
-  }
-
-  // Responsive image renditions.
-  for (const match of html.matchAll(
-    /\b(?:srcset|data-srcset)=["']([^"']+)["']/gi,
-  )) {
-    for (const item of match[1].split(",")) {
-      const candidate = item.trim().split(/\s+/)[0];
-      if (candidate) candidates.push(candidate);
+    if (normalized) {
+      urls.add(normalized);
     }
-  }
-
-  // Images referenced by inline CSS.
-  for (const match of html.matchAll(
-    /url\(\s*["']?([^"')]+)["']?\s*\)/gi,
-  )) {
-    candidates.push(match[1]);
-  }
-
-  for (const raw of candidates) {
-    const normalized = normalizeAssetUrl(raw, pageUrl);
-    if (!normalized) continue;
-
-    const url = new URL(normalized);
-
-    let filename: string;
-    try {
-      filename = decodeURIComponent(
-        url.pathname.split("/").pop() ?? "",
-      );
-    } catch {
-      continue;
-    }
-
-    if (
-      !supportedImage.test(url.pathname) ||
-      !calendarIdentity.test(filename)
-    ) {
-      continue;
-    }
-
-    urls.add(normalized);
   }
 
   return [...urls];
