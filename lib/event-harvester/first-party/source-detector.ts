@@ -1606,7 +1606,8 @@ async function inspectProviderHandoffs(
   detections: SourceDetection[],
 ): Promise<number> {
   const providerLinks = discoverLinks(html, pageUrl).filter((link) =>
-    /(?:uvtix\.com|urvenue\.com)/i.test(link.url),
+    /(?:uvtix\.com|urvenue\.com)/i.test(link.url) ||
+    isGoTonightProfileUrl(link.url),
   );
 
   const seen = new Set<string>();
@@ -1627,7 +1628,30 @@ async function inspectProviderHandoffs(
         continue;
       }
 
-      inspectPage(providerPage.html, providerPage.url, detections);
+      if (isGoTonightProfileUrl(link.url)) {
+        const providerHtml = providerPage.html;
+
+        const profileVerified =
+          /id=["']profileId["']/i.test(providerHtml) &&
+          /id=["']eventViews["']/i.test(providerHtml) &&
+          /Venue Profile/i.test(providerHtml);
+
+        if (profileVerified) {
+          pushDetection(detections, {
+            sourceType: "gotonight_events",
+            url: link.url,
+            confidence: "high",
+            adapterAvailable: true,
+            supported: true,
+            evidence: [
+              "GoTonight venue profile linked from official event page",
+              "GoTonight venue profile identity and event surface verified",
+            ],
+          });
+        }
+      } else {
+        inspectPage(providerPage.html, providerPage.url, detections);
+      }
     } catch {
       // Provider handoff discovery is best-effort.
     }
