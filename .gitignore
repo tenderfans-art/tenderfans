@@ -33,3 +33,4 @@ tsconfig.tsbuildinfo
 
 # Local event harvester execution logs and checkpoints
 /.harvester-runs/
+/.swc

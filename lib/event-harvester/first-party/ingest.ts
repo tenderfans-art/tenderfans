@@ -415,6 +415,36 @@ export async function ingestFirstPartySource(
 ): Promise<FirstPartyIngestResult> {
   const dryRun = options.dryRun ?? true;
 
+  /*
+   * One live ingestion execution per source, across all callers.
+   * Never automatically reclaim an unknown or timed-out execution.
+   */
+  let executionToken: string | null = null;
+
+  if (!dryRun) {
+    const { data, error } = await supabase.rpc(
+      "claim_first_party_source_execution",
+      { p_source_id: sourceId },
+    );
+
+    if (error) {
+      throw new Error(
+        `Could not claim first-party source execution: ${error.message}`,
+      );
+    }
+
+    if (typeof data !== "string" || !data) {
+      throw new Error(
+        `First-party source ${sourceId} is already being ingested.`,
+      );
+    }
+
+    executionToken = data;
+  }
+
+  let ingestionFailed = false;
+
+  try {
   const source = await loadFirstPartySource(supabase, sourceId);
 
   /*
@@ -596,4 +626,31 @@ export async function ingestFirstPartySource(
   }
 
   return result;
+  } catch (error) {
+    ingestionFailed = true;
+    throw error;
+  } finally {
+    if (executionToken) {
+      const { data, error } = await supabase.rpc(
+        "release_first_party_source_execution",
+        {
+          p_source_id: sourceId,
+          p_execution_token: executionToken,
+        },
+      );
+
+      if (error || data !== true) {
+        const releaseMessage =
+          `Could not release first-party source execution: ${
+            error?.message ?? "Execution ownership changed"
+          }`;
+
+        if (ingestionFailed) {
+          console.error(releaseMessage);
+        } else {
+          throw new Error(releaseMessage);
+        }
+      }
+    }
+  }
 }

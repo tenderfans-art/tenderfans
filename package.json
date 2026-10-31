@@ -24,7 +24,8 @@
     "resend": "^6.26.0",
     "twilio": "^6.1.1",
     "tz-lookup": "^6.1.25",
-    "undici": "^8.11.2"
+    "undici": "^8.11.2",
+    "workflow": "^5.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
