@@ -1,0 +1,3512 @@
+
+=================================================================
+lib/event-harvester/first-party/source-detector.ts (3039 lines)
+   1: import { inspectToastDigitalStorefront } from "./toast-digital-storefront";
+   2: import { inspectSquareOnline } from "./square-online-events";
+   3: import { parseMetadataRecurringSchedule } from "./html-metadata-recurring";
+   4: import { isVerificationInterstitial } from "../access-challenge";
+   5: import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
+   6: import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
+   7: import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
+   8: import { AsyncLocalStorage } from "node:async_hooks";
+   9: 
+  10: const preferredProxyContext = new AsyncLocalStorage<boolean>();
+  11: 
+  12: export function runWithPreferredFirstPartyProxy<T>(
+  13:   operation: () => Promise<T>,
+  14: ): Promise<T> {
+  15:   return preferredProxyContext.run(true, operation);
+  16: }
+  17: import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
+  18: import { fetchBrowserEvidence } from "./browser-transport";
+  19: import { discoverCalendarImageAssets } from "./calendar-image-assets";
+  20: import { extractHtmlEventsWithDiagnostics } from "./html-events";
+  21: import { discoverTanStackCalendar } from "./tanstack-seroval-events";
+  22: import { discoverPublicPostgrestEvents } from "./supabase-postgrest-discovery";
+  23: 
+  24: export type DetectedSourceType =
+  25:   | "supabase_postgrest_events"
+  26:   | "eventbrite_organizer"
+  27:   | "html_metadata_recurring"
+  28:   | "godaddy_menu_recurring"
+  29:   | "cp_multi_view_calendar"
+  30:   | "uvtix_events"
+  31:   | "schema_org_events"
+  32:   | "html_events"
+  33:   | "html_error"
+  34:   | "pwpc_events_calendar"
+  35:   | "toast_digital_storefront"
+  36:   | "square_online_events"
+  37:   | "shopify_events"
+  38:   | "woocommerce_events"
+  39:   | "calendar_image"
+  40:   | "eventscalendar_events"
+  41:   | "sociablekit_facebook_events"
+  42:   | "browser_required"
+  43:   | "spothopper_events"
+  44:   | "shared_event_calendar"
+  45:   | "squarespace_events"
+  46:   | "tribe_rest"
+  47:   | "next_rsc_events"
+  48:   | "tanstack_seroval_events"
+  49:   | "google_calendar"
+  50:   | "simcal_events"
+  51:   | "google_apps_script_events"
+  52:   | "beatgig_events"
+  53:   | "bandzoogle_events"
+  54:   | "ics"
+  55:   | "wordpress_ajax_events"
+  56:   | "eventer_events"
+  57:   | "ticket_spot_events"
+  58:   | "wordpress_category_events"
+  59:   | "wordpress_event_feed"
+  60:   | "timely"
+  61:   | "facebook"
+  62:   | "linktree"
+  63:   | "unknown";
+  64: 
+  65: export type SourceDetection = {
+  66:   sourceType: DetectedSourceType;
+  67:   url: string;
+  68:   confidence: "high" | "medium" | "low";
+  69:   /**
+  70:    * True when TenderFans has an implemented adapter capable of
+  83:   evidence: string[];
+  84: };
+  85: 
+  86: export type DiscoveredEventPage = {
+  87:   url: string;
+  88:   linkText: string;
+  89:   sameSite: boolean;
+  90:   fetched: boolean;
+  91:   httpStatus: number | null;
+  92:   finalUrl: string | null;
+  93:   htmlBytes: number | null;
+  94: };
+  95: 
+  96: export type RedirectDestinationIdentity = {
+  97:   name: string;
+  98:   streetAddress: string | null;
+  99:   city: string | null;
+ 100:   stateRegion: string | null;
+ 102:   source: "json_ld" | "website_json_ld";
+ 103: };
+ 104: 
+ 105: export type BrowserExecutionOutcome = {
+ 106:   url: string;
+ 107:   ok: boolean;
+ 108:   error: string | null;
+ 109: };
+ 110: 
+ 111: export type SiteDetectionResult = {
+ 112:   browserOutcomes?: BrowserExecutionOutcome[];
+ 113:   challengeEvidence?: string[];
+ 114:   redirectIdentities?: RedirectDestinationIdentity[];
+ 115:   websiteUrl: string;
+ 116:   fetchedUrl: string | null;
+ 117:   status:
+ 118:     | "detected"
+ 119:     | "challenge_encountered"
+ 120:     | "transport_blocked"
+ 121:     | "transport_failed"
+ 122:     | "external_redirect"
+ 123:     | "no_event_source";
+ 124:   pagesInspected: number;
+ 125:   discoveredEventPages: DiscoveredEventPage[];
+ 126:   detections: SourceDetection[];
+ 127:   error: string | null;
+ 185:   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
+ 186: 
+ 187: const EVENT_HINT =
+ 188:   /\b(events?|calendar|live[-\s]?music|music|entertainment|shows?|what'?s[-\s]?on|things[-\s]?to[-\s]?do)\b/i;
+ 189: 
+ 190: function decodeHtml(value: string): string {
+ 191:   return value
+ 192:     .replace(/&amp;/gi, "&")
+ 237:   }
+ 238: }
+ 239: 
+ 240: function sameSite(a: string, b: string): boolean {
+ 241:   const ah = hostname(a);
+ 242:   const bh = hostname(b);
+ 243: 
+ 244:   return ah === bh || ah.endsWith(`.${bh}`) || bh.endsWith(`.${ah}`);
+ 268:     const text = stripTags(match[3]);
+ 269: 
+ 270:     const knownEventProvider =
+ 271:       /(?:eventbrite\.com|uvtix\.com|urvenue\.com)/i.test(url);
+ 272: 
+ 273:     if (EVENT_HINT.test(text) || EVENT_HINT.test(url) || knownEventProvider) {
+ 274:       links.set(url, { url, text });
+ 275:     }
+ 284:   const stack: Array<{
+ 285:     tag: string;
+ 286:     start: number;
+ 287:     eventMenu: boolean;
+ 288:     eventList: boolean;
+ 289:     directItem: boolean;
+ 290:     href: string | null;
+ 291:   }> = [];
+ 292: 
+ 312:         const parent = stack[stack.length - 1];
+ 313: 
+ 314:         if (parent?.tag === "li" && EVENT_HINT.test(label) &&
+ 315:             /^events?$/i.test(label)) {
+ 316:           parent.eventMenu = true;
+ 317:         }
+ 318: 
+ 319:         if (parent?.directItem) {
+ 320:           const url = normalizeUrl(node.href, pageUrl);
+ 337:     stack.push({
+ 338:       tag,
+ 339:       start: tags.lastIndex,
+ 340:       eventMenu: false,
+ 341:       eventList:
+ 342:         tag === "ul" && parent?.tag === "li" &&
+ 343:         parent.eventMenu === true,
+ 344:       directItem:
+ 345:         tag === "li" && parent?.tag === "ul" &&
+ 346:         parent.eventList === true,
+ 347:       href,
+ 348:     });
+ 349:   }
+ 350: 
+ 549:   try {
+ 550:     const robotsUrl = new URL("/robots.txt", homepageUrl).toString();
+ 551: 
+ 552:     const robots = await fetchHtml(robotsUrl);
+ 553: 
+ 554:     if (robots.ok) {
+ 555:       for (const url of extractRobotsSitemaps(robots.html, robots.url)) {
+ 556:         sitemapUrls.add(url);
+ 569:   /*
+ 570:    * A sitemap may itself be a sitemap index. Follow a
+ 571:    * small number of same-site child sitemaps, then look
+ 572:    * for URLs whose paths provide event-surface evidence.
+ 573:    */
+ 574:   const sitemapQueue = [...sitemapUrls];
+ 575:   const visitedSitemaps = new Set<string>();
+ 576: 
+ 581:   ) {
+ 582:     const sitemapUrl = sitemapQueue.shift()!;
+ 583: 
+ 584:     if (visitedSitemaps.has(sitemapUrl) || !sameSite(sitemapUrl, homepageUrl)) {
+ 585:       continue;
+ 586:     }
+ 587: 
+ 588:     visitedSitemaps.add(sitemapUrl);
+ 589: 
+ 590:     try {
+ 591:       const sitemap = await fetchHtml(sitemapUrl);
+ 592: 
+ 593:       if (!sitemap.ok) {
+ 594:         continue;
+ 595:       }
+ 596: 
+ 597:       for (const url of extractSitemapLocations(sitemap.html, sitemap.url)) {
+ 598:         if (!sameSite(url, homepageUrl)) {
+ 599:           continue;
+ 600:         }
+ 601: 
+ 602:         if (
+ 626:   return [...discovered.values()];
+ 627: }
+ 628: 
+ 629: function pushDetection(
+ 630:   detections: SourceDetection[],
+ 631:   detection: SourceDetection,
+ 632: ) {
+ 633:   const existing = detections.find(
+ 679:   }
+ 680: 
+ 681:   if (
+ 682:     url.hostname.toLowerCase() === "inffuse.eventscalendar.co" &&
+ 683:     /^\/api\/v0\.1\/projects\/[^/]+\/data\/public\/events\/?$/i.test(
+ 684:       url.pathname,
+ 685:     ) &&
+ 686:     url.searchParams.get("app") === "calendar"
+ 687:   ) {
+ 688:     pushDetection(detections, {
+ 689:       sourceType: "eventscalendar_events",
+ 690:       url: url.toString(),
+ 691:       confidence: "high",
+ 692:       adapterAvailable: true,
+ 693:       supported: true,
+ 694:       evidence: [
+ 695:         "EventsCalendar.co public events API observed during browser execution",
+ 696:       ],
+ 697:     });
+ 698:   }
+ 699: 
+ 700:   /*
+ 701:    * Some first-party event surfaces only expose their Google Calendar
+ 702:    * embed after browser execution. Preserve the embed URL here, just as
+ 703:    * inspectPage() does for a statically visible embed; the existing
+ 704:    * Google Calendar adapter owns conversion to the public ICS endpoint.
+ 705:    */
+ 708:     /^\/calendar\/embed\/?$/i.test(url.pathname) &&
+ 709:     url.searchParams.get("src")
+ 710:   ) {
+ 711:     pushDetection(detections, {
+ 712:       sourceType: "google_calendar",
+ 713:       url: url.toString(),
+ 714:       confidence: "high",
+ 715:       adapterAvailable: true,
+ 716:       supported: true,
+ 733:      */
+ 734:     url.searchParams.delete("nocache");
+ 735: 
+ 736:     pushDetection(detections, {
+ 737:       sourceType:
+ 738:         "sociablekit_facebook_events",
+ 739:       url: url.toString(),
+ 740:       confidence: "high",
+ 741:       adapterAvailable: true,
+ 742:       supported: true,
+ 750: /*
+ 751:  * Popmenu renders an explicit empty inventory inside its calendar.
+ 752:  * The sitewide Apollo state alone is not calendar evidence.
+ 753:  * A static shell, challenge page, or unrelated "no events" text
+ 754:  * must never qualify as a validated source.
+ 755:  */
+ 756: function isConfirmedEmptyPopmenuCalendar(html: string): boolean {
+ 757:   return (
+ 758:     /pm-calendar-event-section-wrapper/i.test(html) &&
+ 759:     /NO\s+UPCOMING\s+EVENTS/i.test(
+ 760:       html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ")
+ 761:     ) &&
+ 762:     !/pm-calendar-event-card-wrapper/i.test(html)
+ 763:   );
+ 764: }
+ 765: 
+ 766: function inspectPage(
+ 772: 
+ 773:   /*
+ 774:    * Popmenu's static calendar shell does not contain the
+ 775:    * client-rendered event cards. Use the existing browser
+ 776:    * resolution path; do not register an unverified source.
+ 777:    */
+ 778:   if (
+ 779:     /pm-calendar-event-section-wrapper/i.test(html) &&
+ 780:     !/pm-calendar-event-card-wrapper/i.test(html) &&
+ 781:     !isConfirmedEmptyPopmenuCalendar(html)
+ 782:   ) {
+ 783:     pushDetection(detections, {
+ 784:       sourceType: "browser_required",
+ 785:       url: pageUrl,
+ 786:       confidence: "high",
+ 787:       adapterAvailable: false,
+ 788:       supported: false,
+ 791:   }
+ 792: 
+ 793:   /*
+ 794:    * Ticket Spot embeds its Wix event viewer on first-party pages.
+ 795:    * The widget loads event inventory through its authenticated
+ 796:    * runtime API. Preserve the first-party page as the source URL;
+ 797:    * the adapter obtains the session through browser execution.
+ 798:    */
+ 799:   const ticketSpotIframe =
+ 802:     );
+ 803: 
+ 804:   if (ticketSpotIframe) {
+ 805:     pushDetection(detections, {
+ 806:       sourceType: "ticket_spot_events",
+ 807:       url: pageUrl,
+ 808:       confidence: "high",
+ 809:       adapterAvailable: true,
+ 810:       supported: true,
+ 811:       evidence: [
+ 812:         "Ticket Spot event viewer embedded on first-party website",
+ 813:         "Ticket Spot browser-backed events adapter available",
+ 814:       ],
+ 815:     });
+ 816:   }
+ 817: 
+ 821:    * exposes the widget registration but not a harvestable source.
+ 822:    * Browser execution is therefore required for source discovery.
+ 823:    */
+ 824:   const eventsCalendarRuntimeMatch =
+ 825:     /plugin\.eventscalendar\.co\/widget\.html/i.test(
+ 826:       html.replace(/\\\//g, "/"),
+ 827:     );
+ 828: 
+ 829:   if (eventsCalendarRuntimeMatch) {
+ 830:     pushDetection(detections, {
+ 831:       sourceType: "browser_required",
+ 832:       url: pageUrl,
+ 833:       confidence: "high",
+ 834:       adapterAvailable: false,
+ 835:       supported: false,
+ 836:       evidence: [
+ 837:         "EventsCalendar.co runtime widget detected",
+ 838:         "Browser execution required to obtain runtime event-source configuration",
+ 839:       ],
+ 840:     });
+ 841:   }
+ 842: 
+ 861:         .replace(/\\u0026/gi, "&"),
+ 862:     );
+ 863: 
+ 864:     pushDetection(detections, {
+ 865:       sourceType: "google_calendar",
+ 866:       url: googleCalendarUrl,
+ 867:       confidence: "high",
+ 868:       adapterAvailable: true,
+ 869:       supported: true,
+ 870:       evidence: [
+ 871:         "Google Calendar embed found on first-party event surface",
+ 872:       ],
+ 873:     });
+ 874:   }
+ 875: 
+ 924:   }
+ 925: 
+ 926:   for (const endpoint of appsScriptEndpoints) {
+ 927:     pushDetection(detections, {
+ 928:       sourceType: "google_apps_script_events",
+ 929:       url: endpoint,
+ 930:       confidence: "high",
+ 931:       adapterAvailable: true,
+ 932:       supported: true,
+ 939:   /*
+ 940:    * Bandzoogle exposes its native calendar directly in first-party
+ 941:    * HTML. The calendar feature ID identifies the server-rendered
+ 942:    * Turbo inventory surface, while event/occurrence IDs identify
+ 943:    * individual scheduled occurrences.
+ 944:    */
+ 945:   const bandzoogleCalendarMatch =
+ 946:     html.match(
+ 954:     );
+ 955: 
+ 956:   const hasBandzoogleOccurrence =
+ 957:     /\bdata-event-id=["']\d+["'][^>]*\bdata-occurrence-id=["']\d+["']/i.test(
+ 958:       html,
+ 959:     );
+ 960: 
+ 961:   /*
+ 962:    * Bandzoogle event detail routes can embed the same calendar
+ 963:    * feature markup as the inventory page. They are event records,
+ 964:    * not independent calendar inventory sources.
+ 965:    *
+ 966:    * Continue inspecting these pages for every other source type.
+ 967:    */
+ 968:   const isBandzoogleEventDetailPage =
+ 969:     /\/event\/\d+\/\d+(?:\/|$)/i.test(
+ 970:       new URL(pageUrl).pathname
+ 971:     );
+ 972: 
+ 973:   if (
+ 975:     hasBandzoogleOccurrence &&
+ 976:     !isBandzoogleEventDetailPage
+ 977:   ) {
+ 978:     pushDetection(detections, {
+ 979:       sourceType: "bandzoogle_events",
+ 980:       url: pageUrl,
+ 981:       confidence: "high",
+ 982:       adapterAvailable: true,
+ 983:       supported: true,
+ 984:       evidence: [
+ 985:         "Bandzoogle native calendar feature found on first-party event surface",
+ 986:         "Bandzoogle event and occurrence IDs exposed by calendar inventory",
+ 987:       ],
+ 988:     });
+ 989:   }
+ 990: 
+1026:         decodeHtml(beatGigVenueSlug),
+1027:       )}`;
+1028: 
+1029:     pushDetection(detections, {
+1030:       sourceType: "beatgig_events",
+1031:       url: beatGigSourceUrl,
+1032:       confidence: "high",
+1033:       adapterAvailable: true,
+1034:       supported: true,
+1035:       evidence: [
+1036:         "Dusk / BeatGig venue calendar embed found on first-party event surface",
+1037:         "BeatGig venue slug exposed by first-party embed configuration",
+1038:       ],
+1039:     });
+1040:   }
+1041: 
+1042:   const eventbriteOrganizerMatch = html.match(
+1043:     /https?:\\?\/\\?\/(?:www\\?\.)?eventbrite\\?\.com\\?\/o\\?\/[^"'<>\\\\\s]+/i,
+1044:   );
+1045: 
+1046:   if (eventbriteOrganizerMatch) {
+1047:     pushDetection(detections, {
+1048:       sourceType: "eventbrite_organizer",
+1049:       url: decodeHtml(
+1050:         eventbriteOrganizerMatch[0]
+1051:           .replace(/\\\\\//g, "/")
+1052:           .replace(/\\u0026/gi, "&"),
+1053:       ),
+1054:       confidence: "high",
+1058:     });
+1059:   }
+1060: 
+1061:   const eventbriteEventMatch = html.match(
+1062:     /https?:\\?\/\\?\/(?:www\\?\.)?eventbrite\\?\.com\\?\/e\\?\/[^"'<>\\\s]+/i,
+1063:   );
+1064: 
+1065:   if (eventbriteEventMatch) {
+1066:     pushDetection(detections, {
+1067:       sourceType: "eventbrite_organizer",
+1068:       url: decodeHtml(
+1069:         eventbriteEventMatch[0].replace(/\\\//g, "/").replace(/\\u0026/gi, "&"),
+1070:       ),
+1071:       confidence: "medium",
+1072:       adapterAvailable: true,
+1073:       supported: true,
+1074:       evidence: ["Direct Eventbrite event URL found in page HTML"],
+1075:     });
+1076:   }
+1077: 
+1078:   /*
+1079:    * Shopify event collections expose a stable public JSON
+1080:    * product feed. Require both Shopify storefront evidence
+1081:    * and an event-oriented collection path so an ordinary
+1082:    * Shopify store is not classified as an event source.
+1083:    */
+1084:   if (
+1085:     (/cdn\.shopify\.com/i.test(html) ||
+1086:       /Shopify\.(?:theme|routes|shop)/i.test(html) ||
+1087:       /shopify-section/i.test(html)) &&
+1088:     /\/collections\/[^"'<>?\s]*(?:event|calendar)[^"'<>?\s]*/i.test(pageUrl)
+1089:   ) {
+1090:     try {
+1091:       const collectionUrl = new URL(pageUrl);
+1092:       const match = collectionUrl.pathname.match(
+1101: 
+1102:         feedUrl.searchParams.set("limit", "250");
+1103: 
+1104:         pushDetection(detections, {
+1105:           sourceType: "shopify_events",
+1106:           url: feedUrl.toString(),
+1107:           confidence: "high",
+1108:           adapterAvailable: true,
+1109:           supported: true,
+1120:   }
+1121: 
+1122:   /*
+1123:    * WooCommerce event publishers expose products through the
+1124:    * public Store API. Require both a WooCommerce signature and
+1125:    * an event-oriented product/category surface.
+1126:    *
+1127:    * A generic WooCommerce shop is not an event source.
+1128:    */
+1129:   if (
+1130:     /woocommerce|wc-block-|wp-json\/wc\/store/i.test(html) &&
+1131:     (
+1132:       /\/product-category\/[^"'<>?\s]*(?:event|dinner|comedy|music|show|concert|ticket)/i.test(pageUrl) ||
+1133:       /\/product\/[^/?#]*(?:event|reservation|ticket)[^/?#]*\/?$/i.test(pageUrl)
+1134:     )
+1135:   ) {
+1136:     try {
+1137:       const page = new URL(pageUrl);
+1140:         page.origin,
+1141:       );
+1142: 
+1143:       pushDetection(detections, {
+1144:         sourceType: "woocommerce_events",
+1145:         url: feed.toString(),
+1146:         confidence: "high",
+1147:         adapterAvailable: true,
+1148:         supported: true,
+1161:     parseMetadataRecurringSchedule(html);
+1162: 
+1163:   if (metadataRecurring.length > 0) {
+1164:     pushDetection(detections, {
+1165:       sourceType: "html_metadata_recurring",
+1166:       url: pageUrl,
+1167:       confidence: "high",
+1168:       adapterAvailable: true,
+1169:       supported: true,
+1175:   }
+1176: 
+1177:   if (hasParseableGoDaddyRecurringItems(html, pageUrl)) {
+1178:     pushDetection(detections, {
+1179:       sourceType: "godaddy_menu_recurring",
+1180:       url: pageUrl,
+1181:       confidence: "high",
+1182:       adapterAvailable: true,
+1183:       supported: true,
+1184:       evidence: [
+1185:         "GoDaddy Website Builder signature",
+1186:         "Parseable recurring-event markup",
+1187:       ],
+1188:     });
+1189:   }
+1190: 
+1193:     /cpmvc_ajax_object/i.test(html) &&
+1194:     /cpmvc_configmultiview/i.test(html)
+1195:   ) {
+1196:     pushDetection(detections, {
+1197:       sourceType: "cp_multi_view_calendar",
+1198:       url: pageUrl,
+1199:       confidence: "high",
+1200:       adapterAvailable: true,
+1201:       supported: true,
+1211:     (/urvenue\.com/i.test(html) || /application\/ld\+json/i.test(html)) &&
+1212:     /"@type"\s*:\s*"Event"/i.test(html)
+1213:   ) {
+1214:     pushDetection(detections, {
+1215:       sourceType: "uvtix_events",
+1216:       url: pageUrl,
+1217:       confidence: "high",
+1218:       adapterAvailable: true,
+1219:       supported: true,
+1229:    *
+1230:    * Provider-specific adapters remain authoritative when their
+1231:    * stronger signatures are present. This generic source catches
+1232:    * first-party event pages that publish structured Event JSON-LD
+1233:    * without belonging to one of those provider families.
+1234:    */
+1235:   const hasPwpcEventsCalendar =
+1236:     /\/assets\/pwpc\/pwpc-[^"'<>]+\.(?:css|js)/i.test(html) &&
+1237:     /id=["']events-container["']/i.test(html) &&
+1238:     /class=["'][^"']*\bevent-card\b/i.test(html) &&
+1239:     /action=["']\/events\/?["']/i.test(html);
+1240: 
+1241:   if (hasPwpcEventsCalendar) {
+1242:     pushDetection(detections, {
+1243:       sourceType: "pwpc_events_calendar",
+1244:       url: pageUrl,
+1245:       confidence: "high",
+1246:       adapterAvailable: true,
+1247:       supported: true,
+1248:       evidence: [
+1249:         "PWPC server-rendered events calendar found on first-party event surface",
+1250:       ],
+1251:     });
+1252:   }
+1253: 
+1261:     !hasPwpcEventsCalendar &&
+1262:     !/uvtix\.com/i.test(html)
+1263:   ) {
+1264:     pushDetection(detections, {
+1265:       sourceType: "schema_org_events",
+1266:       url: pageUrl,
+1267:       confidence: "high",
+1268:       adapterAvailable: true,
+1269:       supported: true,
+1270:       evidence: [
+1271:         "Schema.org Event JSON-LD inventory found on first-party event surface",
+1272:       ],
+1273:     });
+1274:   }
+1275: 
+1276:   if (/href=["'][^"']+\?format=ical(?:&[^"']*)?["']/i.test(html)) {
+1277:     pushDetection(detections, {
+1278:       sourceType: "squarespace_events",
+1279:       url: pageUrl,
+1280:       confidence: "high",
+1281:       adapterAvailable: true,
+1282:       supported: true,
+1283:       evidence: ["Per-event iCal links found"],
+1284:     });
+1285:   }
+1286: 
+1287:   /*
+1299:    * before proposing the Tribe REST adapter.
+1300:    */
+1301:   /*
+1302:    * WordPress event detail pages may advertise a REST URL for one
+1303:    * event (/events/12345). That is not evidence that the collection
+1304:    * endpoint (/events) is available for harvesting.
+1305:    *
+1306:    * Only an explicit collection URL qualifies as Tribe REST evidence.
+1307:    */
+1308:   const hasTribeRestEvidence =
+1309:     /wp-json\/tribe\/events\/v1\/events(?=[?#"'<>\s]|$)/i.test(html);
+1310:   if (hasTribeRestEvidence) {
+1311:     let tribeUrl = pageUrl;
+1312: 
+1313:     try {
+1314:       tribeUrl = new URL("/wp-json/tribe/events/v1/events", pageUrl).toString();
+1315:     } catch {
+1316:       // Keep page URL as evidence if URL construction fails.
+1317:     }
+1318: 
+1319:     pushDetection(detections, {
+1320:       sourceType: "tribe_rest",
+1321:       url: tribeUrl,
+1322:       confidence: "high",
+1323:       adapterAvailable: true,
+1324:       supported: true,
+1332:       /"startTime"/i.test(html) ||
+1333:       /"isDraft"/i.test(html))
+1334:   ) {
+1335:     pushDetection(detections, {
+1336:       sourceType: "next_rsc_events",
+1337:       url: pageUrl,
+1338:       confidence: "medium",
+1339:       adapterAvailable: true,
+1340:       supported: true,
+1341:       evidence: ["Next.js RSC payload with event-like fields"],
+1342:     });
+1343:   }
+1344: 
+1345:   if (/wp-admin\/admin-ajax\.php/i.test(html) && /get_events/i.test(html)) {
+1346:     pushDetection(detections, {
+1347:       sourceType: "wordpress_ajax_events",
+1348:       url: pageUrl,
+1349:       confidence: "high",
+1350:       adapterAvailable: false,
+1351:       supported: false,
+1352:       evidence: ["WordPress AJAX event endpoint signature"],
+1353:     });
+1354:   }
+1355: 
+1356:   if (
+1357:     (/(?:calendar|events?)\.time\.ly/i.test(html) ||
+1358:       /timely-event/i.test(html) ||
+1359:       /timely-calendar/i.test(html) ||
+1360:       /data-timely/i.test(html) ||
+1361:       /timely\/calendar/i.test(html)) &&
+1362:     (/calendar/i.test(lower) || /events/i.test(lower))
+1363:   ) {
+1364:     pushDetection(detections, {
+1365:       sourceType: "timely",
+1366:       url: pageUrl,
+1367:       confidence: "high",
+1368:       adapterAvailable: false,
+1369:       supported: false,
+1374:   // WordPress Eventer occurrence inventory, not WordPress post RSS.
+1375:   // Derive the archive from a dated occurrence link, including on homepages.
+1376:   if (
+1377:     /\beventer-event-item\b/i.test(html) &&
+1378:     /\beventer-event-title\b/i.test(html)
+1379:   ) {
+1380:     const occurrenceHref = html.match(
+1381:       /<a\b[^>]*href=["']([^"']+\/edate\/\d{4}-\d{2}-\d{2}(?:\/)?(?:\?[^"']*)?)["']/i,
+1382:     )?.[1];
+1399:         ) {
+1400:           const archiveUrl = new URL(archivePath, occurrenceUrl.origin);
+1401: 
+1402:           pushDetection(detections, {
+1403:             sourceType: "eventer_events",
+1404:             url: archiveUrl.toString(),
+1405:             confidence: "high",
+1406:             adapterAvailable: true,
+1407:             supported: true,
+1408:             evidence: [
+1409:               "WordPress Eventer occurrence cards and dated event URLs",
+1410:             ],
+1411:           });
+1412:         }
+1413:       } catch {
+1419:   const wordpressEventFeedMatch = html.match(
+1420:     /<link\b[^>]*rel=["']alternate["'][^>]*type=["']application\/rss\+xml["'][^>]*title=["'][^"']*\bEvents Feed\b[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>/i,
+1421:   ) ?? html.match(
+1422:     /<link\b[^>]*href=["']([^"']+\/events\/feed\/?)["'][^>]*type=["']application\/rss\+xml["'][^>]*>/i,
+1423:   );
+1424: 
+1425:   if (
+1426:     wordpressEventFeedMatch?.[1] &&
+1427:     /\bjs-event-entry\b|\bc-events__body\b/i.test(html)
+1428:   ) {
+1429:     const feedUrl = normalizeUrl(
+1430:       wordpressEventFeedMatch[1],
+1431:       pageUrl,
+1432:     );
+1433: 
+1434:     if (feedUrl) {
+1435:       pushDetection(detections, {
+1436:         sourceType: "wordpress_event_feed",
+1437:         url: pageUrl,
+1438:         confidence: "high",
+1439:         adapterAvailable: true,
+1440:         supported: true,
+1441:         evidence: [
+1442:           "WordPress Events RSS feed with structured event entries",
+1443:         ],
+1444:       });
+1445:     }
+1446:   }
+1450:     /spothopper(?:app)?\.com/i.test(html) ||
+1451:     /\bspothopper\b/i.test(html)
+1452:   ) {
+1453:     pushDetection(detections, {
+1454:       sourceType: "spothopper_events",
+1455:       url: pageUrl,
+1456:       confidence: "high",
+1457:       adapterAvailable: true,
+1458:       supported: true,
+1461:   }
+1462: 
+1463:   const {
+1464:     events: htmlEvents,
+1465:     diagnostics: htmlDiagnostics,
+1466:   } = extractHtmlEventsWithDiagnostics(html, pageUrl);
+1467: 
+1468:   /*
+1475:     htmlDiagnostics.extractedPerformances <
+1476:       htmlDiagnostics.expectedPerformances
+1477:   ) {
+1478:     pushDetection(detections, {
+1479:       sourceType: "html_error",
+1480:       url: pageUrl,
+1481:       confidence: "medium",
+1482:       adapterAvailable: false,
+1483:       supported: false,
+1491:   }
+1492: 
+1493:   if (htmlEvents.length > 0) {
+1494:     pushDetection(detections, {
+1495:       sourceType: "html_events",
+1496:       url: pageUrl,
+1497:       confidence: "high",
+1498:       adapterAvailable: true,
+1499:       supported: true,
+1500:       evidence: [
+1501:         "Dated event inventory extracted from first-party HTML",
+1502:         `${htmlEvents.length} normalized HTML event record(s)`,
+1503:       ],
+1504:     });
+1505:   }
+1506: 
+1508:     isConfirmedEmptyPopmenuCalendar(html) &&
+1509:     !htmlEvents.length
+1510:   ) {
+1511:     pushDetection(detections, {
+1512:       sourceType: "html_events",
+1513:       url: pageUrl,
+1514:       confidence: "high",
+1515:       adapterAvailable: true,
+1516:       supported: true,
+1517:       evidence: [
+1518:         "Rendered Popmenu calendar with explicit empty inventory",
+1519:         "0 upcoming events",
+1520:       ],
+1521:     });
+1522:   }
+1523: 
+1524:   /*
+1525:    * Individual product pages can contain promotional artwork with
+1526:    * event-like filenames. These are not independent
+1527:    * calendar-image sources.
+1528:    *
+1529:    * Preserve calendar-image discovery on genuine calendar pages.
+1530:    */
+1531:   /*
+1532:    * Simple Calendar renders Google Calendar events as structured
+1533:    * Simcal HTML. Detect actual event records, not plugin assets.
+1534:    */
+1535:   if (
+1536:     /class=["'][^"']*\bsimcal-calendar\b/i.test(html) &&
+1537:     /class=["'][^"']*\bsimcal-event\b/i.test(html) &&
+1538:     /data-calendar-id=["']\d+["']/i.test(html)
+1539:   ) {
+1540:     pushDetection(detections, {
+1541:       sourceType: "simcal_events",
+1542:       url: pageUrl,
+1543:       confidence: "high",
+1544:       adapterAvailable: true,
+1545:       supported: true,
+1546:       evidence: ["Simple Calendar structured event records found"],
+1547:     });
+1548:   }
+1549: 
+1550:   const isIndividualProductPage =
+1555:     : discoverCalendarImageAssets(html, pageUrl);
+1556: 
+1557:   if (calendarImageAssets.length > 0) {
+1558:     pushDetection(detections, {
+1559:       sourceType: "calendar_image",
+1560:       url: pageUrl,
+1561:       confidence: "medium",
+1562:       adapterAvailable: true,
+1563:       supported: true,
+1566:   }
+1567: 
+1568:   if (
+1569:     /eventlist-event/i.test(html) &&
+1570:     /(?:hotel|rooftop|restaurant|bar)/i.test(html) &&
+1571:     (/\/events\/[^"'<>\s]+/i.test(html) || /\?format=ical\b/i.test(html))
+1572:   ) {
+1573:     const eventTitles = [
+1574:       ...html.matchAll(
+1575:         /eventlist-title[^>]*>[\s\S]{0,250}?>([^<]{2,160})<\/a>/gi,
+1576:       ),
+1577:     ]
+1578:       .map((match) => stripTags(match[1]))
+1579:       .filter(Boolean);
+1580: 
+1581:     const namedVenueTitles = eventTitles.filter((title) =>
+1582:       /\b(?:at|@)\s+[A-Z][\w'’& -]{2,}/.test(title),
+1583:     );
+1584: 
+1585:     if (namedVenueTitles.length > 0) {
+1586:       pushDetection(detections, {
+1587:         sourceType: "shared_event_calendar",
+1588:         url: pageUrl,
+1589:         confidence: "medium",
+1590:         adapterAvailable: false,
+1591:         supported: false,
+1592:         evidence: [
+1593:           "Event collection contains explicitly named venue events",
+1594:           "Shared-calendar venue attribution may be required",
+1595:         ],
+1596:       });
+1597:     }
+1618:     seen.add(link.url);
+1619: 
+1620:     try {
+1621:       const providerPage = await fetchHtml(link.url);
+1622:       inspected += 1;
+1623: 
+1624:       if (!providerPage.ok) {
+1625:         continue;
+1634:   return inspected;
+1635: }
+1636: 
+1637: export async function fetchHtml(
+1638:   url: string,
+1639: ): Promise<{
+1640:   ok: boolean;
+1641:   status: number;
+1871:     }
+1872: 
+1873:     throw new Error(
+1874:       `Direct fetch failed: ${String(directError)}; ` +
+1875:       `Vultr recovery returned HTTP ${recovered.status}`,
+1876:     );
+1877:   } catch (error) {
+1878:     if (!direct) throw error;
+1966:   const businessTypes = new Set([
+1967:     "localbusiness", "restaurant", "barorpub", "nightclub",
+1968:     "foodestablishment", "cafeorcoffeeshop", "brewery",
+1969:     "winery", "hotel", "lodgingbusiness", "eventvenue",
+1970:     "entertainmentbusiness", "sportsbar",
+1971:     "pub", "fastfoodrestaurant", "bakery", "distillery",
+1972:     "danceclub", "musicvenue", "performingartstheater",
+1973:     "movie theater", "movietheater", "bowlingalley",
+2052:   return identities;
+2053: }
+2054: 
+2055: export type RedirectVenueIdentity = {
+2056:   name: string;
+2057:   city?: string | null;
+2058:   stateRegion?: string | null;
+2059:   streetAddress?: string | null;
+2106:         typeof category.slug === "string"
+2107:       )
+2108:       .filter(category =>
+2109:         /\b(events?|entertainment|live[-\s]?music|happenings|calendar)\b/i
+2110:           .test(`${category.name} ${category.slug}`)
+2111:       )
+2112:       .slice(0, 3);
+2113: 
+2145: 
+2146:         if (!hasParseableWordPressCategoryEvents(validPosts)) continue;
+2147: 
+2148:         pushDetection(detections, {
+2149:           sourceType: "wordpress_category_events",
+2150:           url: postsUrl.toString(),
+2151:           confidence: "high",
+2152:           adapterAvailable: true,
+2153:           supported: true,
+2154:           evidence: [
+2155:             `WordPress category "${category.name}" contains dated event announcements`,
+2156:             "WordPress posts contain parseable scheduled-event evidence",
+2157:             "Timezone configuration required before harvesting",
+2158:           ],
+2159:         });
+2160:       } catch {
+2168: 
+2169: /*
+2170:  * Preserve the underlying network error for first-party homepage
+2171:  * diagnostics. Node fetch often reports only "fetch failed" while
+2172:  * the actionable DNS or socket code lives in error.cause.
+2173:  *
+2174:  * The extracted codes also support definitive DNS classification.
+2175:  */
+2231:     : outerMessage;
+2232: }
+2233: 
+2234: export async function detectFirstPartySources(
+2235:   websiteUrl: string,
+2236:   venueIdentity?: RedirectVenueIdentity,
+2237:   approvedRedirectUrls: readonly string[] = [],
+2238: ): Promise<SiteDetectionResult> {
+2239:   const detections: SourceDetection[] = [];
+2240: 
+2241:   let homepage: Awaited<ReturnType<typeof fetchHtml>>;
+2242: 
+2243:   let homepageFetchError: unknown = null;
+2244: 
+2245:   try {
+2246:     homepage = await fetchHtml(websiteUrl);
+2247:   } catch (error) {
+2248:     homepageFetchError = error;
+2249:     homepage = {
+2250:       ok: false,
+2275:     ).length
+2276:   ) {
+2277:     try {
+2278:       const evidence = await fetchBrowserEvidence(
+2279:         websiteUrl,
+2280:         recoveryProxy,
+2281:       );
+2282: 
+2335:     return {
+2336:       websiteUrl,
+2337:       browserOutcomes,
+2338:       fetchedUrl: null,
+2339:       status: "transport_failed",
+2340:       pagesInspected: 0,
+2341:       discoveredEventPages: [],
+2342:       detections: [],
+2357:     return {
+2358:       websiteUrl,
+2359:       browserOutcomes,
+2360:       fetchedUrl: homepage.url,
+2361:       status: "challenge_encountered",
+2362:       challengeEvidence: homepageChallenge,
+2363:       pagesInspected: 1,
+2364:       discoveredEventPages: [],
+2371:     return {
+2372:       websiteUrl,
+2373:       browserOutcomes,
+2374:       fetchedUrl: homepage.url,
+2375:       status:
+2376:         homepage.status === 403 ||
+2377:         homepage.status === 429 ||
+2378:         homepage.status === 503
+2390:   }
+2391: 
+2392:   const requestedHost = hostname(websiteUrl);
+2393:   const fetchedHost = hostname(homepage.url);
+2394: 
+2395:   if (
+2396:     requestedHost &&
+2397:     fetchedHost &&
+2398:     !sameSite(websiteUrl, homepage.url) &&
+2399:     !approvedRedirectUrls.some((approvedUrl) => {
+2400:       try {
+2401:         const approved = new URL(approvedUrl);
+2402:         const fetched = new URL(homepage.url);
+2403: 
+2404:         approved.hash = "";
+2405:         fetched.hash = "";
+2406: 
+2407:         return approved.href === fetched.href;
+2408:       } catch {
+2409:         return false;
+2410:       }
+2411:     })
+2413:     return {
+2414:       websiteUrl,
+2415:       browserOutcomes,
+2416:       fetchedUrl: homepage.url,
+2417:       status: "external_redirect",
+2418:       redirectIdentities: extractRedirectDestinationIdentities(homepage.html),
+2419:       pagesInspected: 1,
+2420:       discoveredEventPages: [],
+2421:       detections: [],
+2422:       error: `Website redirected from ${requestedHost} to unverified cross-domain host ${fetchedHost}`,
+2423:     };
+2424:   }
+2425: 
+2426:   inspectPage(homepage.html, homepage.url, detections);
+2427: 
+2428:   if (inspectToastDigitalStorefront(homepage.html)) {
+2429:     pushDetection(detections, {
+2430:       sourceType: "toast_digital_storefront", url: homepage.url,
+2431:       confidence: "high", adapterAvailable: true, supported: true,
+2432:       evidence: ["Toast Digital Storefront event page with explicit weekly schedule"],
+2433:     });
+2434:   }
+2435: 
+2436:   // Square storefronts must contain actual event products.
+2437:   // A generic Square shop is not automatically an event source.
+2438:   try {
+2439:     if (await inspectSquareOnline(homepage.html)) {
+2440:       pushDetection(detections, {
+2441:         sourceType: "square_online_events",
+2442:         url: homepage.url,
+2443:         confidence: "high",
+2444:         adapterAvailable: true,
+2445:         supported: true,
+2446:         evidence: [
+2447:           "Square Online storefront identified",
+2448:           "Public catalog contains structured event products",
+2449:         ],
+2450:       });
+2451:     }
+2452:   } catch {
+2454:   }
+2455: 
+2456:   /*
+2457:    * Discover public event inventories exposed by first-party
+2458:    * JavaScript applications. The discovery module verifies
+2459:    * the API before returning a candidate.
+2460:    *
+2461:    * Never put the public API key in detection evidence.
+2467:     );
+2468: 
+2469:     if (postgrest) {
+2470:       pushDetection(detections, {
+2471:         sourceType: "supabase_postgrest_events",
+2472:         url: homepage.url,
+2473:         confidence: "high",
+2474:         adapterAvailable: true,
+2475:         supported: true,
+2476:         evidence: [
+2477:           "First-party JavaScript exposes a public Supabase events inventory",
+2478:           "Public PostgREST events API returned parseable records",
+2479:           "Supported weekly recurrences are expanded; cancellation exceptions remain unverified",
+2480:         ],
+2481:       });
+2482:     }
+2497:     const facebookUrl = normalizeFacebookPageUrl(homepage.url);
+2498: 
+2499:     if (facebookUrl) {
+2500:       pushDetection(detections, {
+2501:         sourceType: "facebook",
+2502:         url: facebookUrl,
+2503:         confidence: "high",
+2504:         adapterAvailable: true,
+2505:         supported: true,
+2509:   }
+2510: 
+2511:   if (homeHost === "linktr.ee" || homeHost.endsWith(".linktr.ee")) {
+2512:     pushDetection(detections, {
+2513:       sourceType: "linktree",
+2514:       url: homepage.url,
+2515:       confidence: "high",
+2516:       adapterAvailable: false,
+2517:       supported: false,
+2521: 
+2522:   const primaryLinks = discoverLinks(homepage.html, homepage.url).filter(
+2523:     (link) =>
+2524:       sameSite(link.url, homepage.url) ||
+2525:       /eventbrite\.com/i.test(link.url) ||
+2526:       /uvtix\.com/i.test(link.url),
+2527:   );
+2528: 
+2529:   /*
+2530:    * Homepage navigation is not authoritative. Some sites
+2531:    * expose event inventory through routes that are absent
+2532:    * from server-rendered navigation but present in their
+2533:    * sitemap/site metadata.
+2534:    */
+2535:   const secondaryLinks = await discoverSecondaryEventLinks(homepage.url);
+2548:     (link) => ({
+2549:       url: link.url,
+2550:       linkText: link.text,
+2551:       sameSite: sameSite(link.url, homepage.url),
+2552:       fetched: false,
+2553:       httpStatus: null,
+2554:       finalUrl: null,
+2555:       htmlBytes: null,
+2556:     }),
+2560:   const encounteredChallenges: string[] = [];
+2561: 
+2562:   /*
+2563:    * TanStack discovery fetches and inspects compiled JS modules.
+2564:    * Only enqueue pages with evidence of TanStack Start hydration
+2565:    * and module loading. This is generic platform detection.
+2566:    */
+2567:   const tanstackEligibleUrls = new Set<string>();
+2585:       continue;
+2586:     }
+2587: 
+2588:     if (/eventbrite\.com\/o\//i.test(link.url)) {
+2589:       pushDetection(detections, {
+2590:         sourceType: "eventbrite_organizer",
+2591:         url: link.url,
+2592:         confidence: "high",
+2593:         adapterAvailable: true,
+2594:         supported: true,
+2597:       continue;
+2598:     }
+2599: 
+2600:     if (/eventbrite\.com\/e\//i.test(link.url)) {
+2601:       pushDetection(detections, {
+2602:         sourceType: "eventbrite_organizer",
+2603:         url: link.url,
+2604:         confidence: "medium",
+2605:         adapterAvailable: true,
+2606:         supported: true,
+2607:         evidence: ["Direct Eventbrite event link discovered"],
+2608:       });
+2609:       continue;
+2610:     }
+2611: 
+2612:     if (/uvtix\.com/i.test(link.url)) {
+2613:       try {
+2614:         const page = await fetchHtml(link.url);
+2615:         pagesInspected += 1;
+2616: 
+2617:         if (discovered) {
+2618:           discovered.fetched = true;
+2619:           discovered.httpStatus = page.status;
+2620:           discovered.finalUrl = page.url;
+2621:           discovered.htmlBytes = page.html.length;
+2622:         }
+2631:       continue;
+2632:     }
+2633: 
+2634:     if (!sameSite(link.url, homepage.url)) {
+2635:       continue;
+2636:     }
+2637: 
+2638:     try {
+2639:       const page = await fetchHtml(link.url);
+2640:       pagesInspected += 1;
+2641: 
+2642:       if (discovered) {
+2643:         discovered.fetched = true;
+2644:         discovered.httpStatus = page.status;
+2645:         discovered.finalUrl = page.url;
+2646:         discovered.htmlBytes = page.html.length;
+2647:       }
+2661: 
+2662:       inspectPage(page.html, page.url, detections);
+2663:       if (inspectToastDigitalStorefront(page.html)) {
+2664:         pushDetection(detections, {
+2665:           sourceType: "toast_digital_storefront",
+2666:           url: page.url,
+2667:           confidence: "high",
+2668:           adapterAvailable: true,
+2669:           supported: true,
+2670:           evidence: ["Toast Digital Storefront event page with explicit weekly schedule"],
+2671:         });
+2672:       }
+2673:       recordTanStackEligibility(
+2674:         page.html,
+2688:   /*
+2689:    * Browser escalation is transport enrichment, not a source type.
+2690:    *
+2691:    * Static detection may prove that a runtime event application exists
+2692:    * without exposing its actual provider data source. Revisit the
+2693:    * already-discovered same-site event surfaces in the browser and feed
+2694:    * the resulting evidence back through the same detector.
+2695:    *
+2696:    * Stop as soon as the browser exposes a harvestable provider source.
+2697:    * This keeps browser resolution bounded while preserving the existing
+2711:       discoveredEventPages.some(
+2712:         (page) =>
+2713:           page.sameSite &&
+2714:           page.fetched &&
+2715:           page.httpStatus !== null &&
+2716:           page.httpStatus >= 200 &&
+2717:           page.httpStatus < 400,
+2718:       )
+2722:     const browserCandidates = discoveredEventPages.filter(
+2723:       (page) =>
+2724:         page.sameSite &&
+2725:         page.fetched &&
+2726:         page.httpStatus !== null &&
+2727:         page.httpStatus >= 200 &&
+2728:         page.httpStatus < 400,
+2729:     );
+2752:             url: homepage.url,
+2753:             finalUrl: homepage.url,
+2754:             sameSite: true,
+2755:             fetched: true,
+2756:             httpStatus: 200,
+2757:           }]
+2758:         : [];
+2759: 
+2769: 
+2770:     for (const candidate of orderedBrowserCandidates) {
+2771:       try {
+2772:         const evidence = await fetchBrowserEvidence(
+2773:           candidate.finalUrl ?? candidate.url,
+2774:           getTransportRecoveryProxy(),
+2775:         );
+2776: 
+2791:           evidence.status === null ||
+2792:           evidence.status < 200 ||
+2793:           evidence.status >= 400 ||
+2794:           !sameSite(candidate.url, evidence.finalUrl)
+2795:         ) {
+2796:           continue;
+2797:         }
+2798: 
+2810: 
+2811:         const confirmedPopmenuHtml = detections.some(
+2812:           d =>
+2813:             d.sourceType === "html_events" &&
+2814:             d.supported &&
+2815:             d.url === evidence.finalUrl &&
+2816:             (
+2817:               /pm-calendar-event-card-wrapper/i.test(evidence.html) ||
+2818:               isConfirmedEmptyPopmenuCalendar(evidence.html)
+2819:             )
+2820:         );
+2821: 
+2847:           popmenuUrls.size > 0 &&
+2848:           [...popmenuUrls].every(url =>
+2849:             detections.some(d =>
+2850:               d.sourceType === "html_events" &&
+2851:               d.supported &&
+2852:               d.url === url
+2853:             )
+2854:           );
+2855: 
+2856:         const otherProviderConfirmed = detections.some(
+2857:           d =>
+2858:             d.sourceType === "eventscalendar_events" ||
+2859:             d.sourceType === "sociablekit_facebook_events" ||
+2860:             d.sourceType === "google_calendar" ||
+2861:             d.sourceType === "ticket_spot_events"
+2862:         );
+2863: 
+2864:         if (
+2865:           popmenuUrls.size > 0
+2874:           ok: false,
+2875:           error: error instanceof Error
+2876:             ? error.message
+2877:             : "Browser event-page evaluation failed",
+2878:         });
+2879:         /*
+2880:          * A failed browser attempt on one discovered event surface
+2881:          * does not invalidate the HTTP detector result or prevent
+2882:          * another candidate page from being tried.
+2883:          */
+2884:       }
+2885:     }
+2893:       detections.some(
+2894:         (detection) =>
+2895:           detection.sourceType ===
+2896:             "eventscalendar_events" ||
+2897:           detection.sourceType ===
+2898:             "sociablekit_facebook_events" ||
+2899:           detection.sourceType ===
+2900:             "google_calendar" ||
+2901:             detection.sourceType === "ticket_spot_events",
+2902:       )
+2903:     ) {
+2904:       for (
+2905:         let index = detections.length - 1;
+2918:   /*
+2919:    * TanStack Start / Seroval calendar discovery.
+2920:    *
+2921:    * Inspect only event surfaces already found by the existing
+2922:    * discovery pipeline. The adapter verifies the compiled route,
+2923:    * server-function module, and unique function hash.
+2924:    *
+2925:    * A generic TanStack application is not sufficient evidence.
+2931:         .filter(
+2932:           (page) =>
+2933:             page.sameSite &&
+2934:             page.fetched &&
+2935:             page.httpStatus !== null &&
+2936:             page.httpStatus >= 200 &&
+2937:             page.httpStatus < 400,
+2938:         )
+2950:         continue;
+2951:       }
+2952: 
+2953:       pushDetection(detections, {
+2954:         sourceType: "tanstack_seroval_events",
+2955:         url: descriptor.pageUrl,
+2956:         confidence: "high",
+2957:         adapterAvailable: true,
+2958:         supported: true,
+2968:   /*
+2969:    * A detected PWPC server-rendered calendar is the stronger live
+2970:    * inventory for this first-party site. Some sites also expose stale
+2971:    * Schema.org Event JSON-LD on a separate event/promotions page.
+2972:    * Do not retain that weaker generic candidate when the live calendar
+2973:    * adapter is available for the same Spot.
+2974:    */
+2975:   if (
+2976:     detections.some(
+2977:       (detection) => detection.sourceType === "pwpc_events_calendar",
+2978:     )
+2979:   ) {
+2980:     for (let index = detections.length - 1; index >= 0; index -= 1) {
+2981:       if (detections[index].sourceType === "schema_org_events") {
+2982:         detections.splice(index, 1);
+2983:       }
+2984:     }
+2985:   }
+2987:   /*
+2988:    * Facebook is a non-ratified fallback signal only.
+2989:    *
+2990:    * If no stronger event source was discovered but the Spot's
+2991:    * website links to Facebook, preserve that fact for later
+2992:    * Facebook-adapter review. Do not attempt to associate the
+2993:    * Facebook page with a specific venue or treat it as supported.
+2994:    */
+2996:     discoverFacebookUrl(homepage.html, homepage.url);
+2997: 
+2998:   if (facebookUrl) {
+2999:     pushDetection(detections, {
+3000:       sourceType: "facebook",
+3001:       url: facebookUrl,
+3002:       confidence: "medium",
+3003:       adapterAvailable: true,
+3004:       supported: true,
+3005:       evidence: ["Facebook is the only potential event source discovered"],
+3006:     });
+3007:   }
+3008: 
+3009:   const challengeOnly =
+3017:   return {
+3018:     websiteUrl,
+3019:     browserOutcomes,
+3020:     fetchedUrl: homepage.url,
+3021:     status: challengeOnly
+3022:       ? "challenge_encountered"
+3023:       : detections.length > 0
+3024:         ? "detected"
+3025:         : "no_event_source",
+3026:     challengeEvidence: [
+3027:       ...new Set([
+3028:         ...(homepage.challengeEvidence ?? []),
+3029:         ...encounteredChallenges,
+
+=================================================================
+lib/event-harvester/first-party/preview.ts (437 lines)
+   1: import { fetchToastDigitalStorefrontEvents } from "./toast-digital-storefront";
+   2: import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
+   3: import type { SupabaseClient } from "@supabase/supabase-js";
+   4: 
+   5: import { eventFingerprint, normalizeTitle } from "../identity";
+   6: 
+   7: import { parseIcsEvents } from "./ics";
+   8: import { fetchGoogleCalendarEvents } from "./google-calendar-events";
+   9: import { fetchSimcalEvents } from "./simcal-events";
+  10: import { fetchGoogleAppsScriptEvents } from "./google-apps-script-events";
+  11: import { fetchBeatGigEvents } from "./beatgig-events";
+  12: import { fetchBandzoogleEvents } from "./bandzoogle-events";
+  13: import { fetchEventsCalendarEvents } from "./eventscalendar-events";
+  14: import { fetchSociableKitFacebookEvents } from "./sociablekit-facebook-events";
+  15: import { fetchEventbriteOrganizerEvents } from "./eventbrite-organizer";
+  16: import { fetchGoDaddyMenuRecurringEvents } from "./godaddy-menu-recurring";
+  17: import { fetchHtmlMetadataRecurringEvents } from "./html-metadata-recurring";
+  18: import { fetchCpMultiViewCalendarEvents } from "./cp-multi-view-calendar";
+  19: import { fetchNextRscEvents } from "./next-rsc-events";
+  20: import { fetchSquarespaceEvents } from "./squarespace-events";
+  21: import { fetchTribeRestEvents } from "./tribe-rest";
+  22: import { fetchUvTixEvents } from "./uvtix-events";
+  23: import { fetchSchemaOrgEvents } from "./schema-org-events";
+  24: import { fetchHtmlEvents } from "./html-events";
+  25: import { fetchPwpcEventsCalendarEvents } from "./pwpc-events-calendar";
+  26: import { fetchSquareOnlineEvents } from "./square-online-events";
+  27: import { fetchShopifyEvents } from "./shopify-events";
+  28: import { fetchWooCommerceEvents } from "./woocommerce-events";
+  29: import { fetchWordPressEventFeedEvents } from "./wordpress-event-feed";
+  30: import { fetchWordPressCategoryEvents } from "./wordpress-category-events";
+  31: import { fetchEventerEvents } from "./eventer-events";
+  32: import { fetchTicketSpotEvents } from "./ticket-spot-events";
+  33: import { fetchSpotHopperEvents } from "./spothopper-events";
+  34: import { fetchFacebookEvents } from "./facebook-events";
+  35: import { fetchCalendarImageEvents } from "./calendar-image-events";
+  36: import { fetchTanStackSerovalEvents } from "./tanstack-seroval-events";
+  37: import { fetchSupabasePostgrestEvents } from "./supabase-postgrest-events";
+  38: import { discoverPublicPostgrestEvents } from "./supabase-postgrest-discovery";
+  39: 
+  40: export type FirstPartySource = {
+  41:   id: string;
+  42:   provider: string;
+  43:   source_type: string;
+  44:   name: string;
+  45:   source_url: string | null;
+  46:   external_source_id: string | null;
+  47:   venue_id: string | null;
+  48:   is_enabled: boolean;
+  49:   trust_level: string;
+  50:   config: Record<string, unknown>;
+  51:   bootstrapped_at: string | null;
+  52: };
+  53: 
+  54: export type FirstPartyEventPreview = {
+  55:   sourceId: string;
+  56:   sourceType: string;
+  57:   sourceName: string;
+  58:   venueId: string | null;
+  59:   allowSourceDefaultAttribution: boolean;
+  60:   externalEventId: string;
+  61:   sourceUrl: string | null;
+  62:   title: string;
+  63:   normalizedTitle: string;
+  64:   description: string | null;
+  65:   startsAt: string;
+  66:   endsAt: string | null;
+  67:   allDay: boolean;
+  68:   flyerUrl: string | null;
+  69:   location: string | null;
+  70:   venueName: string | null;
+  71:   venueAddress: string | null;
+  72:   eventFingerprint: string | null;
+  73:   rawPayload: Record<string, unknown>;
+  74: };
+  75: 
+  76: export async function loadFirstPartySource(
+  77:   supabase: SupabaseClient,
+  78:   sourceId: string,
+  79: ): Promise<FirstPartySource> {
+  80:   const { data, error } = await supabase
+  81:     .from("event_harvest_sources")
+  82:     .select(
+  83:       `
+  84:       id,
+  85:       provider,
+  86:       source_type,
+  87:       name,
+  88:       source_url,
+  89:       external_source_id,
+  90:       venue_id,
+  91:       is_enabled,
+  92:       trust_level,
+  93:       config,
+  94:       bootstrapped_at
+  95:     `,
+  96:     )
+  97:     .eq("id", sourceId)
+  98:     .eq("provider", "first_party")
+  99:     .eq("is_enabled", true)
+ 100:     .maybeSingle();
+ 101: 
+ 102:   if (error) {
+ 103:     throw new Error(`Could not load first-party source: ${error.message}`);
+ 104:   }
+ 105: 
+ 106:   if (!data) {
+ 107:     throw new Error("Enabled first-party event source was not found.");
+ 108:   }
+ 109: 
+ 110:   if (!data.source_url) {
+ 111:     throw new Error("First-party source has no source URL.");
+ 112:   }
+ 113: 
+ 114:   return data as FirstPartySource;
+ 115: }
+ 116: 
+ 117: export async function previewFirstPartySource(
+ 118:   source: FirstPartySource,
+ 119:   options: { validateFacebookPageIdentity?: boolean } = {},
+ 120: ): Promise<FirstPartyEventPreview[]> {
+ 121:   if (!source.source_url) {
+ 122:     throw new Error("First-party source has no source URL.");
+ 123:   }
+ 124: 
+ 125:   let events;
+ 126: 
+ 127:   if (source.source_type === "supabase_postgrest_events") {
+ 128:     const apiUrl = source.config?.apiUrl;
+ 129:     const anonKey = source.config?.anonKey;
+ 130:     const table = source.config?.table;
+ 131: 
+ 132:     if (
+ 133:       typeof apiUrl === "string" &&
+ 134:       typeof anonKey === "string"
+ 135:     ) {
+ 136:       const result = await fetchSupabasePostgrestEvents({
+ 137:         apiUrl,
+ 138:         anonKey,
+ 139:         ...(typeof table === "string" ? { table } : {}),
+ 140:       });
+ 141: 
+ 142:       events = result.events;
+ 143:     } else {
+ 144:       const discovered = await discoverPublicPostgrestEvents(
+ 145:         source.source_url,
+ 146:       );
+ 147: 
+ 148:       if (!discovered) {
+ 149:         throw new Error(
+ 150:           "Public PostgREST events inventory could not be verified",
+ 151:         );
+ 152:       }
+ 153: 
+ 154:       events = discovered.inventory.events;
+ 155:     }
+ 156:   } else if (source.source_type === "ticket_spot_events") {
+ 157:     events = await fetchTicketSpotEvents(source.source_url);
+ 158:   } else if (source.source_type === "simcal_events") {
+ 159:     events = await fetchSimcalEvents(source.source_url);
+ 160:   } else if (source.source_type === "google_calendar") {
+ 161:     events = await fetchGoogleCalendarEvents(
+ 162:       source.source_url,
+ 163:     );
+ 164:   } else if (source.source_type === "beatgig_events") {
+ 165:     events = await fetchBeatGigEvents(source.source_url);
+ 166:   } else if (source.source_type === "bandzoogle_events") {
+ 167:     events = await fetchBandzoogleEvents(source.source_url);
+ 168:   } else if (source.source_type === "eventscalendar_events") {
+ 169:     const timeZone =
+ 170:       typeof source.config?.timezone === "string"
+ 171:         ? source.config.timezone
+ 172:         : undefined;
+ 173: 
+ 174:     events = await fetchEventsCalendarEvents(
+ 175:       source.source_url,
+ 176:       { timeZone },
+ 177:     );
+ 178:   } else if (
+ 179:     source.source_type === "sociablekit_facebook_events"
+ 180:   ) {
+ 181:     events = await fetchSociableKitFacebookEvents(
+ 182:       source.source_url,
+ 183:     );
+ 184:   } else if (source.source_type === "ics") {
+ 185:     const response = await recoveryFetch(source.source_url, {
+ 186:       headers: {
+ 187:         Accept: "text/calendar,text/plain;q=0.9,*/*;q=0.8",
+ 188:         "User-Agent": "TenderFans-Event-Harvester/1.0",
+ 189:       },
+ 190:       cache: "no-store",
+ 191:     });
+ 192: 
+ 193:     if (!response.ok) {
+ 194:       throw new Error(`First-party source returned HTTP ${response.status}.`);
+ 195:     }
+ 196: 
+ 197:     const rawIcs = await response.text();
+ 198:     events = parseIcsEvents(rawIcs);
+ 199:   } else if (source.source_type === "tribe_rest") {
+ 200:     const categorySlug =
+ 201:       typeof source.config?.category_slug === "string"
+ 202:         ? source.config.category_slug
+ 203:         : null;
+ 204: 
+ 205:     const timeZone =
+ 206:       typeof source.config?.timezone === "string"
+ 207:         ? source.config.timezone
+ 208:         : "America/New_York";
+ 209: 
+ 210:     events = await fetchTribeRestEvents(source.source_url, {
+ 211:       categorySlug,
+ 212:       timeZone,
+ 213:     });
+ 214:   } else if (source.source_type === "next_rsc_events") {
+ 215:     events = await fetchNextRscEvents(source.source_url);
+ 216:   } else if (source.source_type === "squarespace_events") {
+ 217:     events = await fetchSquarespaceEvents(source.source_url);
+ 218:   } else if (source.source_type === "eventbrite_organizer") {
+ 219:     const organizerId =
+ 220:       typeof source.config?.organizer_id === "string"
+ 221:         ? source.config.organizer_id
+ 222:         : null;
+ 223: 
+ 224:     const venueId =
+ 225:       typeof source.config?.venue_id === "string"
+ 226:         ? source.config.venue_id
+ 227:         : null;
+ 228: 
+ 229:     const sessionHorizonDays =
+ 230:       typeof source.config?.session_horizon_days === "number"
+ 231:         ? source.config.session_horizon_days
+ 232:         : undefined;
+ 233: 
+ 234:     events = await fetchEventbriteOrganizerEvents(source.source_url, {
+ 235:       organizerId,
+ 236:       venueId,
+ 237:       sessionHorizonDays,
+ 238:     });
+ 239:   } else if (source.source_type === "html_metadata_recurring") {
+ 240:     const timeZone =
+ 241:       typeof source.config?.timezone === "string"
+ 242:         ? source.config.timezone
+ 243:         : "America/New_York";
+ 244: 
+ 245:     const weeksForward =
+ 246:       typeof source.config?.weeks_forward === "number"
+ 247:         ? source.config.weeks_forward
+ 248:         : 8;
+ 249: 
+ 250:     events = await fetchHtmlMetadataRecurringEvents(
+ 251:       source.source_url,
+ 252:       { timeZone, weeksForward },
+ 253:     );
+ 254:   } else if (source.source_type === "godaddy_menu_recurring") {
+ 255:     const timeZone =
+ 256:       typeof source.config?.timezone === "string"
+ 257:         ? source.config.timezone
+ 258:         : "America/New_York";
+ 259: 
+ 260:     const weeksForward =
+ 261:       typeof source.config?.weeks_forward === "number"
+ 262:         ? source.config.weeks_forward
+ 263:         : 8;
+ 264: 
+ 265:     events = await fetchGoDaddyMenuRecurringEvents(source.source_url, {
+ 266:       timeZone,
+ 267:       weeksForward,
+ 268:     });
+ 269:   } else if (source.source_type === "cp_multi_view_calendar") {
+ 270:     const timeZone =
+ 271:       typeof source.config?.timezone === "string"
+ 272:         ? source.config.timezone
+ 273:         : "America/New_York";
+ 274: 
+ 275:     const weeksForward =
+ 276:       typeof source.config?.weeks_forward === "number"
+ 277:         ? source.config.weeks_forward
+ 278:         : 8;
+ 279: 
+ 280:     events = await fetchCpMultiViewCalendarEvents(source.source_url, {
+ 281:       timeZone,
+ 282:       weeksForward,
+ 283:     });
+ 284:   } else if (source.source_type === "toast_digital_storefront") {
+ 285:     events = await fetchToastDigitalStorefrontEvents(source.source_url, {
+ 286:       timeZone: typeof source.config?.timezone === "string"
+ 287:         ? source.config.timezone : "America/New_York",
+ 288:     });
+ 289:   } else if (source.source_type === "square_online_events") {
+ 290:     events = await fetchSquareOnlineEvents(source.source_url);
+ 291:   } else if (source.source_type === "shopify_events") {
+ 292:     const timeZone =
+ 293:       typeof source.config?.timezone === "string"
+ 294:         ? source.config.timezone
+ 295:         : "America/New_York";
+ 296: 
+ 297:     const weeksForward =
+ 298:       typeof source.config?.weeks_forward === "number"
+ 299:         ? source.config.weeks_forward
+ 300:         : 8;
+ 301: 
+ 302:     events = await fetchShopifyEvents(source.source_url, {
+ 303:       timeZone,
+ 304:       weeksForward,
+ 305:     });
+ 306:   } else if (source.source_type === "woocommerce_events") {
+ 307:     const timeZone =
+ 308:       typeof source.config?.timezone === "string"
+ 309:         ? source.config.timezone
+ 310:         : "America/New_York";
+ 311: 
+ 312:     events = await fetchWooCommerceEvents(source.source_url, {
+ 313:       timeZone,
+ 314:     });
+ 315:   } else if (source.source_type === "uvtix_events") {
+ 316:     const timeZone =
+ 317:       typeof source.config?.timezone === "string"
+ 318:         ? source.config.timezone
+ 319:         : "America/New_York";
+ 320: 
+ 321:     events = await fetchUvTixEvents(source.source_url, {
+ 322:       timeZone,
+ 323:     });
+ 324:   } else if (source.source_type === "schema_org_events") {
+ 325:     events = await fetchSchemaOrgEvents(source.source_url);
+ 326:   } else if (source.source_type === "html_events") {
+ 327:     events = await fetchHtmlEvents(source.source_url);
+ 328:   } else if (source.source_type === "pwpc_events_calendar") {
+ 329:     const timeZone =
+ 330:       typeof source.config?.timezone === "string"
+ 331:         ? source.config.timezone
+ 332:         : "America/New_York";
+ 333: 
+ 334:     events = await fetchPwpcEventsCalendarEvents(
+ 335:       source.source_url,
+ 336:       { timeZone },
+ 337:     );
+ 338:   } else if (source.source_type === "spothopper_events") {
+ 339:     const timeZone =
+ 340:       typeof source.config?.timezone === "string"
+ 341:         ? source.config.timezone
+ 342:         : "America/New_York";
+ 343: 
+ 344:     const weeksForward =
+ 345:       typeof source.config?.weeks_forward === "number"
+ 346:         ? source.config.weeks_forward
+ 347:         : 8;
+ 348: 
+ 349:     events = await fetchSpotHopperEvents(source.source_url, {
+ 350:       timeZone,
+ 351:       weeksForward,
+ 352:     });
+ 353:   } else if (source.source_type === "google_apps_script_events") {
+ 354:     const timeZone =
+ 355:       typeof source.config?.timezone === "string"
+ 356:         ? source.config.timezone
+ 357:         : "America/New_York";
+ 358: 
+ 359:     events = await fetchGoogleAppsScriptEvents(
+ 360:       source.source_url,
+ 361:       { timeZone },
+ 362:     );
+ 363:   } else if (source.source_type === "calendar_image") {
+ 364:     const timeZone =
+ 365:       typeof source.config?.timezone === "string"
+ 366:         ? source.config.timezone
+ 367:         : "America/New_York";
+ 368: 
+ 369:     events = await fetchCalendarImageEvents(
+ 370:       source.source_url,
+ 371:       { timeZone },
+ 372:     );
+ 373:   } else if (source.source_type === "tanstack_seroval_events") {
+ 374:     events = await fetchTanStackSerovalEvents(source.source_url);
+ 375:   } else if (source.source_type === "facebook_events") {
+ 376:     events = await fetchFacebookEvents(source.source_url, {
+ 377:       validatePageIdentity: options.validateFacebookPageIdentity === true,
+ 378:     });
+ 379:   } else if (source.source_type === "eventer_events") {
+ 380:     const timeZone = typeof source.config?.timezone === "string"
+ 381:       ? source.config.timezone : "America/New_York";
+ 382:     events = await fetchEventerEvents(source.source_url, { timeZone });
+ 383:   } else if (source.source_type === "wordpress_category_events") {
+ 384:     const timeZone =
+ 385:       typeof source.config?.timezone === "string"
+ 386:         ? source.config.timezone
+ 387:         : undefined;
+ 388: 
+ 389:     events = await fetchWordPressCategoryEvents(
+ 390:       source.source_url,
+ 391:       { timeZone },
+ 392:     );
+ 393:   } else if (source.source_type === "wordpress_event_feed") {
+ 394:     const timeZone =
+ 395:       typeof source.config?.timezone === "string"
+ 396:         ? source.config.timezone
+ 397:         : "America/New_York";
+ 398: 
+ 399:     events = await fetchWordPressEventFeedEvents(
+ 400:       source.source_url,
+ 401:       { timeZone },
+ 402:     );
+ 403:   } else {
+ 404:     throw new Error(
+ 405:       `Unsupported first-party source type: ${source.source_type}`,
+ 406:     );
+ 407:   }
+ 408: 
+ 409:   return events.map((event) => ({
+ 410:     sourceId: source.id,
+ 411:     sourceType: source.source_type,
+ 412:     sourceName: source.name,
+ 413:     venueId: source.venue_id,
+ 414:     allowSourceDefaultAttribution:
+ 415:       event.rawPayload?.allowSourceDefaultAttribution !== false,
+ 416:     externalEventId: event.externalEventId,
+ 417:     sourceUrl: event.sourceUrl ?? source.source_url,
+ 418:     title: event.title,
+ 419:     normalizedTitle: normalizeTitle(event.title),
+ 420:     description: event.description,
+ 421:     startsAt: event.startsAt,
+ 422:     endsAt: event.endsAt,
+ 423:     allDay: event.allDay,
+ 424:     flyerUrl: event.flyerUrl,
+ 425:     location: event.location,
+ 426:     venueName: event.venueName ?? null,
+ 427:     venueAddress: event.venueAddress ?? null,
+ 428:     eventFingerprint: source.venue_id
+ 429:       ? eventFingerprint({
+ 430:           venueId: source.venue_id,
+ 431:           title: event.title,
+ 432:           startsAt: event.startsAt,
+ 433:         })
+ 434:       : null,
+ 435:     rawPayload: event.rawPayload,
+ 436:   }));
+ 437: }
+
+=================================================================
+lib/event-harvester/first-party/ratify.ts (471 lines)
+   1: import tzLookup from "tz-lookup";
+   2: import { fetchEventbriteEventIdentity } from "./eventbrite-organizer";
+   3: import { venueIdentityMatch } from "../venue-identity";
+   4: 
+   5: import type { SourceDetection } from "./source-detector";
+   6: 
+   7: export type SourceVenueIdentity = {
+   8:   name: string;
+   9:   streetAddress: string | null;
+  10:   city: string | null;
+  11:   region: string | null;
+  12:   postalCode: string | null;
+  13:   country: string | null;
+  14:   latitude: number | null;
+  15:   longitude: number | null;
+  16: };
+  17: 
+  18: export type RatifiedSource = {
+  19:   sourceType: string;
+  20:   sourceUrl: string;
+  21:   externalSourceId: string | null;
+  22:   config: Record<string, unknown>;
+  23: };
+  24: 
+  25: export type SourceRatification =
+  26:   | {
+  27:       status: "ratified";
+  28:       source: RatifiedSource;
+  29:       evidence: string[];
+  30:       error: null;
+  31:     }
+  32:   | {
+  33:       status: "rejected";
+  34:       source: null;
+  35:       evidence: string[];
+  36:       error: null;
+  37:     }
+  38:   | {
+  39:       status: "ratification_failed";
+  40:       source: null;
+  41:       evidence: string[];
+  42:       error: string;
+  43:     };
+  44: 
+  45: function distanceMiles(
+  46:   lat1: number,
+  47:   lon1: number,
+  48:   lat2: number,
+  49:   lon2: number,
+  50: ): number {
+  51:   const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  52: 
+  53:   const earthRadiusMiles = 3958.8;
+  54:   const dLat = toRadians(lat2 - lat1);
+  55:   const dLon = toRadians(lon2 - lon1);
+  56: 
+  57:   const a =
+  58:     Math.sin(dLat / 2) ** 2 +
+  59:     Math.cos(toRadians(lat1)) *
+  60:       Math.cos(toRadians(lat2)) *
+  61:       Math.sin(dLon / 2) ** 2;
+  62: 
+  63:   return 2 * earthRadiusMiles * Math.asin(Math.sqrt(a));
+  64: }
+  65: 
+  66: function eventbriteUrlKind(value: string): "organizer" | "event" | null {
+  67:   try {
+  68:     const url = new URL(value);
+  69: 
+  70:     if (!/(^|\.)eventbrite\.com$/i.test(url.hostname)) {
+  71:       return null;
+  72:     }
+  73: 
+  74:     if (/\/o\//i.test(url.pathname)) {
+  75:       return "organizer";
+  76:     }
+  77: 
+  78:     if (/\/e\//i.test(url.pathname)) {
+  79:       return "event";
+  80:     }
+  81: 
+  82:     return null;
+  83:   } catch {
+  84:     return null;
+  85:   }
+  86: }
+  87: 
+  88: function eventbriteOrganizerId(value: string): string | null {
+  89:   try {
+  90:     const url = new URL(value);
+  91:     const match = url.pathname.match(/\/o\/(?:.*-)?(\d+)\/?$/i);
+  92: 
+  93:     return match?.[1] ?? null;
+  94:   } catch {
+  95:     return null;
+  96:   }
+  97: }
+  98: 
+  99: async function ratifyEventbrite(
+ 100:   detection: SourceDetection,
+ 101:   venue: SourceVenueIdentity,
+ 102: ): Promise<SourceRatification> {
+ 103:   const kind = eventbriteUrlKind(detection.url);
+ 104: 
+ 105:   if (!kind) {
+ 106:     return {
+ 107:       status: "ratification_failed",
+ 108:       source: null,
+ 109:       evidence: [
+ 110:         ...detection.evidence,
+ 111:         "Detected Eventbrite URL could not be classified",
+ 112:       ],
+ 113:       error: "Detected Eventbrite URL is neither an organizer nor event URL.",
+ 114:     };
+ 115:   }
+ 116: 
+ 117:   if (kind === "organizer") {
+ 118:     const organizerId = eventbriteOrganizerId(detection.url);
+ 119: 
+ 120:     if (!organizerId) {
+ 121:       return {
+ 122:         status: "ratification_failed",
+ 123:         source: null,
+ 124:         evidence: [
+ 125:           ...detection.evidence,
+ 126:           "Eventbrite organizer URL did not expose a stable organizer ID",
+ 127:         ],
+ 128:         error: "Could not derive Eventbrite organizer ID.",
+ 129:       };
+ 130:     }
+ 131: 
+ 132:     return {
+ 133:       status: "ratification_failed",
+ 134:       source: null,
+ 135:       evidence: [
+ 136:         ...detection.evidence,
+ 137:         `Eventbrite organizer ID ${organizerId} resolved from durable source`,
+ 138:         "Direct organizer URL does not by itself establish Spot attribution",
+ 139:       ],
+ 140:       error:
+ 141:         "Eventbrite organizer source requires Spot attribution before ratification.",
+ 142:     };
+ 143:   }
+ 144: 
+ 145:   try {
+ 146:     const identity = await fetchEventbriteEventIdentity(detection.url);
+ 147: 
+ 148:     if (identity.isOnline) {
+ 149:       return {
+ 150:         status: "rejected",
+ 151:         source: null,
+ 152:         evidence: [
+ 153:           ...detection.evidence,
+ 154:           "Eventbrite candidate is an online event rather than a physical Spot event",
+ 155:         ],
+ 156:         error: null,
+ 157:       };
+ 158:     }
+ 159: 
+ 160:     if (!identity.venue) {
+ 161:       return {
+ 162:         status: "ratification_failed",
+ 163:         source: null,
+ 164:         evidence: [
+ 165:           ...detection.evidence,
+ 166:           "Eventbrite event did not expose a physical venue",
+ 167:         ],
+ 168:         error: "Insufficient Eventbrite venue identity for Spot attribution.",
+ 169:       };
+ 170:     }
+ 171: 
+ 172:     const external = identity.venue;
+ 173: 
+ 174:     if (
+ 175:       venue.latitude === null ||
+ 176:       venue.longitude === null ||
+ 177:       external.latitude === null ||
+ 178:       external.longitude === null
+ 179:     ) {
+ 180:       return {
+ 181:         status: "ratification_failed",
+ 182:         source: null,
+ 183:         evidence: [
+ 184:           ...detection.evidence,
+ 185:           "Eventbrite event and TenderFans Spot did not both expose coordinates",
+ 186:         ],
+ 187:         error:
+ 188:           "Insufficient coordinate evidence for Eventbrite Spot attribution.",
+ 189:       };
+ 190:     }
+ 191: 
+ 192:     const miles = distanceMiles(
+ 193:       venue.latitude,
+ 194:       venue.longitude,
+ 195:       external.latitude,
+ 196:       external.longitude,
+ 197:     );
+ 198: 
+ 199:     if (miles > 1) {
+ 200:       return {
+ 201:         status: "rejected",
+ 202:         source: null,
+ 203:         evidence: [
+ 204:           ...detection.evidence,
+ 205:           `Eventbrite identifies physical venue "${external.name ?? "unknown"}"`,
+ 206:           `Eventbrite venue is ${miles.toFixed(1)} miles from the TenderFans Spot`,
+ 207:         ],
+ 208:         error: null,
+ 209:       };
+ 210:     }
+ 211: 
+ 212:     if (miles > 0.25) {
+ 213:       return {
+ 214:         status: "ratification_failed",
+ 215:         source: null,
+ 216:         evidence: [
+ 217:           ...detection.evidence,
+ 218:           `Eventbrite venue is ${miles.toFixed(2)} miles from the TenderFans Spot`,
+ 219:         ],
+ 220:         error: "Eventbrite venue proximity is inconclusive.",
+ 221:       };
+ 222:     }
+ 223: 
+ 224:     /*
+ 225:      * Coordinates establish proximity, not identity.
+ 226:      *
+ 227:      * Multiple Spots can legitimately share a building, organizer,
+ 228:      * or event infrastructure. A nearby but differently named
+ 229:      * Eventbrite venue therefore requires attribution review
+ 230:      * rather than automatic registration or permanent rejection.
+ 231:      */
+ 232:     const venueMatch = venueIdentityMatch({
+ 233:       spot: {
+ 234:         name: venue.name,
+ 235:         streetAddress: venue.streetAddress,
+ 236:         city: venue.city,
+ 237:         stateRegion: venue.region,
+ 238:         postalCode: venue.postalCode,
+ 239:       },
+ 240:       candidate: {
+ 241:         name: external.name ?? "",
+ 242:         streetAddress: external.streetAddress,
+ 243:         city: external.city,
+ 244:         stateRegion: external.region,
+ 245:         postalCode: external.postalCode,
+ 246:       },
+ 247:     });
+ 248: 
+ 249:     if (!venueMatch.autoAttach) {
+ 250:       return {
+ 251:         status: "ratification_failed",
+ 252:         source: null,
+ 253:         evidence: [
+ 254:           ...detection.evidence,
+ 255:           `Eventbrite physical venue: "${external.name ?? "unknown"}"`,
+ 256:           `TenderFans Spot: "${venue.name}"`,
+ 257:           `Physical separation: ${miles.toFixed(3)} miles`,
+ 258:           `Venue identity score: ${venueMatch.score}`,
+ 259:           `Venue identity evidence: ${JSON.stringify(venueMatch.evidence)}`,
+ 260:           "Nearby venue requires explicit Eventbrite attribution review",
+ 261:         ],
+ 262:         error:
+ 263:           "Eventbrite physical venue identity is not sufficiently established for automatic Spot attribution.",
+ 264:       };
+ 265:     }
+ 266: 
+ 267:     const organizerId = identity.organizer.id;
+ 268: 
+ 269:     const organizerUrl = identity.organizer.url;
+ 270: 
+ 271:     if (!organizerId || !organizerUrl) {
+ 272:       return {
+ 273:         status: "ratification_failed",
+ 274:         source: null,
+ 275:         evidence: [
+ 276:           ...detection.evidence,
+ 277:           "Attributed Eventbrite event did not expose a durable organizer source",
+ 278:         ],
+ 279:         error: "Could not derive durable Eventbrite organizer source.",
+ 280:       };
+ 281:     }
+ 282: 
+ 283:     /*
+ 284:      * An event's physical venue does not establish ownership of its
+ 285:      * organizer feed. The publisher may hold events at many Spots.
+ 286:      *
+ 287:      * Preserve the discovered organizer identity for review, but
+ 288:      * never auto-register the organizer under the physical host.
+ 289:      */
+ 290:     return {
+ 291:       status: "ratification_failed",
+ 292:       source: null,
+ 293:       evidence: [
+ 294:         ...detection.evidence,
+ 295:         `Eventbrite physical venue: "${external.name ?? "unknown"}"`,
+ 296:         `Physical venue matches the TenderFans Spot within ${miles.toFixed(2)} miles`,
+ 297:         `Eventbrite organizer ID: ${organizerId}`,
+ 298:         `Eventbrite organizer URL: ${organizerUrl}`,
+ 299:         "Physical event location does not establish organizer ownership",
+ 300:       ],
+ 301:       error:
+ 302:         "Eventbrite organizer publisher identity requires source attribution review.",
+ 303:     };
+ 304:   } catch (error) {
+ 305:     return {
+ 306:       status: "ratification_failed",
+ 307:       source: null,
+ 308:       evidence: [
+ 309:         ...detection.evidence,
+ 310:         "Eventbrite event identity could not be inspected",
+ 311:       ],
+ 312:       error: error instanceof Error ? error.message : String(error),
+ 313:     };
+ 314:   }
+ 315: }
+ 316: 
+ 317: const directlyRatifiableSourceTypes = new Set([
+ 318:   "supabase_postgrest_events",
+ 319:   "html_metadata_recurring",
+ 320:   "godaddy_menu_recurring",
+ 321:   "cp_multi_view_calendar",
+ 322:   "uvtix_events",
+ 323:   "schema_org_events",
+ 324:   "html_events",
+ 325:   "pwpc_events_calendar",
+ 326:   "toast_digital_storefront",
+ 327:   "square_online_events",
+ 328:   "shopify_events",
+ 329:   "woocommerce_events",
+ 330:   "spothopper_events",
+ 331:   "squarespace_events",
+ 332:   "google_calendar",
+ 333:   "simcal_events",
+ 334:   "google_apps_script_events",
+ 335:   "beatgig_events",
+ 336:   "bandzoogle_events",
+ 337:   "eventscalendar_events",
+ 338:   "sociablekit_facebook_events",
+ 339:   "tribe_rest",
+ 340:   "next_rsc_events",
+ 341:   "tanstack_seroval_events",
+ 342:   "eventer_events",
+ 343:   "ticket_spot_events",
+ 344:   "wordpress_category_events",
+ 345:   "wordpress_event_feed",
+ 346:   "calendar_image",
+ 347: ]);
+ 348: 
+ 349: function stableExternalSourceId(detection: SourceDetection): string {
+ 350:   return ["first_party", detection.sourceType, detection.url].join(":");
+ 351: }
+ 352: 
+ 353: export async function ratifyDetectedSource(
+ 354:   detection: SourceDetection,
+ 355:   venue: SourceVenueIdentity,
+ 356: ): Promise<SourceRatification> {
+ 357:   if (
+ 358:     detection.sourceType === "facebook" &&
+ 359:     detection.adapterAvailable
+ 360:   ) {
+ 361:     /*
+ 362:      * Preserve "facebook" as the detector/finding type while storing
+ 363:      * the implemented production adapter as "facebook_events".
+ 364:      *
+ 365:      * Facebook Pages may publish events for multiple physical venues,
+ 366:      * so event-level venue attribution remains downstream rather than
+ 367:      * forcing every harvested event onto the source Spot.
+ 368:      */
+ 369:     return {
+ 370:       status: "ratified",
+ 371:       source: {
+ 372:         sourceType: "facebook_events",
+ 373:         sourceUrl: detection.url,
+ 374:         externalSourceId: [
+ 375:           "first_party",
+ 376:           "facebook_events",
+ 377:           detection.url,
+ 378:         ].join(":"),
+ 379:         config: {},
+ 380:       },
+ 381:       evidence: [
+ 382:         ...detection.evidence,
+ 383:         "Facebook Page was discovered from the Spot surface",
+ 384:         "TenderFans has an implemented Facebook Events adapter",
+ 385:         "Event venue attribution will be resolved per harvested event",
+ 386:       ],
+ 387:       error: null,
+ 388:     };
+ 389:   }
+ 390: 
+ 391:   if (detection.sourceType === "eventbrite_organizer") {
+ 392:     /*
+ 393:      * Eventbrite is the exception because an Eventbrite
+ 394:      * event or organizer can belong to a completely different
+ 395:      * physical venue. Preserve the stronger venue-attribution
+ 396:      * ratifier for this provider.
+ 397:      */
+ 398:     return ratifyEventbrite(detection, venue);
+ 399:   }
+ 400: 
+ 401:   if (
+ 402:     detection.adapterAvailable &&
+ 403:     directlyRatifiableSourceTypes.has(detection.sourceType)
+ 404:   ) {
+ 405:     /*
+ 406:      * These source types were discovered from the Spot's own
+ 407:      * first-party website/event surface (or a provider handoff
+ 408:      * exposed by that surface), and each has an implemented
+ 409:      * preview adapter.
+ 410:      *
+ 411:      * Ratification establishes the source candidate. The
+ 412:      * adapter is still exercised separately by validation;
+ 413:      * zero current events remains a valid/empty source rather
+ 414:      * than a failed source.
+ 415:      */
+ 416:     return {
+ 417:       status: "ratified",
+ 418:       source: {
+ 419:         sourceType: detection.sourceType,
+ 420:         sourceUrl: detection.url,
+ 421:         externalSourceId: stableExternalSourceId(detection),
+ 422:         config: (() => {
+ 423:           if (detection.sourceType !== "wordpress_category_events") {
+ 424:             return {};
+ 425:           }
+ 426: 
+ 427:           const { latitude, longitude } = venue;
+ 428: 
+ 429:           if (
+ 430:             typeof latitude !== "number" ||
+ 431:             !Number.isFinite(latitude) ||
+ 432:             latitude < -90 ||
+ 433:             latitude > 90 ||
+ 434:             typeof longitude !== "number" ||
+ 435:             !Number.isFinite(longitude) ||
+ 436:             longitude < -180 ||
+ 437:             longitude > 180
+ 438:           ) {
+ 439:             return {};
+ 440:           }
+ 441: 
+ 442:           try {
+ 443:             const timezone = tzLookup(latitude, longitude);
+ 444:             new Intl.DateTimeFormat("en-US", {
+ 445:               timeZone: timezone,
+ 446:             });
+ 447:             return { timezone };
+ 448:           } catch {
+ 449:             return {};
+ 450:           }
+ 451:         })(),
+ 452:       },
+ 453:       evidence: [
+ 454:         ...detection.evidence,
+ 455:         "Source was discovered from the Spot event surface",
+ 456:         "TenderFans has an implemented adapter for this source type",
+ 457:       ],
+ 458:       error: null,
+ 459:     };
+ 460:   }
+ 461: 
+ 462:   return {
+ 463:     status: "ratification_failed",
+ 464:     source: null,
+ 465:     evidence: [
+ 466:       ...detection.evidence,
+ 467:       "No automatic ratification rule is available for this detected source type",
+ 468:     ],
+ 469:     error: `No automatic ratifier implemented for ${detection.sourceType}.`,
+ 470:   };
+ 471: }
+
+=================================================================
+lib/event-harvester/first-party/validate.ts (105 lines)
+   1: import {
+   2:   SpotHopperSurfaceError,
+   3: } from "./spothopper-events";
+   4: 
+   5: import {
+   6:   previewFirstPartySource,
+   7:   type FirstPartyEventPreview,
+   8:   type FirstPartySource,
+   9: } from "./preview";
+  10: 
+  11: export type SourceValidationStatus =
+  12:   | "validated"
+  13:   | "rejected"
+  14:   | "validation_failed";
+  15: 
+  16: export type SourceInventoryStatus =
+  17:   | "available"
+  18:   | "empty"
+  19:   | "unsafe"
+  20:   | "unknown";
+  21: 
+  22: export type FirstPartySourceValidation = {
+  23:   status: SourceValidationStatus;
+  24:   inventory: SourceInventoryStatus;
+  25:   eventCount: number;
+  26:   events: FirstPartyEventPreview[];
+  27:   evidence: string[];
+  28:   error: string | null;
+  29: };
+  30: 
+  31: /**
+  32:  * Validate that an implemented adapter can actually exercise a
+  33:  * particular ratified source.
+  34:  *
+  35:  * Important:
+  36:  * - zero events does NOT mean unsupported;
+  37:  * - validation does NOT register or ingest the source;
+  38:  * - Spot/source attribution belongs to ratification, not here.
+  39:  */
+  40: export async function validateFirstPartySource(
+  41:   source: FirstPartySource
+  42: ): Promise<FirstPartySourceValidation> {
+  43:   try {
+  44:     const events =
+  45:       await previewFirstPartySource(source, {
+  46:         validateFacebookPageIdentity: source.source_type === "facebook_events",
+  47:       });
+  48: 
+  49:     if (events.length > 0) {
+  50:       return {
+  51:         status: "validated",
+  52:         inventory: "available",
+  53:         eventCount: events.length,
+  54:         events,
+  55:         evidence: [
+  56:           "Implemented adapter successfully exercised source",
+  57:           "Source returned normalized event inventory",
+  58:         ],
+  59:         error: null,
+  60:       };
+  61:     }
+  62: 
+  63:     return {
+  64:       status: "validated",
+  65:       inventory: "empty",
+  66:       eventCount: 0,
+  67:       events: [],
+  68:       evidence: [
+  69:         "Implemented adapter successfully exercised source",
+  70:         "Source currently returned no publishable event inventory",
+  71:       ],
+  72:       error: null,
+  73:     };
+  74:   } catch (error) {
+  75:     if (
+  76:       error instanceof SpotHopperSurfaceError &&
+  77:       error.reason === "unsupported_surface"
+  78:     ) {
+  79:       return {
+  80:         status: "rejected",
+  81:         inventory: "unknown",
+  82:         eventCount: 0,
+  83:         events: [],
+  84:         evidence: [
+  85:           "SpotHopper platform detected without a recognized public event calendar",
+  86:         ],
+  87:         error: error.message,
+  88:       };
+  89:     }
+  90: 
+  91:     return {
+  92:       status: "validation_failed",
+  93:       inventory: "unknown",
+  94:       eventCount: 0,
+  95:       events: [],
+  96:       evidence: [
+  97:         "Implemented adapter could not successfully exercise source",
+  98:       ],
+  99:       error:
+ 100:         error instanceof Error
+ 101:           ? error.message
+ 102:           : String(error),
+ 103:     };
+ 104:   }
+ 105: }
+
+=================================================================
+lib/event-harvester/first-party/ingest.ts (599 lines)
+   1: import type { SupabaseClient } from "@supabase/supabase-js";
+   2: 
+   3: import {
+   4:   loadFirstPartySource,
+   5:   previewFirstPartySource,
+   6:   type FirstPartyEventPreview,
+   7: } from "./preview";
+   8: 
+   9: import { eventFingerprint } from "../identity";
+  10: import { resolveFirstPartyAttribution } from "./attribution";
+  11: import { classifyEventEligibility } from "./event-eligibility";
+  12: 
+  13: export type FirstPartyIngestResult = {
+  14:   sourceId: string;
+  15:   sourceName: string;
+  16:   dryRun: boolean;
+  17:   discovered: number;
+  18:   processed: number;
+  19:   linkedExisting: number;
+  20:   graduated: number;
+  21:   synced: number;
+  22:   needsReview: number;
+  23:   events: Array<{
+  24:     externalEventId: string;
+  25:     title: string;
+  26:     startsAt: string;
+  27:     candidateId: string | null;
+  28:     canonicalEventId: string | null;
+  29:     action: "preview" | "linked_existing" | "graduated" | "needs_review";
+  30:   }>;
+  31: };
+  32: 
+  33: function rpcValue<T>(data: unknown): T {
+  34:   return data as T;
+  35: }
+  36: 
+  37: async function ingestEvent(
+  38:   supabase: SupabaseClient,
+  39:   event: FirstPartyEventPreview,
+  40: ): Promise<{
+  41:   candidateId: string | null;
+  42:   canonicalEventId: string | null;
+  43:   action: "linked_existing" | "graduated" | "needs_review";
+  44: }> {
+  45:   const attribution = await resolveFirstPartyAttribution(supabase, event);
+  46: 
+  47:   if (attribution.status === "unresolved") {
+  48:     const evidence = attribution.publisherEvidence;
+  49: 
+  50:     const unresolvedPayload = {
+  51:       ...event.rawPayload,
+  52:       isAllDay: event.allDay,
+  53:       publisherVenueName: attribution.rawVenueName,
+  54:       publisherVenueAddress: attribution.rawAddress,
+  55:       attributionMethod: "needs_review",
+  56:     };
+  57: 
+  58:     const { error: unresolvedError } = await supabase.rpc(
+  59:       "upsert_event_harvest_unresolved_venue",
+  60:       {
+  61:         p_source_id: event.sourceId,
+  62:         p_external_event_id: event.externalEventId,
+  63:         p_source_url: event.sourceUrl,
+  64:         p_raw_title: event.title,
+  65:         p_raw_starts_at: event.startsAt,
+  66:         p_raw_ends_at: event.endsAt,
+  67:         p_publisher_venue_name: attribution.rawVenueName,
+  68:         p_publisher_address: evidence?.streetAddress ?? attribution.rawAddress,
+  69:         p_publisher_city: evidence?.city ?? null,
+  70:         p_publisher_state_region: evidence?.stateRegion ?? null,
+  71:         p_publisher_postal_code: evidence?.postalCode ?? null,
+  72:         p_suggested_venue_id: attribution.suggestedVenueId,
+  73:         p_confidence_score: attribution.confidenceScore,
+  74:         p_evidence: attribution.evidence,
+  75:         p_raw_payload: unresolvedPayload,
+  76:       },
+  77:     );
+  78: 
+  79:     if (unresolvedError) {
+  80:       throw new Error(
+  81:         `Unresolved venue preservation failed for "${event.title}": ${unresolvedError.message}`,
+  82:       );
+  83:     }
+  84: 
+  85:     return {
+  86:       candidateId: null,
+  87:       canonicalEventId: null,
+  88:       action: "needs_review",
+  89:     };
+  90:   }
+  91: 
+  92:   /*
+  93:    * An existing administrator approval may now resolve another
+  94:    * Facebook occurrence. Retire only that occurrence's pending
+  95:    * attribution review. Never alter rejected reviews or the
+  96:    * event's identity, start time, or publication status here.
+  97:    */
+  98:   if (
+  99:     event.sourceType === "facebook_events" &&
+ 100:     attribution.method === "admin_resolved"
+ 101:   ) {
+ 102:     const { error: reviewUpdateError } = await supabase
+ 103:       .from("event_harvest_unresolved_venues")
+ 104:       .update({
+ 105:         status: "resolved",
+ 106:         resolved_venue_id: attribution.venueId,
+ 107:         updated_at: new Date().toISOString(),
+ 108:       })
+ 109:       .eq("source_id", event.sourceId)
+ 110:       .eq("external_event_id", event.externalEventId)
+ 111:       .eq("status", "pending");
+ 112: 
+ 113:     if (reviewUpdateError) {
+ 114:       throw new Error(
+ 115:         `Could not retire resolved Facebook review: ${reviewUpdateError.message}`,
+ 116:       );
+ 117:     }
+ 118:   }
+ 119: 
+ 120:   const resolvedFingerprint = eventFingerprint({
+ 121:     venueId: attribution.venueId,
+ 122:     title: event.title,
+ 123:     startsAt: event.startsAt,
+ 124:   });
+ 125: 
+ 126:   const harvestPayload = {
+ 127:     ...event.rawPayload,
+ 128:     isAllDay: event.allDay,
+ 129:     publisherVenueName: attribution.rawVenueName,
+ 130:     publisherVenueAddress: attribution.rawAddress,
+ 131:     attributionMethod: attribution.method,
+ 132:   };
+ 133: 
+ 134:   /*
+ 135:    * Preserve malformed publisher end times as raw provenance, but do
+ 136:    * not let an equal/earlier end invalidate an otherwise usable event.
+ 137:    *
+ 138:    * The start remains authoritative. A later harvest with a corrected
+ 139:    * publisher end time will flow through normally and replace the null
+ 140:    * normalized end during first-party synchronization.
+ 141:    */
+ 142:   const normalizedEndsAt =
+ 143:     event.endsAt &&
+ 144:     new Date(event.endsAt).getTime() > new Date(event.startsAt).getTime()
+ 145:       ? event.endsAt
+ 146:       : null;
+ 147: 
+ 148:   const { data: candidateData, error: candidateError } = await supabase.rpc(
+ 149:     "upsert_event_harvest_candidate",
+ 150:     {
+ 151:       p_source_id: event.sourceId,
+ 152:       p_external_event_id: event.externalEventId,
+ 153:       p_source_url: event.sourceUrl,
+ 154:       p_raw_title: event.title,
+ 155:       p_raw_venue_name: attribution.rawVenueName,
+ 156:       p_raw_address: attribution.rawAddress,
+ 157:       p_raw_description: event.description,
+ 158:       p_raw_starts_at: event.startsAt,
+ 159:       p_raw_ends_at: event.endsAt,
+ 160:       p_normalized_title: event.normalizedTitle,
+ 161:       p_starts_at: event.startsAt,
+ 162:       p_ends_at: normalizedEndsAt,
+ 163:       p_venue_id: attribution.venueId,
+ 164:       p_confidence_score: attribution.confidenceScore,
+ 165:       p_event_fingerprint: resolvedFingerprint,
+ 166:       p_raw_payload: harvestPayload,
+ 167:     },
+ 168:   );
+ 169: 
+ 170:   if (candidateError) {
+ 171:     throw new Error(
+ 172:       `Candidate upsert failed for "${event.title}": ${candidateError.message}`,
+ 173:     );
+ 174:   }
+ 175: 
+ 176:   const candidateId = rpcValue<string>(candidateData);
+ 177: 
+ 178:   if (!candidateId) {
+ 179:     throw new Error(`Candidate upsert returned no ID for "${event.title}".`);
+ 180:   }
+ 181: 
+ 182:   /*
+ 183:    * Explicitly disputed publisher times must reach Event Review
+ 184:    * before cross-source linking or canonical graduation.
+ 185:    * Preserve every observed candidate and its original evidence.
+ 186:    */
+ 187:   const reviewEvidence = event.rawPayload?.eventEvidence;
+ 188: 
+ 189:   const explicitlyRequiresReview =
+ 190:     reviewEvidence !== null &&
+ 191:     typeof reviewEvidence === "object" &&
+ 192:     !Array.isArray(reviewEvidence) &&
+ 193:     (
+ 194:       reviewEvidence as { requiresReview?: unknown }
+ 195:     ).requiresReview === true &&
+ 196:     event.rawPayload?.occurrenceType === "numeric_ticket_performance";
+ 197: 
+ 198:   if (explicitlyRequiresReview) {
+ 199:     const { error: reviewError } = await supabase.rpc(
+ 200:       "mark_harvest_candidate_for_review",
+ 201:       { p_candidate_id: candidateId },
+ 202:     );
+ 203: 
+ 204:     if (reviewError) {
+ 205:       throw new Error(
+ 206:         `Candidate review routing failed for "${event.title}": ${reviewError.message}`,
+ 207:       );
+ 208:     }
+ 209: 
+ 210:     return {
+ 211:       candidateId,
+ 212:       canonicalEventId: null,
+ 213:       action: "needs_review",
+ 214:     };
+ 215:   }
+ 216: 
+ 217:   /*
+ 218:    * Cross-source dedupe MUST happen before graduation.
+ 219:    *
+ 220:    * If Ticketmaster or another source already owns the exact
+ 221:    * Spot/title/start occurrence, attach this first-party provenance
+ 222:    * to that canonical event instead of creating a duplicate.
+ 223:    */
+ 224:   const { data: linkedData, error: linkedError } = await supabase.rpc(
+ 225:     "link_harvest_candidate_to_existing_event",
+ 226:     {
+ 227:       p_candidate_id: candidateId,
+ 228:     },
+ 229:   );
+ 230: 
+ 231:   if (linkedError) {
+ 232:     throw new Error(
+ 233:       `Cross-source link failed for "${event.title}": ${linkedError.message}`,
+ 234:     );
+ 235:   }
+ 236: 
+ 237:   let canonicalEventId = rpcValue<string | null>(linkedData);
+ 238:   let action: "linked_existing" | "graduated";
+ 239: 
+ 240:   if (canonicalEventId) {
+ 241:     action = "linked_existing";
+ 242:   } else {
+ 243:     /*
+ 244:      * Exact fingerprint dedupe above intentionally remains strict.
+ 245:      *
+ 246:      * Before creating a new canonical event, check whether this
+ 247:      * candidate exposes a plausible duplicate occurrence that needs
+ 248:      * human adjudication. The database function also places any
+ 249:      * implicated peer candidates into the same review lifecycle.
+ 250:      */
+ 251:     const {
+ 252:       data: occurrenceReviewData,
+ 253:       error: occurrenceReviewError,
+ 254:     } = await supabase.rpc(
+ 255:       "flag_event_harvest_occurrence_review",
+ 256:       {
+ 257:         p_candidate_id: candidateId,
+ 258:       },
+ 259:     );
+ 260: 
+ 261:     if (occurrenceReviewError) {
+ 262:       throw new Error(
+ 263:         `Occurrence review routing failed for "${event.title}": ${occurrenceReviewError.message}`,
+ 264:       );
+ 265:     }
+ 266: 
+ 267:     const requiresOccurrenceReview =
+ 268:       rpcValue<boolean>(occurrenceReviewData);
+ 269: 
+ 270:     if (requiresOccurrenceReview) {
+ 271:       return {
+ 272:         candidateId,
+ 273:         canonicalEventId: null,
+ 274:         action: "needs_review",
+ 275:       };
+ 276:     }
+ 277: 
+ 278:     /*
+ 279:      * Calendar-image extraction may establish the event itself while
+ 280:      * leaving a critical occurrence fact, such as its calendar date,
+ 281:      * deterministically inferred from explicit image evidence.
+ 282:      *
+ 283:      * Preserve the candidate and route it to the existing event-review
+ 284:      * lifecycle rather than publishing a new canonical occurrence.
+ 285:      *
+ 286:      * Exact cross-source matches above remain authoritative enough to
+ 287:      * link without creating a new event from the inferred occurrence.
+ 288:      */
+ 289:     const eventEvidence =
+ 290:       event.rawPayload?.eventEvidence;
+ 291: 
+ 292:     const requiresEvidenceReview =
+ 293:       eventEvidence !== null &&
+ 294:       typeof eventEvidence === "object" &&
+ 295:       !Array.isArray(eventEvidence) &&
+ 296:       (
+ 297:         eventEvidence as {
+ 298:           requiresReview?: unknown;
+ 299:         }
+ 300:       ).requiresReview === true;
+ 301: 
+ 302:     const requiresHtmlAnnouncementReview =
+ 303:       event.rawPayload?.extraction ===
+ 304:         "html_multiday_announcement" &&
+ 305:       event.rawPayload?.yearRequiresConfirmation === true;
+ 306: 
+ 307:     const requiresEventReview =
+ 308:       requiresEvidenceReview ||
+ 309:       requiresHtmlAnnouncementReview;
+ 310: 
+ 311:     if (requiresEventReview) {
+ 312:       const {
+ 313:         error: reviewError,
+ 314:       } = await supabase.rpc(
+ 315:         "mark_harvest_candidate_for_review",
+ 316:         {
+ 317:           p_candidate_id:
+ 318:             candidateId,
+ 319:         },
+ 320:       );
+ 321: 
+ 322:       if (reviewError) {
+ 323:         throw new Error(
+ 324:           `Candidate review routing failed for "${event.title}": ${reviewError.message}`,
+ 325:         );
+ 326:       }
+ 327: 
+ 328:       return {
+ 329:         candidateId,
+ 330:         canonicalEventId: null,
+ 331:         action: "needs_review",
+ 332:       };
+ 333:     }
+ 334: 
+ 335:     const graduationRpc = "graduate_harvest_candidate";
+ 336: 
+ 337:     const graduationArgs = {
+ 338:       p_candidate_id: candidateId,
+ 339:       p_reviewed_by: null,
+ 340:     };
+ 341: 
+ 342:     const { data: graduatedData, error: graduatedError } = await supabase.rpc(
+ 343:       graduationRpc,
+ 344:       graduationArgs,
+ 345:     );
+ 346: 
+ 347:     if (graduatedError) {
+ 348:       throw new Error(
+ 349:         `Candidate graduation failed for "${event.title}": ${graduatedError.message}`,
+ 350:       );
+ 351:     }
+ 352: 
+ 353:     canonicalEventId = rpcValue<string>(graduatedData);
+ 354:     action = "graduated";
+ 355: 
+ 356:     if (!canonicalEventId) {
+ 357:       throw new Error(
+ 358:         `Candidate graduation returned no event ID for "${event.title}".`,
+ 359:       );
+ 360:     }
+ 361:   }
+ 362: 
+ 363:   /*
+ 364:    * Refresh first-party provenance and factual lifecycle fields.
+ 365:    *
+ 366:    * 053 protects Ticketmaster-linked canonical events here:
+ 367:    * first-party provenance refreshes, but Ticketmaster's canonical
+ 368:    * title/time/artwork/lifecycle remains authoritative.
+ 369:    */
+ 370:   const { data: syncedData, error: syncedError } = await supabase.rpc(
+ 371:     "sync_first_party_event",
+ 372:     {
+ 373:       p_candidate_id: candidateId,
+ 374:       p_source_url: event.sourceUrl,
+ 375:       p_raw_title: event.title,
+ 376:       p_raw_description: event.description,
+ 377:       p_raw_starts_at: event.startsAt,
+ 378:       p_raw_ends_at: event.endsAt,
+ 379:       p_normalized_title: event.normalizedTitle,
+ 380:       p_starts_at: event.startsAt,
+ 381:       p_ends_at: normalizedEndsAt,
+ 382:       p_event_fingerprint: resolvedFingerprint,
+ 383:       p_flyer_url: event.flyerUrl,
+ 384:       p_raw_payload: harvestPayload,
+ 385:     },
+ 386:   );
+ 387: 
+ 388:   if (syncedError) {
+ 389:     throw new Error(
+ 390:       `First-party sync failed for "${event.title}": ${syncedError.message}`,
+ 391:     );
+ 392:   }
+ 393: 
+ 394:   const syncedEventId = rpcValue<string>(syncedData);
+ 395: 
+ 396:   if (syncedEventId !== canonicalEventId) {
+ 397:     throw new Error(`Canonical event mismatch for "${event.title}".`);
+ 398:   }
+ 399: 
+ 400:   return {
+ 401:     candidateId,
+ 402:     canonicalEventId,
+ 403:     action,
+ 404:   };
+ 405: }
+ 406: 
+ 407: export async function ingestFirstPartySource(
+ 408:   supabase: SupabaseClient,
+ 409:   sourceId: string,
+ 410:   options: {
+ 411:     dryRun?: boolean;
+ 412:     limit?: number;
+ 413:     title?: string;
+ 414:   } = {},
+ 415: ): Promise<FirstPartyIngestResult> {
+ 416:   const dryRun = options.dryRun ?? true;
+ 417: 
+ 418:   const source = await loadFirstPartySource(supabase, sourceId);
+ 419: 
+ 420:   /*
+ 421:    * Absence reconciliation compares candidate last_seen_at against
+ 422:    * the instant this complete source scan began. Capture this before
+ 423:    * fetching/parsing so every event observed by this run is newer.
+ 424:    */
+ 425:   const scanStartedAt = new Date().toISOString();
+ 426: 
+ 427:   const allPreview = await previewFirstPartySource(source);
+ 428: 
+ 429:   /*
+ 430:    * TanStack calendar inventories may include television schedules.
+ 431:    * Preserve the complete inventory for source diagnostics, but do
+ 432:    * not persist broadcast-only listings as TenderFans events.
+ 433:    */
+ 434:   /*
+ 435:    * Do not ingest completed historical occurrences.
+ 436:    *
+ 437:    * An explicit valid end time is authoritative; otherwise use
+ 438:    * the start time. This prevents expired events from generating
+ 439:    * new attribution, candidate, or Event Review writes.
+ 440:    *
+ 441:    * Preserve the full source inventory for diagnostics and
+ 442:    * absence reconciliation.
+ 443:    */
+ 444:   const eligibilityNow = Date.now();
+ 445: 
+ 446:   const eligiblePreview = allPreview.filter((event) => {
+ 447:     if (
+ 448:       source.source_type === "tanstack_seroval_events" &&
+ 449:       !classifyEventEligibility(event).eligible
+ 450:     ) {
+ 451:       return false;
+ 452:     }
+ 453: 
+ 454:     const startsAt = Date.parse(event.startsAt);
+ 455: 
+ 456:     if (!Number.isFinite(startsAt)) {
+ 457:       return true;
+ 458:     }
+ 459: 
+ 460:     const endsAt = event.endsAt
+ 461:       ? Date.parse(event.endsAt)
+ 462:       : NaN;
+ 463: 
+ 464:     const completionTime =
+ 465:       Number.isFinite(endsAt) && endsAt > startsAt
+ 466:         ? endsAt
+ 467:         : startsAt;
+ 468: 
+ 469:     return completionTime >= eligibilityNow;
+ 470:   });
+ 471: 
+ 472:   const selectedPreview = options.title
+ 473:     ? eligiblePreview.filter(
+ 474:         (event) =>
+ 475:           event.title.toLowerCase() === options.title!.trim().toLowerCase(),
+ 476:       )
+ 477:     : eligiblePreview;
+ 478: 
+ 479:   const preview =
+ 480:     options.limit === undefined
+ 481:       ? selectedPreview
+ 482:       : selectedPreview.slice(0, Math.max(0, options.limit));
+ 483: 
+ 484:   if (dryRun) {
+ 485:     return {
+ 486:       sourceId: source.id,
+ 487:       sourceName: source.name,
+ 488:       dryRun: true,
+ 489:       discovered: allPreview.length,
+ 490:       processed: 0,
+ 491:       linkedExisting: 0,
+ 492:       graduated: 0,
+ 493:       synced: 0,
+ 494:       needsReview: 0,
+ 495:       events: preview.map((event) => ({
+ 496:         externalEventId: event.externalEventId,
+ 497:         title: event.title,
+ 498:         startsAt: event.startsAt,
+ 499:         candidateId: null,
+ 500:         canonicalEventId: null,
+ 501:         action: "preview" as const,
+ 502:       })),
+ 503:     };
+ 504:   }
+ 505: 
+ 506:   const result: FirstPartyIngestResult = {
+ 507:     sourceId: source.id,
+ 508:     sourceName: source.name,
+ 509:     dryRun: false,
+ 510:     discovered: allPreview.length,
+ 511:     processed: 0,
+ 512:     linkedExisting: 0,
+ 513:     graduated: 0,
+ 514:     synced: 0,
+ 515:     needsReview: 0,
+ 516:     events: [],
+ 517:   };
+ 518: 
+ 519:   for (const event of preview) {
+ 520:     const ingested = await ingestEvent(supabase, event);
+ 521: 
+ 522:     result.processed += 1;
+ 523: 
+ 524:     if (ingested.action === "needs_review") {
+ 525:       result.needsReview += 1;
+ 526:     } else {
+ 527:       result.synced += 1;
+ 528: 
+ 529:       if (ingested.action === "linked_existing") {
+ 530:         result.linkedExisting += 1;
+ 531:       } else {
+ 532:         result.graduated += 1;
+ 533:       }
+ 534:     }
+ 535: 
+ 536:     result.events.push({
+ 537:       externalEventId: event.externalEventId,
+ 538:       title: event.title,
+ 539:       startsAt: event.startsAt,
+ 540:       candidateId: ingested.candidateId,
+ 541:       canonicalEventId: ingested.canonicalEventId,
+ 542:       action: ingested.action,
+ 543:     });
+ 544:   }
+ 545: 
+ 546:   /*
+ 547:    * A complete, unfiltered source scan can reconcile absences
+ 548:    * regardless of whether some observed events require review.
+ 549:    *
+ 550:    * Keep the existing TanStack exclusion.
+ 551:    */
+ 552:   /*
+ 553:    * Bounded ICS recurrence expansion is not an authoritative
+ 554:    * full-history inventory. Missing instances outside the expansion
+ 555:    * window must never count toward cancellation.
+ 556:    *
+ 557:    * This is a temporary safety guard until reconciliation accepts
+ 558:    * explicit scan coverage. Keep existing full-inventory behavior
+ 559:    * unchanged for other adapters.
+ 560:    */
+ 561:   const boundedIcsInventory = new Set([
+ 562:     "ics",
+ 563:     "google_calendar",
+ 564:     "squarespace_events",
+ 565:     "supabase_postgrest_events",
+ 566:     "html_metadata_recurring",
+ 567:   ]).has(source.source_type);
+ 568: 
+ 569:   /*
+ 570:    * Facebook's recurring-event inventory is not complete while
+ 571:    * occurrence expansion is bounded. Missing sibling occurrences
+ 572:    * must not be interpreted as cancellations.
+ 573:    */
+ 574:   const completeSourceRun =
+ 575:     !boundedIcsInventory &&
+ 576:     source.source_type !== "facebook_events" &&
+ 577:     source.source_type !== "tanstack_seroval_events" &&
+ 578:     allPreview.length > 0 &&
+ 579:     options.title === undefined &&
+ 580:     options.limit === undefined;
+ 581: 
+ 582:   if (completeSourceRun) {
+ 583:     const { error: reconcileError } = await supabase.rpc(
+ 584:       "reconcile_first_party_source_absences",
+ 585:       {
+ 586:         p_source_id: source.id,
+ 587:         p_scan_started_at: scanStartedAt,
+ 588:       },
+ 589:     );
+ 590: 
+ 591:     if (reconcileError) {
+ 592:       throw new Error(
+ 593:         `Could not reconcile first-party source absences: ${reconcileError.message}`,
+ 594:       );
+ 595:     }
+ 596:   }
+ 597: 
+ 598:   return result;
+ 599: }
+
+=================================================================
+lib/event-harvester/first-party/eventscalendar-events.ts (661 lines)
+   1: import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
+   2: import type {
+   3:   FirstPartyHarvestEvent,
+   4: } from "./types";
+   5: 
+ 169: 
+ 170:   /*
+ 171:    * EventsCalendar uses `start` / `end` as UTC
+ 172:    * date anchors rather than event clock times.
+ 173:    * Recover only the calendar date here.
+ 174:    */
+ 175:   return {
+ 176:     year: date.getUTCFullYear(),
+ 315:   );
+ 316: }
+ 317: 
+ 318: function eventTime(
+ 319:   date: DateParts,
+ 320:   hourValue: unknown,
+ 321:   minuteValue: unknown,
+ 322:   timeZone: string,
+ 345:   );
+ 346: }
+ 347: 
+ 348: function sourceUrlIsEventsCalendarApi(
+ 349:   sourceUrl: string,
+ 350: ): boolean {
+ 351:   try {
+ 352:     const url = new URL(sourceUrl);
+ 353: 
+ 354:     return (
+ 355:       url.hostname.toLowerCase() ===
+ 356:         "inffuse.eventscalendar.co" &&
+ 357:       /^\/api\/v0\.1\/projects\/[^/]+\/data\/public\/events$/i
+ 358:         .test(url.pathname) &&
+ 359:       url.searchParams.get("app") ===
+ 360:         "calendar"
+ 361:     );
+ 364:   }
+ 365: }
+ 366: 
+ 367: export async function fetchEventsCalendarEvents(
+ 368:   sourceUrl: string,
+ 369:   options: {
+ 370:     timeZone?: string;
+ 371:   } = {},
+ 372: ): Promise<FirstPartyHarvestEvent[]> {
+ 373:   if (
+ 374:     !sourceUrlIsEventsCalendarApi(
+ 375:       sourceUrl,
+ 376:     )
+ 377:   ) {
+ 378:     throw new Error(
+ 379:       "EventsCalendar source URL is not a recognized public events API.",
+ 380:     );
+ 381:   }
+ 382: 
+ 383:   const response = await recoveryFetch(
+ 384:     sourceUrl,
+ 385:     {
+ 386:       headers: {
+ 387:         Accept:
+ 388:           "application/json,*/*;q=0.8",
+ 411:     );
+ 412:   }
+ 413: 
+ 414:   const events:
+ 415:     FirstPartyHarvestEvent[] = [];
+ 416: 
+ 417:   const now = Date.now();
+ 418: 
+ 430:     const record =
+ 431:       raw as EventsCalendarRecord;
+ 432: 
+ 433:     const externalEventId =
+ 434:       clean(record.id);
+ 435: 
+ 436:     const title =
+ 437:       clean(record.title);
+ 438: 
+ 439:     if (
+ 440:       !externalEventId ||
+ 441:       !title
+ 442:     ) {
+ 443:       continue;
+ 444:     }
+ 480:         options.timeZone,
+ 481:       );
+ 482: 
+ 483:     let startsAt: Date;
+ 484:     let endsAt: Date | null;
+ 485: 
+ 486:     if (allDay) {
+ 487:       /*
+ 488:        * Preserve date-only semantics without
+ 489:        * inventing a local clock time.
+ 490:        */
+ 491:       startsAt = new Date(
+ 492:         Date.UTC(
+ 493:           startDate.year,
+ 494:           startDate.month - 1,
+ 495:           startDate.day,
+ 509:       }
+ 510: 
+ 511:       const start =
+ 512:         eventTime(
+ 513:           startDate,
+ 514:           record.startHour,
+ 515:           record.startMinutes,
+ 516:           timeZone,
+ 520:         continue;
+ 521:       }
+ 522: 
+ 523:       startsAt = start;
+ 524: 
+ 525:       let effectiveEndDate =
+ 526:         endDate;
+ 527: 
+ 535:         integer(record.endMinutes);
+ 536: 
+ 537:       /*
+ 538:        * When a same-date event ends at or before
+ 539:        * its start clock time, treat the end as
+ 540:        * crossing midnight, matching the existing
+ 541:        * first-party calendar convention.
+ 542:        */
+ 565:       }
+ 566: 
+ 567:       endsAt =
+ 568:         eventTime(
+ 569:           effectiveEndDate,
+ 570:           record.endHour,
+ 571:           record.endMinutes,
+ 572:           timeZone,
+ 575: 
+ 576:     const lifecycleBoundary =
+ 577:       endsAt?.getTime() ??
+ 578:       startsAt.getTime();
+ 579: 
+ 580:     if (
+ 581:       !Number.isFinite(
+ 582:         lifecycleBoundary,
+ 586:       continue;
+ 587:     }
+ 588: 
+ 589:     events.push({
+ 590:       externalEventId,
+ 591:       title,
+ 592:       description:
+ 593:         clean(record.description),
+ 594:       startsAt:
+ 595:         startsAt.toISOString(),
+ 596:       endsAt:
+ 597:         endsAt?.toISOString() ??
+ 598:         null,
+ 599:       allDay,
+ 600:       sourceUrl,
+ 601:       flyerUrl: null,
+ 602:       location:
+ 603:         clean(record.location),
+ 604:       rawPayload: {
+ 605:         provider:
+ 606:           "eventscalendar",
+ 607:         eventId:
+ 608:           externalEventId,
+ 609:         timeZone,
+ 610:         explicitStartDate:
+ 611:           clean(record.startDate),
+ 612:         explicitEndDate:
+ 646:     FirstPartyHarvestEvent
+ 647:   >();
+ 648: 
+ 649:   for (const event of events) {
+ 650:     unique.set(
+ 651:       event.externalEventId,
+ 652:       event,
+ 653:     );
+ 654:   }
+ 655: 
+ 656:   return [...unique.values()].sort(
+ 657:     (a, b) =>
+ 658:       Date.parse(a.startsAt) -
+ 659:       Date.parse(b.startsAt),
+ 660:   );
+ 661: }
+
+=================================================================
+lib/event-harvester/first-party/square-online-events.ts (315 lines)
+   1: import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
+   2: import type { FirstPartyHarvestEvent } from "./types";
+   3: 
+   4: type SquareRecord = Record<string, unknown>;
+   5: 
+  59:   return null;
+  60: }
+  61: 
+  62: export function discoverSquareIdentity(
+  63:   html: string,
+  64: ): SquareIdentity | null {
+  65:   if (!/editmysite\.com|Square Online/i.test(html)) return null;
+  66: 
+ 106: 
+ 107: async function catalog(
+ 108:   identity: SquareIdentity,
+ 109:   fetcher: typeof recoveryFetch,
+ 110: ): Promise<SquareRecord[]> {
+ 111:   const products: SquareRecord[] = [];
+ 112:   const seen = new Set<string>();
+ 113:   let totalPages = 1;
+ 114: 
+ 115:   for (let page = 1; page <= Math.min(totalPages, 40); page++) {
+ 116:     const response = await fetcher(apiUrl(identity, page), {
+ 117:       headers: {
+ 118:         Accept: "application/json",
+ 119:         "User-Agent": "Mozilla/5.0",
+ 120:       },
+ 226:   }
+ 227: }
+ 228: 
+ 229: export async function inspectSquareOnline(
+ 230:   html: string,
+ 231:   fetcher: typeof recoveryFetch = recoveryFetch,
+ 232: ): Promise<boolean> {
+ 233:   const identity = discoverSquareIdentity(html);
+ 234:   if (!identity) return false;
+ 235: 
+ 236:   const products = await catalog(identity, fetcher);
+ 237:   return products.some(product => product.product_type === "event");
+ 238: }
+ 239: 
+ 240: export async function fetchSquareOnlineEvents(
+ 241:   sourceUrl: string,
+ 242:   options: { fetcher?: typeof recoveryFetch } = {},
+ 243: ): Promise<FirstPartyHarvestEvent[]> {
+ 244:   const fetcher = options.fetcher ?? recoveryFetch;
+ 245:   const page = await fetcher(sourceUrl, {
+ 246:     headers: { "User-Agent": "Mozilla/5.0" },
+ 247:     cache: "no-store",
+ 248:   });
+ 249: 
+ 256:     throw new Error("Square Online catalog identity not discovered");
+ 257:   }
+ 258: 
+ 259:   const products = await catalog(identity, fetcher);
+ 260:   const now = Date.now();
+ 261:   const events: FirstPartyHarvestEvent[] = [];
+ 262: 
+ 263:   for (const product of products) {
+ 264:     if (product.product_type !== "event") continue;
+ 265: 
+ 266:     const details = record(product.product_type_details);
+ 267:     const title = string(product.name);
+ 268:     const id = String(product.id ?? "");
+ 270: 
+ 271:     if (!title || !id || !timezone) continue;
+ 272: 
+ 273:     const startsAt = dateTime(
+ 274:       string(details.start_date),
+ 275:       string(details.start_time),
+ 276:       timezone,
+ 277:     );
+ 278: 
+ 279:     if (!startsAt || Date.parse(startsAt) < now) continue;
+ 280: 
+ 281:     const endsAt = dateTime(
+ 282:       string(details.end_date),
+ 283:       string(details.end_time),
+ 287:     const image = record(record(product.thumbnail).data);
+ 288:     const description = string(product.description);
+ 289: 
+ 290:     events.push({
+ 291:       externalEventId: `square-online:product:${id}`,
+ 292:       title,
+ 293:       description: description || null,
+ 294:       startsAt,
+ 295:       endsAt: endsAt && endsAt >= startsAt ? endsAt : null,
+ 296:       allDay: false,
+ 297:       sourceUrl: string(product.absolute_site_link) || sourceUrl,
+ 298:       flyerUrl: string(image.absolute_url) || null,
+ 299:       location: null,
+ 300:       venueName: null,
+ 301:       venueAddress: null,
+ 303:         platform: "square_online",
+ 304:         productId: id,
+ 305:         timezone,
+ 306:         dateEvidence: "square_structured_event",
+ 307:         allowSourceDefaultAttribution: true,
+ 308:       },
+ 309:     });
+ 310:   }
+ 311: 
+ 312:   return events.sort(
+ 313:     (a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)
+ 314:   );
+ 315: }
+
+=================================================================
+lib/event-harvester/first-party/wordpress-category-events.ts (788 lines)
+   1: import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
+   2: import type { FirstPartyHarvestEvent } from "./types";
+   3: 
+   4: type WordPressPost = {
+   5:   id: number;
+ 207:   time: Clock,
+ 208:   timeZone: string,
+ 209: ): string | null {
+ 210:   // Discovery needs to verify that an event has a parseable local
+ 211:   // schedule without assuming the publisher's timezone.
+ 212:   // The sentinel is never used for ingestion or publication.
+ 213:   if (timeZone === "__qualification_only__") {
+ 214:     return new Date(Date.UTC(
+ 352:         .at(-1)
+ 353:         ?.trim() ?? "";
+ 354: 
+ 355:       // Do not create an event from an incomplete sentence fragment.
+ 356:       if (
+ 357:         phrase.length >= 3 &&
+ 358:         !/\b(?:we|we'll|we’re|we've|they|they'll|it|it's)\b/i.test(phrase)
+ 359:       ) {
+ 363:   }
+ 364: 
+ 365:   return activities.flatMap((activity) => {
+ 366:     const startsAt = timestamp(
+ 367:       year, month, day, activity.time, timeZone,
+ 368:     );
+ 369: 
+ 370:     if (!startsAt) return [];
+ 371: 
+ 372:     const timeKey =
+ 373:       `${activity.time.hour}-${activity.time.minute}`;
+ 374: 
+ 379:       .slice(0, 80);
+ 380: 
+ 381:     return [{
+ 382:       externalEventId:
+ 383:         `wordpress-category:${post.id}:${year}-${month}-${day}:${timeKey}:${nameKey}`,
+ 384:       title: activity.name,
+ 385:       description: body,
+ 386:       startsAt,
+ 387:       endsAt: null,
+ 388:       allDay: false,
+ 389:       sourceUrl: post.link,
+ 390:       flyerUrl: null,
+ 391:       location: venueAddress ?? venueName,
+ 392:       venueName,
+ 393:       venueAddress,
+ 394:       rawPayload: {
+ 395:         platform: "wordpress_category_events",
+ 396:         postId: post.id,
+ 397:         postUrl: post.link,
+ 398:         publishedAt: post.date,
+ 399:         extraction: "wordpress_scheduled_activity",
+ 400:         allowSourceDefaultAttribution: false,
+ 401:         eventEvidence: {
+ 402:           requiresReview: true,
+ 403:           reasons: [
+ 404:             "Activity extracted from a multi-schedule article",
+ 405:             ...(!explicitYear
+ 452: 
+ 453:   if (headings.length < 2) return [];
+ 454: 
+ 455:   const events: FirstPartyHarvestEvent[] = [];
+ 456: 
+ 457:   for (let i = 0; i < headings.length; i++) {
+ 458:     const current = headings[i];
+ 459:     const next = headings[i + 1];
+ 474:     const sectionEvents = normalize(sectionPost, timeZone, false);
+ 475:     const activityTitle = extractSectionActivityTitle(section);
+ 476: 
+ 477:     for (const event of sectionEvents) {
+ 478:       events.push({
+ 479:         ...event,
+ 480:         title: activityTitle ?? event.title,
+ 481:         rawPayload: {
+ 482:           ...(event.rawPayload &&
+ 483:           typeof event.rawPayload === "object" &&
+ 484:           !Array.isArray(event.rawPayload)
+ 485:             ? event.rawPayload
+ 486:             : {}),
+ 487:           extraction: "wordpress_multi_date_section",
+ 488:           originalArticleTitle: clean(post.title.rendered),
+ 489:           sectionHeading: current.date,
+ 490:           allowSourceDefaultAttribution: false,
+ 491:           eventEvidence: {
+ 492:             ...(event.rawPayload &&
+ 493:             typeof event.rawPayload === "object" &&
+ 494:             !Array.isArray(event.rawPayload) &&
+ 495:             "eventEvidence" in event.rawPayload &&
+ 496:             event.rawPayload.eventEvidence &&
+ 497:             typeof event.rawPayload.eventEvidence === "object" &&
+ 498:             !Array.isArray(event.rawPayload.eventEvidence)
+ 499:               ? event.rawPayload.eventEvidence
+ 500:               : {}),
+ 501:             requiresReview: true,
+ 502:             reasons: [
+ 503:               "Event extracted from a multi-date article section",
+ 508:     }
+ 509:   }
+ 510: 
+ 511:   return events;
+ 512: }
+ 513: 
+ 514: function normalize(
+ 515:   post: WordPressPost,
+ 588: 
+ 589:   // A separate lineup or activity schedule can contain several
+ 590:   // distinct times. A single first match must not be promoted
+ 591:   // to the event's overall start.
+ 592:   const allClockMentions = [
+ 593:     ...combined.matchAll(
+ 594:       /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi,
+ 595:     ),
+ 597: 
+ 598:   const distinctClockMentions = new Set(allClockMentions);
+ 599: 
+ 600:   // Multiple clock times without an explicit overall event range
+ 601:   // may describe separate activities, performers, or schedules.
+ 602:   // Do not promote the first activity to the event start.
+ 603:   if (
+ 604:     distinctClockMentions.size > 2 &&
+ 605:     ranges.length === 0
+ 606:   ) {
+ 627:     start = clock(ranges[0][1]);
+ 628:     end = clock(ranges[0][2]);
+ 629:   } else if (flexibleRange) {
+ 630:     // Do not promote one activity's range to the entire event
+ 631:     // when additional clock times indicate a larger schedule.
+ 632:     if (
+ 633:       distinctClockMentions.size > 2 ||
+ 634:       new Set(
+ 655: 
+ 656:   if (!start) return [];
+ 657: 
+ 658:   const startsAt = timestamp(year, month, day, start, timeZone);
+ 659:   const endsAt = end
+ 660:     ? timestamp(year, month, day, end, timeZone)
+ 661:     : null;
+ 662: 
+ 663:   if (!startsAt || (end && !endsAt)) return [];
+ 664: 
+ 665:   if (
+ 666:     endsAt &&
+ 667:     Date.parse(endsAt) <= Date.parse(startsAt)
+ 668:   ) return [];
+ 669: 
+ 670:   // A publisher's own name must not be guessed from its domain.
+ 671:   // Explicit venue and address evidence is handled separately.
+ 675:   const requiresReview = !explicitYear;
+ 676: 
+ 677:   return [{
+ 678:     externalEventId:
+ 679:       `wordpress-category:${post.id}:${year}-${month}-${day}:${start.hour}-${start.minute}`,
+ 680:     title,
+ 681:     description: body,
+ 682:     startsAt,
+ 683:     endsAt,
+ 684:     allDay: false,
+ 685:     sourceUrl: post.link,
+ 686:     flyerUrl: null,
+ 687:     location: venueAddress ?? venueName,
+ 688:     venueName,
+ 689:     venueAddress,
+ 690:     rawPayload: {
+ 691:       platform: "wordpress_category_events",
+ 692:       postId: post.id,
+ 693:       postUrl: post.link,
+ 694:       publishedAt: post.date,
+ 695:       extraction: "wordpress_single_occurrence",
+ 696:       allowSourceDefaultAttribution: false,
+ 697:       eventEvidence: {
+ 698:         requiresReview,
+ 699:         reasons: requiresReview
+ 700:           ? ["Event year inferred from article publication date"]
+ 701:           : [],
+ 706:   }];
+ 707: }
+ 708: 
+ 709: export function hasParseableWordPressCategoryEvents(
+ 710:   posts: unknown,
+ 711: ): boolean {
+ 712:   if (!Array.isArray(posts)) return false;
+ 713: 
+ 728:   });
+ 729: }
+ 730: 
+ 731: export async function fetchWordPressCategoryEvents(
+ 732:   sourceUrl: string,
+ 733:   options: { timeZone?: string } = {},
+ 734: ): Promise<FirstPartyHarvestEvent[]> {
+ 735:   const timeZone = options.timeZone;
+ 736: 
+ 745:   // Validate the IANA timezone before making the network request.
+ 746:   new Intl.DateTimeFormat("en-US", { timeZone });
+ 747: 
+ 748:   const response = await recoveryFetch(sourceUrl, {
+ 749:     headers: {
+ 750:       Accept: "application/json",
+ 751:       "User-Agent": "TenderFans Event Harvester/1.0",
+ 752:     },
+ 767:     );
+ 768:   }
+ 769: 
+ 770:   const events: FirstPartyHarvestEvent[] = [];
+ 771: 
+ 772:   for (const post of posts as WordPressPost[]) {
+ 773:     if (
+ 774:       !post ||
+ 779:       typeof post.content?.rendered !== "string"
+ 780:     ) continue;
+ 781: 
+ 782:     events.push(...normalize(post, timeZone));
+ 783:   }
+ 784: 
+ 785:   return events.sort(
+ 786:     (a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt),
+ 787:   );
+ 788: }
+
+=== GIT STATUS ===
+?? app/api/dev/source-html-inspect/
+
+=== HEAD ===
+aa7fd54 Improve shared browser event discovery and Popmenu calendar validation
