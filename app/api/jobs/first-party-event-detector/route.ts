@@ -1320,6 +1320,12 @@ export async function GET(request: Request) {
             throw new Error(registeredError.message);
           }
 
+          if ((registeredCalendars?.length ?? 0) > 0) {
+            // Already approved and registered: harvesting is independent.
+            // Do not repeat image qualification during detector runs.
+            continue;
+          }
+
           if ((registeredCalendars?.length ?? 0) === 0) {
             /*
              * A calendar already registered to another Spot is off-limits.
@@ -1462,9 +1468,30 @@ export async function GET(request: Request) {
                 `Could not persist calendar-image finding: ${calendarFindingError.message}`,
               );
             }
+
+            // A different or unresolved identified publisher
+            // requires manual source review.
+            if (
+              calendarBusinessName &&
+              calendarVenueId !== venue.id
+            ) {
+              continue;
+            }
           }
 
-          continue;
+          /*
+           * A business identity identified on the calendar page must
+           * not be silently assigned to the website's original Spot
+           * unless Google qualification resolved to that same Spot.
+           *
+           * Unresolved or different-Spot ownership stays in Source
+           * Review. A calendar discovered from the Spot's own site
+           * without conflicting publisher identity may proceed through
+           * the existing ratifier and vision-backed validator.
+           */
+
+
+          // Fall through to shared ratification and validation.
         }
 
         if (!candidate.adapterAvailable) {
@@ -1860,11 +1887,27 @@ export async function GET(request: Request) {
           }
 
           /*
-           * A successfully registered calendar-image adapter is no
-           * longer actionable discovery work. The image remains an
-           * independent first-party source even when the same Spot
-           * also has structured event sources.
+           * Calendar-image discovery is no longer actionable after
+           * successful AI-backed validation and source registration.
+           * Preserve the independent calendar source.
            */
+          if (candidate.sourceType === "calendar_image") {
+            const { error: calendarResolutionError } =
+              await supabase.rpc(
+                "resolve_event_harvest_detector_findings",
+                {
+                  p_venue_id: venue.id,
+                  p_category: "calendar_image",
+                },
+              );
+
+            if (calendarResolutionError) {
+              throw new Error(
+                `Could not resolve registered calendar finding: ${calendarResolutionError.message}`,
+              );
+            }
+          }
+
           if (candidate.sourceType === "facebook") {
             const { error: facebookResolutionError } = await supabase.rpc(
               "resolve_event_harvest_detector_findings",
