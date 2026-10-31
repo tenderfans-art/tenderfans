@@ -80,7 +80,7 @@ function zonedIso(
       Number(parts.find(p => p.type === type)?.value ?? "0");
 
     const observed = Date.UTC(
-      get("year"), get("month"), get("day"),
+      get("year"), get("month") - 1, get("day"),
       get("hour"), get("minute"),
     );
     const correction = wall - observed;
