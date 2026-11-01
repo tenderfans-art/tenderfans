@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import GooglePlacePicker from "@/components/GooglePlacePicker";
 
 type Market = {
   id: string;
@@ -20,6 +21,16 @@ export default function MarketsPage() {
   const [key, setKey] = useState("");
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [selectedMarket, setSelectedMarket] = useState("");
+  const [selectedPlace, setSelectedPlace] = useState<{
+    id: string;
+    name: string;
+    address: string;
+  } | null>(null);
+  const [savingSpot, setSavingSpot] = useState(false);
 
   async function createMarket() {
     if (creating) return;
@@ -57,6 +68,7 @@ export default function MarketsPage() {
       );
       setName("");
       setKey("");
+      setCreateOpen(false);
       setNotice("Market created. Automated processing is disabled.");
     } catch (cause) {
       setError(
@@ -64,6 +76,58 @@ export default function MarketsPage() {
       );
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function addSpot() {
+    if (!selectedPlace || !selectedMarket || savingSpot) return;
+
+    setSavingSpot(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Session expired.");
+
+      const response = await fetch("/api/google/place", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          placeId: selectedPlace.id,
+          marketId: selectedMarket,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not add Spot.");
+      }
+
+      setNotice(`${selectedPlace.name} saved to market.`);
+      setSelectedPlace(null);
+      setAddOpen(false);
+
+      const refreshed = await fetch("/api/admin/markets", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: "no-store",
+      });
+
+      if (refreshed.ok) {
+        const data = await refreshed.json();
+        setMarkets(data.markets ?? []);
+      }
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Could not add Spot."
+      );
+    } finally {
+      setSavingSpot(false);
     }
   }
 
@@ -125,13 +189,72 @@ export default function MarketsPage() {
           <div className="eyebrow" style={{ marginTop: 24 }}>
             TENDERFANS ADMIN
           </div>
-          <h1>Market Management</h1>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+          }}>
+            <h1 style={{ margin: 0 }}>Market Management</h1>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                className="btn primary"
+                type="button"
+                onClick={() => setCreateOpen(true)}
+              >
+                + Create Market
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => {
+                  setSelectedMarket(
+                    markets.length === 1 ? markets[0].id : ""
+                  );
+                  setBulkOpen(true);
+                }}
+              >
+                Bulk Spot Add
+              </button>
+            </div>
+          </div>
           <p className="lead-copy">
             Onboard, test and manage each TenderFans market.
             Market activation controls automated processing,
             not public Spot visibility.
           </p>
 
+          {createOpen && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Create Market"
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 1000,
+                background: "rgba(10,20,28,.58)",
+                display: "grid",
+                placeItems: "center",
+                padding: 20,
+              }}
+            >
+              <div style={{
+                background: "#fff",
+                borderRadius: 18,
+                padding: 24,
+                width: "100%",
+                maxWidth: 620,
+              }}>
+                <button
+                  type="button"
+                  disabled={creating}
+                  onClick={() => setCreateOpen(false)}
+                  style={{ float: "right" }}
+                >
+                  Close
+                </button>
           <div style={{
             marginTop: 24,
             padding: 22,
@@ -179,6 +302,10 @@ export default function MarketsPage() {
             </p>
           </div>
 
+              </div>
+            </div>
+          )}
+
           {notice && <p role="status">{notice}</p>}
           {loading && <p>Loading markets...</p>}
           {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
@@ -190,38 +317,143 @@ export default function MarketsPage() {
             marginTop: 24,
           }}>
             {markets.map((market) => (
-              <Link
+              <article
                 key={market.id}
-                href={`/admin/markets/${encodeURIComponent(market.market_key)}`}
                 style={{
-                  display: "block",
                   padding: 24,
                   border: "1px solid #ddd7cc",
                   borderRadius: 18,
                   background: "#fff",
-                  textDecoration: "none",
-                  color: "inherit",
                 }}
               >
                 <div style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  gap: 12,
                   alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
                 }}>
-                  <h2 style={{ margin: 0 }}>{market.display_name}</h2>
-                  <span style={{ fontSize: 12, fontWeight: 800 }}>
-                    {market.is_enabled ? "ENABLED" : "DISABLED"}
-                  </span>
+                  <Link
+                    href={`/admin/markets/${encodeURIComponent(market.market_key)}`}
+                    style={{
+                      color: "inherit",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <h2 style={{ margin: 0 }}>
+                      {market.display_name}
+                    </h2>
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      setSelectedMarket(market.id);
+                      setSelectedPlace(null);
+                      setAddOpen(true);
+                    }}
+                  >
+                    + Add Spot
+                  </button>
                 </div>
                 <p style={{ marginBottom: 0, opacity: 0.7 }}>
-                  {market.spot_count} assigned Spots
+                  {market.spot_count} assigned Spots ·{" "}
+                  {market.is_enabled ? "ENABLED" : "DISABLED"}
                 </p>
-              </Link>
+              </article>
             ))}
           </div>
           {!loading && !error && markets.length === 0 && (
             <p>No markets configured.</p>
+          )}
+          {(addOpen || bulkOpen) && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={addOpen ? "Add Spot" : "Bulk Spot Add"}
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 1000,
+                background: "rgba(10,20,28,.58)",
+                display: "grid",
+                placeItems: "center",
+                padding: 20,
+              }}
+            >
+              <div style={{
+                background: "#fff",
+                borderRadius: 18,
+                padding: 24,
+                width: "100%",
+                maxWidth: 620,
+              }}>
+                <button
+                  type="button"
+                  disabled={savingSpot}
+                  onClick={() => {
+                    setAddOpen(false);
+                    setBulkOpen(false);
+                    setSelectedPlace(null);
+                  }}
+                  style={{ float: "right" }}
+                >
+                  Close
+                </button>
+
+                <h2>{addOpen ? "Add a Spot" : "Bulk Spot Add"}</h2>
+
+                <label htmlFor="market-assignment">Market</label>
+                <select
+                  id="market-assignment"
+                  value={selectedMarket}
+                  onChange={(event) =>
+                    setSelectedMarket(event.target.value)
+                  }
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    padding: 12,
+                    margin: "10px 0 20px",
+                  }}
+                >
+                  <option value="">Select a market</option>
+                  {markets.map((market) => (
+                    <option key={market.id} value={market.id}>
+                      {market.display_name}
+                    </option>
+                  ))}
+                </select>
+
+                {addOpen ? (
+                  <>
+                    <GooglePlacePicker
+                      onSelect={(place) => setSelectedPlace(place)}
+                    />
+                    {selectedPlace && (
+                      <div style={{ marginTop: 20 }}>
+                        <strong>{selectedPlace.name}</strong>
+                        <p>{selectedPlace.address}</p>
+                        <button
+                          type="button"
+                          className="btn primary"
+                          disabled={savingSpot || !selectedMarket}
+                          onClick={addSpot}
+                        >
+                          {savingSpot ? "Adding..." : "Add to Market"}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p>
+                    CSV name-and-address import will be connected to
+                    Google Places discovery and Admin Spot Review.
+                    No records are imported from this placeholder.
+                  </p>
+                )}
+              </div>
+            </div>
           )}
         </section>
       </div>

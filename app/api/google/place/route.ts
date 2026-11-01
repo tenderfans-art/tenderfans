@@ -3,7 +3,17 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   try {
-    const { placeId } = await request.json();
+    const { placeId, marketId } = await request.json();
+
+    if (marketId !== undefined && (
+      typeof marketId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(marketId)
+    )) {
+      return NextResponse.json(
+        { error: "Invalid market ID." },
+        { status: 400 }
+      );
+    }
 
     if (!placeId || typeof placeId !== "string") {
       return NextResponse.json(
@@ -99,6 +109,61 @@ export async function POST(request: Request) {
       },
     });
 
+    if (marketId) {
+      const authorization = request.headers.get("authorization") ?? "";
+      const token = authorization.startsWith("Bearer ")
+        ? authorization.slice(7)
+        : "";
+
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!token || !anonKey) {
+        return NextResponse.json(
+          { error: "Admin session required for market assignment." },
+          { status: 401 }
+        );
+      }
+
+      const authClient = createClient(supabaseUrl, anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+
+      const { data: identity, error: identityError } =
+        await authClient.auth.getUser(token);
+
+      if (identityError || !identity.user) {
+        return NextResponse.json(
+          { error: "Invalid session." },
+          { status: 401 }
+        );
+      }
+
+      const { data: admin } = await adminSupabase
+        .from("platform_admins")
+        .select("user_id")
+        .eq("user_id", identity.user.id)
+        .maybeSingle();
+
+      if (!admin) {
+        return NextResponse.json(
+          { error: "Admin access required." },
+          { status: 403 }
+        );
+      }
+
+      const { data: market } = await adminSupabase
+        .from("event_processing_markets")
+        .select("id")
+        .eq("id", marketId)
+        .maybeSingle();
+
+      if (!market) {
+        return NextResponse.json(
+          { error: "Market not found." },
+          { status: 404 }
+        );
+      }
+    }
+
     const { data: venueId, error: venueError } = await adminSupabase.rpc(
       "upsert_google_venue",
       {
@@ -124,9 +189,54 @@ export async function POST(request: Request) {
       );
     }
 
+    if (marketId) {
+      const { data: existing, error: existingError } =
+        await adminSupabase
+          .from("event_processing_market_venues")
+          .select("market_id")
+          .eq("venue_id", venueId)
+          .maybeSingle();
+
+      if (existingError) {
+        return NextResponse.json(
+          { error: "Could not check Spot market assignment.", venueId },
+          { status: 500 }
+        );
+      }
+
+      if (existing && existing.market_id !== marketId) {
+        return NextResponse.json(
+          {
+            error: "This Spot already belongs to another market.",
+            venueId,
+          },
+          { status: 409 }
+        );
+      }
+
+      if (!existing) {
+        const { error: assignmentError } = await adminSupabase
+          .from("event_processing_market_venues")
+          .insert({ venue_id: venueId, market_id: marketId });
+
+        if (assignmentError) {
+          return NextResponse.json(
+            {
+              error: assignmentError.code === "23505"
+                ? "Spot market assignment changed concurrently. Refresh and retry."
+                : "Could not assign Spot to market.",
+              venueId,
+            },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
     return NextResponse.json({
       venueId,
       place: verifiedPlace,
+      marketId: marketId ?? null,
     });
   } catch (error) {
     console.error("Google Place verification failed:", error);
