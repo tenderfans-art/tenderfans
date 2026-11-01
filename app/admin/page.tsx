@@ -2,50 +2,14 @@ import Link from "next/link";
 
 const tools = [
   {
-    title: "Verification Requests",
-    description: "Review pending Tender and Spot ownership claims.",
-    href: "/admin/claims",
+    title: "Market Management",
+    description: "Manage markets, onboarding, operations and activation.",
+    href: "/admin/markets",
     status: "OPEN",
-  },
-  {
-    title: "Harvester Management",
-    description: "Manage Event Harvester reviews, adapters and source issues.",
-    href: "/admin/harvester",
-    status: "OPEN",
-  },
-  {
-    title: "Manage Spots",
-    description: "Search, add and manage venue profiles.",
-    href: "/admin/spots",
-    status: "OPEN",
-  },
-  {
-    title: "Manage Tenders",
-    description: "Search, edit, hide or remove Tender profiles.",
-    href: "/admin/tenders",
-    status: "OPEN",
-  },
-  {
-    title: "Events",
-    description: "Add and manage events for the TenderFans calendar.",
-    href: "/admin/events",
-    status: "OPEN",
-  },
-  {
-    title: "Contests",
-    description: "Create, activate and manage TenderFans contests.",
-    href: "/admin/contests",
-    status: "OPEN",
-  },
-  {
-    title: "Site Banners",
-    description: "Quickly change hero and banner images across the site.",
-    href: null,
-    status: "COMING SOON",
   },
   {
     title: "Site Settings",
-    description: "Platform controls and future administrative tools.",
+    description: "Global platform configuration, including Site Banners.",
     href: null,
     status: "COMING SOON",
   },
