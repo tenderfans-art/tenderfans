@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 type Market = {
+  id: string;
   market_key: string;
   display_name: string;
   is_enabled: boolean;
@@ -27,6 +28,74 @@ export default function MarketDashboard() {
   const [market, setMarket] = useState<Market | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  async function operate(
+    action: "assign-unassigned" | "set-enabled",
+    enabled?: boolean
+  ) {
+    if (!market || busy) return;
+
+    const question = action === "assign-unassigned"
+      ? `Assign all currently unassigned Spots to ${market.display_name}? Existing market memberships will be preserved.`
+      : enabled
+        ? `Enable automated Workflow processing for ${market.display_name}? Only do this after completing market testing.`
+        : `Disable automated Workflow processing for ${market.display_name}?`;
+
+    if (!window.confirm(question)) return;
+
+    setBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const { data: { session } } =
+        await supabase.auth.getSession();
+
+      if (!session) throw new Error("Session expired.");
+
+      const response = await fetch("/api/admin/markets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action,
+          marketId: market.id,
+          enabled,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      if (action === "set-enabled") {
+        setMarket((current) =>
+          current ? { ...current, is_enabled: Boolean(enabled) } : current
+        );
+        setNotice(
+          enabled ? "Automated processing enabled." :
+            "Automated processing disabled."
+        );
+      } else {
+        setMarket((current) =>
+          current ? {
+            ...current,
+            spot_count: current.spot_count + result.added,
+          } : current
+        );
+        setNotice(result.message);
+      }
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Operation failed."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -103,6 +172,48 @@ export default function MarketDashboard() {
                 Automated processing is controlled separately from
                 manual Admin testing and review.
               </p>
+              <section style={{
+                border: "1px solid #ddd7cc",
+                borderRadius: 18,
+                padding: 20,
+                marginTop: 24,
+                marginBottom: 24,
+              }}>
+                <h2 style={{ marginTop: 0 }}>Market Controls</h2>
+                <div style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: 12,
+                }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={busy || market.is_enabled}
+                    onClick={() => operate("assign-unassigned")}
+                  >
+                    Assign Unassigned Spots
+                  </button>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={busy}
+                    onClick={() =>
+                      operate("set-enabled", !market.is_enabled)
+                    }
+                  >
+                    {market.is_enabled
+                      ? "Disable Automated Processing"
+                      : "Enable Automated Processing"}
+                  </button>
+                </div>
+                <p style={{ opacity: 0.7, marginBottom: 0 }}>
+                  Bulk assignment never transfers Spots already assigned
+                  to another market. Manual review and testing remain
+                  separate from automated processing.
+                </p>
+                {notice && <p role="status">{notice}</p>}
+              </section>
               <div style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",

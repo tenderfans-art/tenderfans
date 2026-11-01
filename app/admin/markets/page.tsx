@@ -16,6 +16,56 @@ export default function MarketsPage() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [name, setName] = useState("");
+  const [key, setKey] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  async function createMarket() {
+    if (creating) return;
+    setCreating(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const { data: { session } } =
+        await supabase.auth.getSession();
+
+      if (!session) throw new Error("Session expired.");
+
+      const response = await fetch("/api/admin/markets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: "create",
+          name,
+          key,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      setMarkets((current) =>
+        [...current, { ...result.market, spot_count: 0 }]
+          .sort((a, b) =>
+            a.display_name.localeCompare(b.display_name)
+          )
+      );
+      setName("");
+      setKey("");
+      setNotice("Market created. Automated processing is disabled.");
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Creation failed."
+      );
+    } finally {
+      setCreating(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -82,6 +132,54 @@ export default function MarketsPage() {
             not public Spot visibility.
           </p>
 
+          <div style={{
+            marginTop: 24,
+            padding: 22,
+            border: "1px solid #ddd7cc",
+            borderRadius: 18,
+          }}>
+            <h2 style={{ marginTop: 0 }}>Create Market</h2>
+            <div style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}>
+              <input
+                aria-label="Market name"
+                placeholder="Market name"
+                value={name}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setName(value);
+                  setKey(value.toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-|-$/g, ""));
+                }}
+                style={{ padding: 12, flex: "1 1 220px" }}
+              />
+              <input
+                aria-label="Market URL key"
+                placeholder="market-url-key"
+                value={key}
+                onChange={(event) => setKey(event.target.value)}
+                style={{ padding: 12, flex: "1 1 180px" }}
+              />
+              <button
+                className="btn primary"
+                type="button"
+                disabled={creating || !name.trim() || !key.trim()}
+                onClick={createMarket}
+              >
+                {creating ? "Creating..." : "+ Create Market"}
+              </button>
+            </div>
+            <p style={{ opacity: 0.7, marginBottom: 0 }}>
+              New markets always begin with automated processing disabled.
+            </p>
+          </div>
+
+          {notice && <p role="status">{notice}</p>}
           {loading && <p>Loading markets...</p>}
           {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
 
