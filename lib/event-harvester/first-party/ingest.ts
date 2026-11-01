@@ -34,9 +34,26 @@ function rpcValue<T>(data: unknown): T {
   return data as T;
 }
 
+
+async function fencedFirstPartyWrite(
+  supabase: SupabaseClient,
+  sourceId: string,
+  executionToken: string,
+  operation: string,
+  args: Record<string, unknown>,
+) {
+  return supabase.rpc("execute_fenced_first_party_write", {
+    p_source_id: sourceId,
+    p_execution_token: executionToken,
+    p_operation: operation,
+    p_args: args,
+  });
+}
+
 async function ingestEvent(
   supabase: SupabaseClient,
   event: FirstPartyEventPreview,
+  executionToken: string,
 ): Promise<{
   candidateId: string | null;
   canonicalEventId: string | null;
@@ -55,7 +72,10 @@ async function ingestEvent(
       attributionMethod: "needs_review",
     };
 
-    const { error: unresolvedError } = await supabase.rpc(
+    const { error: unresolvedError } = await fencedFirstPartyWrite(
+      supabase,
+      event.sourceId,
+      executionToken,
       "upsert_event_harvest_unresolved_venue",
       {
         p_source_id: event.sourceId,
@@ -99,16 +119,17 @@ async function ingestEvent(
     event.sourceType === "facebook_events" &&
     attribution.method === "admin_resolved"
   ) {
-    const { error: reviewUpdateError } = await supabase
-      .from("event_harvest_unresolved_venues")
-      .update({
-        status: "resolved",
-        resolved_venue_id: attribution.venueId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("source_id", event.sourceId)
-      .eq("external_event_id", event.externalEventId)
-      .eq("status", "pending");
+    const { error: reviewUpdateError } =
+      await fencedFirstPartyWrite(
+        supabase,
+        event.sourceId,
+        executionToken,
+        "resolve_pending_facebook_review",
+        {
+          p_external_event_id: event.externalEventId,
+          p_resolved_venue_id: attribution.venueId,
+        },
+      );
 
     if (reviewUpdateError) {
       throw new Error(
@@ -145,8 +166,11 @@ async function ingestEvent(
       ? event.endsAt
       : null;
 
-  const { data: candidateData, error: candidateError } = await supabase.rpc(
-    "upsert_event_harvest_candidate",
+  const { data: candidateData, error: candidateError } = await fencedFirstPartyWrite(
+      supabase,
+      event.sourceId,
+      executionToken,
+      "upsert_event_harvest_candidate",
     {
       p_source_id: event.sourceId,
       p_external_event_id: event.externalEventId,
@@ -196,7 +220,10 @@ async function ingestEvent(
     event.rawPayload?.occurrenceType === "numeric_ticket_performance";
 
   if (explicitlyRequiresReview) {
-    const { error: reviewError } = await supabase.rpc(
+    const { error: reviewError } = await fencedFirstPartyWrite(
+      supabase,
+      event.sourceId,
+      executionToken,
       "mark_harvest_candidate_for_review",
       { p_candidate_id: candidateId },
     );
@@ -221,8 +248,11 @@ async function ingestEvent(
    * Spot/title/start occurrence, attach this first-party provenance
    * to that canonical event instead of creating a duplicate.
    */
-  const { data: linkedData, error: linkedError } = await supabase.rpc(
-    "link_harvest_candidate_to_existing_event",
+  const { data: linkedData, error: linkedError } = await fencedFirstPartyWrite(
+      supabase,
+      event.sourceId,
+      executionToken,
+      "link_harvest_candidate_to_existing_event",
     {
       p_candidate_id: candidateId,
     },
@@ -251,7 +281,10 @@ async function ingestEvent(
     const {
       data: occurrenceReviewData,
       error: occurrenceReviewError,
-    } = await supabase.rpc(
+    } = await fencedFirstPartyWrite(
+      supabase,
+      event.sourceId,
+      executionToken,
       "flag_event_harvest_occurrence_review",
       {
         p_candidate_id: candidateId,
@@ -311,8 +344,11 @@ async function ingestEvent(
     if (requiresEventReview) {
       const {
         error: reviewError,
-      } = await supabase.rpc(
-        "mark_harvest_candidate_for_review",
+      } = await fencedFirstPartyWrite(
+      supabase,
+      event.sourceId,
+      executionToken,
+      "mark_harvest_candidate_for_review",
         {
           p_candidate_id:
             candidateId,
@@ -339,7 +375,10 @@ async function ingestEvent(
       p_reviewed_by: null,
     };
 
-    const { data: graduatedData, error: graduatedError } = await supabase.rpc(
+    const { data: graduatedData, error: graduatedError } = await fencedFirstPartyWrite(
+      supabase,
+      event.sourceId,
+      executionToken,
       graduationRpc,
       graduationArgs,
     );
@@ -367,8 +406,11 @@ async function ingestEvent(
    * first-party provenance refreshes, but Ticketmaster's canonical
    * title/time/artwork/lifecycle remains authoritative.
    */
-  const { data: syncedData, error: syncedError } = await supabase.rpc(
-    "sync_first_party_event",
+  const { data: syncedData, error: syncedError } = await fencedFirstPartyWrite(
+      supabase,
+      event.sourceId,
+      executionToken,
+      "sync_first_party_event",
     {
       p_candidate_id: candidateId,
       p_source_url: event.sourceUrl,
@@ -411,6 +453,10 @@ export async function ingestFirstPartySource(
     dryRun?: boolean;
     limit?: number;
     title?: string;
+    marketWork?: {
+      workId: string;
+      leaseToken: string;
+    };
   } = {},
 ): Promise<FirstPartyIngestResult> {
   const dryRun = options.dryRun ?? true;
@@ -423,8 +469,16 @@ export async function ingestFirstPartySource(
 
   if (!dryRun) {
     const { data, error } = await supabase.rpc(
-      "claim_first_party_source_execution",
-      { p_source_id: sourceId },
+      options.marketWork
+        ? "claim_market_first_party_source_execution"
+        : "claim_first_party_source_execution",
+      options.marketWork
+        ? {
+            p_source_id: sourceId,
+            p_work_id: options.marketWork.workId,
+            p_lease_token: options.marketWork.leaseToken,
+          }
+        : { p_source_id: sourceId },
     );
 
     if (error) {
@@ -547,7 +601,7 @@ export async function ingestFirstPartySource(
   };
 
   for (const event of preview) {
-    const ingested = await ingestEvent(supabase, event);
+    const ingested = await ingestEvent(supabase, event, executionToken!);
 
     result.processed += 1;
 
@@ -610,7 +664,10 @@ export async function ingestFirstPartySource(
     options.limit === undefined;
 
   if (completeSourceRun) {
-    const { error: reconcileError } = await supabase.rpc(
+    const { error: reconcileError } = await fencedFirstPartyWrite(
+      supabase,
+      source.id,
+      executionToken!,
       "reconcile_first_party_source_absences",
       {
         p_source_id: source.id,

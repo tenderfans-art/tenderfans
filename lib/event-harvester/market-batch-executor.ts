@@ -219,7 +219,13 @@ export async function executeMarketHarvesterWorkItem(
           ingestFirstPartySource(
             supabase,
             item.claimed_source_id!,
-            { dryRun: false },
+            {
+              dryRun: false,
+              marketWork: {
+                workId: item.work_id,
+                leaseToken: item.claimed_lease_token,
+              },
+            },
           ),
       );
     } catch (cause) {
