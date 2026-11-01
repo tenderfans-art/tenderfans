@@ -4,12 +4,11 @@ import { marketHarvesterWorkflow } from "@/workflows/market-harvester";
 
 export const runtime = "nodejs";
 
-type Candidate = {
-  market_id: string;
-  market_key: string;
-  available_batch_slots: number;
-  ready_items: number;
-  oldest_due_at: string;
+type Reservation = {
+  reservation_id: string;
+  selected_market_id: string;
+  selected_market_key: string;
+  reservation_expires_at: string;
 };
 
 export async function POST(request: Request) {
@@ -39,53 +38,94 @@ export async function POST(request: Request) {
     },
   });
 
-  const { data, error } = await supabase.rpc(
-    "list_shared_harvester_markets",
+  // Recovery is bounded and only affects expired market-bound
+  // executions. Standalone source executions are never recovered.
+  const { error: recoveryError } = await supabase.rpc(
+    "recover_expired_market_source_executions",
+    { p_limit: 100 },
   );
 
-  if (error) {
-    console.error("Shared market discovery failed", error);
+  if (recoveryError) {
+    console.error("Shared source recovery failed", recoveryError);
     return Response.json(
-      { error: "Shared market discovery failed" },
+      { error: "Shared source recovery failed" },
       { status: 503 },
     );
   }
 
-  const candidates = (data ?? []) as Candidate[];
+  const { error: reconciliationError } = await supabase.rpc(
+    "reconcile_shared_harvester_reservations",
+  );
 
-  if (candidates.length === 0) {
+  if (reconciliationError) {
+    console.error(
+      "Shared reservation reconciliation failed",
+      reconciliationError,
+    );
+    return Response.json(
+      { error: "Shared reservation reconciliation failed" },
+      { status: 503 },
+    );
+  }
+
+  const { data, error } = await supabase.rpc(
+    "reserve_shared_harvester_batch",
+  );
+
+  if (error) {
+    console.error("Shared admission failed", error);
+    return Response.json(
+      { error: "Shared admission failed" },
+      { status: 503 },
+    );
+  }
+
+  const reservation = (data as Reservation[] | null)?.[0];
+
+  if (!reservation) {
     return Response.json({
       status: "idle",
-      reason: "No enabled markets with eligible harvester work",
+      reason: "No eligible market or available shared capacity",
     });
   }
 
-  // One dispatch per invocation.
-  // Actual admission remains protected by the existing market
-  // claim RPC. This is discovery, not a global capacity reservation.
-  const selected = candidates[0];
-
   try {
-    const run = await start(
-      marketHarvesterWorkflow,
-      [selected.market_id],
-    );
+    const run = await start(marketHarvesterWorkflow, [
+      reservation.selected_market_id,
+      reservation.reservation_id,
+    ]);
 
     return Response.json(
       {
         status: "accepted",
         runId: run.runId,
-        marketId: selected.market_id,
-        marketKey: selected.market_key,
+        reservationId: reservation.reservation_id,
+        marketId: reservation.selected_market_id,
+        marketKey: reservation.selected_market_key,
       },
       { status: 202 },
     );
   } catch (cause) {
-    console.error("Shared market dispatch failed", cause);
+    console.error("Shared dispatch failed", cause);
+
+    const { error: releaseError } = await supabase.rpc(
+      "release_shared_harvester_reservation",
+      { p_reservation_id: reservation.reservation_id },
+    );
+
+    if (releaseError) {
+      console.error("Reservation release failed", releaseError);
+    }
 
     return Response.json(
-      { error: "Shared market dispatch failed" },
+      { error: "Shared dispatch failed" },
       { status: 503 },
     );
   }
+}
+
+// Vercel scheduled requests use GET.
+// Reuse the existing authorization and dispatch logic.
+export async function GET(request: Request) {
+  return POST(request);
 }

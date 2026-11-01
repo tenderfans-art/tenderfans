@@ -1,9 +1,6 @@
-import { chromium as playwright } from "playwright-core";
-import Chromium from "@sparticuz/chromium";
+import { fetchBrowserJsonResponses } from "./browser-transport";
 
 import type { FirstPartyHarvestEvent } from "./types";
-
-const USER_AGENT = "TenderFans Event Harvester/1.0";
 
 type RecordObject = Record<string, unknown>;
 
@@ -137,8 +134,8 @@ function normalizeEvent(
 export async function fetchTicketSpotEvents(
   sourceUrl: string,
 ): Promise<FirstPartyHarvestEvent[]> {
-  // A resource-exhausted Chromium navigation may leave the browser
-  // unusable. Retry once in a fresh browser, never in the same page.
+  // Retry a transient browser resource failure through the shared
+  // transport, which owns browser creation and cleanup.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       return await fetchTicketSpotEventsOnce(sourceUrl);
@@ -155,104 +152,60 @@ export async function fetchTicketSpotEvents(
 async function fetchTicketSpotEventsOnce(
   sourceUrl: string,
 ): Promise<FirstPartyHarvestEvent[]> {
-  const browser = await playwright.launch({
-    args: Chromium.args,
-    executablePath: await Chromium.executablePath(),
-    headless: true,
-  });
+  const observed = await fetchBrowserJsonResponses(
+    sourceUrl,
+    ticketSpotEventsEndpoint,
+  );
 
-  try {
-    const page = await browser.newPage({
-      viewport: { width: 1440, height: 1600 },
-      userAgent: USER_AGENT,
-    });
-
-    // Ticket Spot data comes from its JSON widget endpoint. Avoid
-    // downloading heavyweight presentation assets during validation
-    // and harvest; leave scripts, styles, and API calls untouched.
-    await page.route("**/*", async (route) => {
-      const type = route.request().resourceType();
-      if (type === "image" || type === "font" || type === "media") {
-        await route.abort();
-      } else {
-        await route.continue();
-      }
-    });
-
-    const responses: unknown[] = [];
-    const pending: Promise<void>[] = [];
-    let observedEndpoint = false;
-    let successfulResponse = false;
-
-    page.on("response", (response) => {
-      if (!ticketSpotEventsEndpoint(response.url())) return;
-
-      observedEndpoint = true;
-
-      const task = (async () => {
-        if (!response.ok()) return;
-
-        const payload: unknown = await response.json();
-
-        if (!Array.isArray(payload)) {
-          throw new Error(
-            "Ticket Spot events endpoint returned a non-array payload.",
-          );
-        }
-
-        successfulResponse = true;
-        responses.push(...payload);
-      })();
-
-      pending.push(task);
-    });
-
-    const navigation = await page.goto(sourceUrl, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
-
-    if (!navigation || !navigation.ok()) {
-      throw new Error(
-        `Ticket Spot source returned HTTP ${navigation?.status() ?? "unknown"}.`,
-      );
-    }
-
-    // Match the existing browser transport's widget initialization
-    // window, then allow observed API responses to finish parsing.
-    await page.waitForTimeout(5000);
-    await Promise.all(pending);
-
-    if (!observedEndpoint || !successfulResponse) {
-      throw new Error(
-        "Ticket Spot widget did not return a successful events API response.",
-      );
-    }
-
-    const events = responses
-      .map(normalizeEvent)
-      .filter(
-        (event): event is FirstPartyHarvestEvent =>
-          event !== null,
-      );
-
-    if (responses.length > 0 && events.length === 0) {
-      throw new Error(
-        "Ticket Spot returned event records, but none passed normalization.",
-      );
-    }
-
-    const unique = new Map<string, FirstPartyHarvestEvent>();
-
-    for (const event of events) {
-      unique.set(
-        `${event.externalEventId}:${event.startsAt}`,
-        event,
-      );
-    }
-
-    return [...unique.values()];
-  } finally {
-    await browser.close();
+  if (
+    observed.status === null ||
+    observed.status < 200 ||
+    observed.status >= 300
+  ) {
+    throw new Error(
+      `Ticket Spot source returned HTTP ${observed.status ?? "unknown"}.`,
+    );
   }
+
+  if (!observed.observedEndpoint || !observed.successfulResponse) {
+    throw new Error(
+      "Ticket Spot widget did not return a successful events API response.",
+    );
+  }
+
+  const responses: unknown[] = [];
+
+  for (const payload of observed.payloads) {
+    if (!Array.isArray(payload)) {
+      throw new Error(
+        "Ticket Spot events endpoint returned a non-array payload.",
+      );
+    }
+
+    responses.push(...payload);
+  }
+
+  const events = responses
+    .map(normalizeEvent)
+    .filter(
+      (event): event is FirstPartyHarvestEvent =>
+        event !== null,
+    );
+
+  if (responses.length > 0 && events.length === 0) {
+    throw new Error(
+      "Ticket Spot returned event records, but none passed normalization.",
+    );
+  }
+
+  const unique = new Map<string, FirstPartyHarvestEvent>();
+
+  for (const event of events) {
+    unique.set(
+      `${event.externalEventId}:${event.startsAt}`,
+      event,
+    );
+  }
+
+  return [...unique.values()];
 }

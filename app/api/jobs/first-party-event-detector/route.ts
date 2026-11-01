@@ -1,3 +1,4 @@
+import { runWithTransportCapacityContext } from "@/lib/event-harvester/transport-capacity-context";
 import { venueIdentityMatch } from "@/lib/event-harvester/venue-identity";
 import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
 import { NextResponse } from "next/server";
@@ -2256,12 +2257,19 @@ export async function GET(request: Request) {
 
     const proxyUrl = process.env.TENDERFANS_TRANSPORT_PROXY_URL;
 
+    const capacityScopedProcessVenue = () =>
+      runWithTransportCapacityContext(
+        supabase,
+        venue.id,
+        processVenue,
+      );
+
     if (needsRecoveryTransport && proxyUrl) {
-      await runWithTransportRecovery(proxyUrl, processVenue);
+      await runWithTransportRecovery(proxyUrl, capacityScopedProcessVenue);
     } else if (recoveryMode) {
       throw new Error("Transport recovery proxy is not configured.");
     } else {
-      await processVenue();
+      await capacityScopedProcessVenue();
     }
 
     if (archiveMode) {

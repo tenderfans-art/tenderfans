@@ -9,6 +9,9 @@ import {
 import { eventFingerprint } from "../identity";
 import { resolveFirstPartyAttribution } from "./attribution";
 import { classifyEventEligibility } from "./event-eligibility";
+import {
+  runWithTransportCapacityContext,
+} from "../transport-capacity-context";
 
 export type FirstPartyIngestResult = {
   sourceId: string;
@@ -508,7 +511,11 @@ export async function ingestFirstPartySource(
    */
   const scanStartedAt = new Date().toISOString();
 
-  const allPreview = await previewFirstPartySource(source);
+  const allPreview = await runWithTransportCapacityContext(
+    supabase,
+    sourceId,
+    () => previewFirstPartySource(source),
+  );
 
   /*
    * TanStack calendar inventories may include television schedules.

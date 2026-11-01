@@ -16,13 +16,14 @@ test("workflow and source execution use durable directives", () => {
 test("source execution is bounded to two per group", () => {
   assert.match(source, /const sourceConcurrency = 2;/);
   assert.match(source, /offset \+= sourceConcurrency/);
-  assert.match(source, /work\.slice\(offset, offset \+ sourceConcurrency\)/);
+  assert.match(source, /length: Math\.min\(/);
+  assert.match(source, /claimReservedSource\(reservationId, offset \+ index\)/);
 });
 
 test("each claimed source executes through its own step", () => {
   assert.match(
     source,
-    /group\.map\(\(item\) => executeSource\(item\)\)/,
+    /work\.map\(executeSource\)/,
   );
 });
 
@@ -38,8 +39,10 @@ test("successful source outcomes are accumulated", () => {
 });
 
 test("unexpected step errors are propagated", () => {
-  assert.match(source, /if \(groupError !== undefined\)/);
-  assert.match(source, /throw groupError;/);
+  assert.match(source, /if \(claimError !== undefined\)/);
+  assert.match(source, /throw claimError;/);
+  assert.match(source, /if \(executionError !== undefined\)/);
+  assert.match(source, /throw executionError;/);
 });
 
 test("the workflow does not bypass the market claim RPC", () => {

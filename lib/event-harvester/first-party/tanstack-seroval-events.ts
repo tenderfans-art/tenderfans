@@ -1,3 +1,4 @@
+import { capacityHttpFetch } from "../transport-capacity-http";
 import type { FirstPartyHarvestEvent } from "./types";
 
 /**
@@ -52,7 +53,7 @@ async function readText(
   url: string,
   maxBytes: number,
 ): Promise<string> {
-  const response = await fetch(url, {
+  const response = await capacityHttpFetch(url, {
     headers: {
       Accept:
         "text/html,application/javascript,text/javascript,*/*",
@@ -639,7 +640,7 @@ export async function fetchTanStackSerovalEvents(
       descriptor.pageUrl,
     );
 
-    const response = await fetch(endpoint, {
+    const response = await capacityHttpFetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

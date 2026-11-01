@@ -270,6 +270,31 @@ export async function resolveFirstPartyAttribution(
    * never from the event's physical coordinates or title.
    */
   if (event.sourceType === "facebook_events") {
+    const rawEvidence = event.rawPayload?.facebookOrganizerEvidence;
+    const organizerEvidence =
+      rawEvidence &&
+      typeof rawEvidence === "object" &&
+      !Array.isArray(rawEvidence)
+        ? rawEvidence as Record<string, unknown>
+        : null;
+
+    if (organizerEvidence?.conflict === true) {
+      return {
+        status: "unresolved",
+        rawVenueName: null,
+        rawAddress: event.venueAddress ?? event.location ?? null,
+        publisherEvidence: null,
+        suggestedVenueId: null,
+        confidenceScore: null,
+        evidence: {
+          reason: "facebook_conflicting_organizer_labels",
+          eventBy: organizerEvidence.eventBy ?? null,
+          host: organizerEvidence.host ?? null,
+          sourceType: event.sourceType,
+        },
+      };
+    }
+
     const rawNames = event.rawPayload?.facebookOrganizerNames;
 
     const names =

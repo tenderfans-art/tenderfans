@@ -1,5 +1,7 @@
 import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { isIP } from "node:net";
+import { capacityHttpFetch } from "./transport-capacity-http";
+import { withTransportPermit } from "./transport-capacity-permits";
 
 import {
   appendSignature,
@@ -198,29 +200,42 @@ export async function signedHarvesterFetch(
 
     const response: Response = proxy
       ? await (async () => {
-          const proxied = await undiciFetch(request.url, {
-            method: "GET",
-            headers: signedHeaders,
-            redirect: "manual",
-            dispatcher: proxy,
-            signal,
-          });
+          return withTransportPermit(
+            "recovery",
+            async (permitSignal) => {
+              const combinedSignal = AbortSignal.any([
+                signal,
+                permitSignal,
+              ]);
 
-          const body = await readLimitedBody(proxied);
+              const proxied = await undiciFetch(request.url, {
+                method: "GET",
+                headers: signedHeaders,
+                redirect: "manual",
+                dispatcher: proxy,
+                signal: combinedSignal,
+              });
 
-          return new Response(
-            Uint8Array.from(body).buffer,
-            {
-              status: proxied.status,
-              statusText: proxied.statusText,
-              headers: Array.from(
-                proxied.headers.entries(),
-                ([name, value]): [string, string] => [name, value],
-              ),
+              const body = await readLimitedBody(proxied);
+
+              return new Response(
+                Uint8Array.from(body).buffer,
+                {
+                  status: proxied.status,
+                  statusText: proxied.statusText,
+                  headers: Array.from(
+                    proxied.headers.entries(),
+                    ([name, value]): [string, string] => [
+                      name,
+                      value,
+                    ],
+                  ),
+                },
+              );
             },
           );
         })()
-      : await fetch(request.url, {
+      : await capacityHttpFetch(request.url, {
           ...init,
           method: "GET",
           headers: signedHeaders,

@@ -1,3 +1,4 @@
+import { capacityHttpFetch } from "../transport-capacity-http";
 import {
   fetchSupabasePostgrestEvents,
   type PostgrestReadResult,
@@ -54,7 +55,7 @@ async function readText(
   url: URL,
   maxBytes: number,
 ): Promise<string | null> {
-  const response = await fetch(url, {
+  const response = await capacityHttpFetch(url, {
     headers: {
       Accept: "text/html,application/javascript,*/*;q=0.8",
     },

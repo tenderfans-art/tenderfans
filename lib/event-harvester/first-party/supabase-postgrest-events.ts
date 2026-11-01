@@ -1,3 +1,4 @@
+import { capacityHttpFetch } from "../transport-capacity-http";
 /**
  * Generic public Supabase PostgREST event reader.
  *
@@ -477,7 +478,7 @@ export async function fetchSupabasePostgrestEvents(
   endpoint.searchParams.set("select", "*");
   endpoint.searchParams.set("limit", String(limit));
 
-  const response = await fetch(endpoint, {
+  const response = await capacityHttpFetch(endpoint, {
     headers: {
       apikey: options.anonKey,
       Authorization: `Bearer ${options.anonKey}`,

@@ -597,32 +597,66 @@ function extractDescription(
  * Extract Facebook's displayed organizer names separately from the
  * physical event place. This is evidence, not automatic ownership.
  */
-function extractFacebookOrganizerNames(text: string): string[] {
+type FacebookOrganizerEvidence = {
+  eventBy: string | null;
+  host: string | null;
+  conflict: boolean;
+  names: string[];
+};
+
+function extractFacebookOrganizerEvidence(
+  text: string,
+): FacebookOrganizerEvidence {
   /*
-   * Preserve explicitly labeled Facebook organizer text.
-   *
-   * Rendered Facebook pages can concatenate multiple organizer
-   * links without delimiters. Business names can also contain
-   * commas and "and". Neither is a safe name separator.
-   *
-   * Matching against registered Spot identities happens later.
+   * Facebook can flatten independent UI fields into one string.
+   * Preserve their labels and stop at recognizable metadata
+   * boundaries. Never split business names on commas or "and".
    */
   const normalized = text.replace(/\s+/g, " ").trim();
 
-  const eventBy = normalized.match(
-    /\bEvent by\s+(.+?)(?=\s+(?:Public|Private)\s*[·•]|\s+Suggested events\b|$)/i,
+  const boundary =
+    String.raw`(?=\s+(?:Hosts?\b|Event by\b|Suggested events\b|Free\b|(?:Public|Private)\s*[·•]|\d{1,6}\s+[A-Za-z][\w.'-]*\s+(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Ct|Court)\b)|$)`;
+
+  const eventByMatch = normalized.match(
+    new RegExp(String.raw`\bEvent by\s+(.+?)` + boundary, "i"),
   );
 
-  const hosts = normalized.match(
-    /\bHosts?\s+(.+?)(?=\s+Suggested events\b|$)/i,
+  const hostMatch = normalized.match(
+    new RegExp(String.raw`\bHosts?\s+(.+?)` + boundary, "i"),
   );
 
-  const fields = [eventBy?.[1], hosts?.[1]]
-    .filter((value): value is string => Boolean(value?.trim()))
-    .map((value) => value.trim())
-    .filter((value) => value.length <= 500);
+  const clean = (value: string | undefined): string | null => {
+    if (!value) return null;
+    const name = value.trim().replace(/[·•,\s]+$/, "").trim();
+    return name && name.length <= 500 ? name : null;
+  };
 
-  return [...new Set(fields)];
+  const eventBy = clean(eventByMatch?.[1]);
+  const host = clean(hostMatch?.[1]);
+
+  const comparable = (value: string) =>
+    value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+  const conflict = Boolean(
+    eventBy &&
+    host &&
+    comparable(eventBy) !== comparable(host),
+  );
+
+  return {
+    eventBy,
+    host,
+    conflict,
+    names: conflict
+      ? []
+      : [...new Set([eventBy, host].filter(
+          (name): name is string => Boolean(name),
+        ))],
+  };
+}
+
+function extractFacebookOrganizerNames(text: string): string[] {
+  return extractFacebookOrganizerEvidence(text).names;
 }
 
 async function fetchEventDetail(
@@ -711,6 +745,7 @@ async function fetchEventDetail(
         endTimestamp: endTimestamp ?? 0,
         eventPlace,
         facebookOrganizerNames: extractFacebookOrganizerNames(visibleText),
+        facebookOrganizerEvidence: extractFacebookOrganizerEvidence(visibleText),
         renderedText: text.slice(0, 5000),
         verifiedOccurrences,
         hasRecurrenceMarker:

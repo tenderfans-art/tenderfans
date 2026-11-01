@@ -1,5 +1,7 @@
+import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 import { chromium as playwright } from "playwright-core";
 import Chromium from "@sparticuz/chromium";
+import { withTransportPermit } from "../transport-capacity-permits";
 
 const USER_AGENT = "TenderFans Event Harvester/1.0";
 
@@ -81,7 +83,14 @@ export async function fetchBrowserEvidence(
       })()
     : undefined;
 
-  const browser = await playwright.launch({
+  const executeBrowser = (recoverySignal?: AbortSignal) =>
+    withTransportPermit("browser", async (permitSignal) => {
+      const combinedSignal = recoverySignal
+        ? AbortSignal.any([permitSignal, recoverySignal])
+        : permitSignal;
+    combinedSignal.throwIfAborted();
+
+    const browser = await playwright.launch({
     args: Chromium.args,
     executablePath: await Chromium.executablePath(),
     headless: true,
@@ -89,7 +98,17 @@ export async function fetchBrowserEvidence(
     ...(proxy ? { proxy } : {}),
   });
 
+  const abortBrowser = () => {
+    void browser.close().catch(() => {});
+  };
+
+  combinedSignal.addEventListener("abort", abortBrowser, {
+    once: true,
+  });
+
   try {
+    combinedSignal.throwIfAborted();
+
     const page = await browser.newPage({
       viewport: { width: 1440, height: 1600 },
       userAgent: USER_AGENT,
@@ -146,6 +165,8 @@ export async function fetchBrowserEvidence(
           keepObservedUrl(frameUrl),
       );
 
+    combinedSignal.throwIfAborted();
+
     return {
       requestedUrl: url,
       finalUrl,
@@ -155,6 +176,241 @@ export async function fetchBrowserEvidence(
       iframeUrls: [...new Set(iframeUrls)],
     };
   } finally {
+    combinedSignal.removeEventListener("abort", abortBrowser);
     await browser.close();
+  }
+  }, recoverySignal);
+
+  if (!proxyUrl) {
+    return executeBrowser();
+  }
+
+  // Recovery is held outside browser capacity, avoiding circular wait.
+  return withTransportPermit("recovery", async (recoverySignal) => {
+    recoverySignal.throwIfAborted();
+    return executeBrowser(recoverySignal);
+  });
+}
+
+
+/*
+ * Shared Tier 1 browser transport for client-rendered JSON endpoints.
+ * Platform adapters supply only the endpoint predicate.
+ * Browser ownership, resource filtering, and capacity are global.
+ */
+async function fetchBrowserJsonResponsesOnce(
+  url: string,
+  matchesEndpoint: (url: string) => boolean,
+  proxyUrl?: string,
+): Promise<{
+  status: number | null;
+  observedEndpoint: boolean;
+  successfulResponse: boolean;
+  payloads: unknown[];
+}> {
+  if (!isAllowedBrowserUrl(url) || new URL(url).protocol !== "https:") {
+    throw new Error("Browser navigation requires a public HTTPS URL");
+  }
+
+  const executeBrowser = (recoverySignal?: AbortSignal) =>
+    withTransportPermit("browser", async (permitSignal) => {
+      const combinedSignal = recoverySignal
+        ? AbortSignal.any([permitSignal, recoverySignal])
+        : permitSignal;
+    combinedSignal.throwIfAborted();
+
+    const proxy = proxyUrl
+      ? (() => {
+          const parsed = new URL(proxyUrl);
+
+          if (!["http:", "https:"].includes(parsed.protocol)) {
+            throw new Error("Unsupported browser proxy protocol");
+          }
+
+          return {
+            server: `${parsed.protocol}//${parsed.host}`,
+            username: decodeURIComponent(parsed.username),
+            password: decodeURIComponent(parsed.password),
+          };
+        })()
+      : undefined;
+
+    const instance = await playwright.launch({
+      args: Chromium.args,
+      executablePath: await Chromium.executablePath(),
+      headless: true,
+      timeout: 30000,
+      ...(proxy ? { proxy } : {}),
+    });
+
+    const abort = () => {
+      void instance.close().catch(() => {});
+    };
+
+    combinedSignal.addEventListener("abort", abort, { once: true });
+
+    try {
+      combinedSignal.throwIfAborted();
+
+      const page = await instance.newPage({
+        viewport: { width: 1440, height: 1600 },
+        userAgent: USER_AGENT,
+      });
+
+      await page.route("**/*", async (route) => {
+        const request = route.request();
+
+        if (
+          !isAllowedBrowserUrl(request.url()) ||
+          ["image", "font", "media"].includes(request.resourceType())
+        ) {
+          await route.abort();
+        } else {
+          await route.continue();
+        }
+      });
+
+      const payloads: unknown[] = [];
+      const pending: Promise<void>[] = [];
+      let observedEndpoint = false;
+      let successfulResponse = false;
+
+      page.on("response", (response) => {
+        if (!matchesEndpoint(response.url())) return;
+
+        observedEndpoint = true;
+
+        const task = (async () => {
+          if (!response.ok()) return;
+
+          const value: unknown = await response.json();
+
+          successfulResponse = true;
+          payloads.push(value);
+        })();
+
+        pending.push(task);
+      });
+
+      const navigation = await page.goto(url, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+
+      await page.waitForTimeout(5000);
+      await Promise.all(pending);
+
+      combinedSignal.throwIfAborted();
+
+      return {
+        status: navigation?.status() ?? null,
+        observedEndpoint,
+        successfulResponse,
+        payloads,
+      };
+    } finally {
+      combinedSignal.removeEventListener("abort", abort);
+      await instance.close();
+    }
+  }, recoverySignal);
+
+  if (!proxyUrl) {
+    return executeBrowser();
+  }
+
+  // Acquire recovery capacity before browser capacity.
+  // Never hold browser capacity while waiting for recovery.
+  return withTransportPermit("recovery", async (recoverySignal) => {
+    recoverySignal.throwIfAborted();
+    return executeBrowser(recoverySignal);
+  });
+}
+
+export async function fetchBrowserJsonResponses(
+  url: string,
+  matchesEndpoint: (url: string) => boolean,
+): Promise<{
+  status: number | null;
+  observedEndpoint: boolean;
+  successfulResponse: boolean;
+  payloads: unknown[];
+}> {
+  const recoveryProxy = getTransportRecoveryProxy();
+
+  let direct:
+    | Awaited<ReturnType<typeof fetchBrowserJsonResponsesOnce>>
+    | undefined;
+
+  try {
+    direct = await fetchBrowserJsonResponsesOnce(
+      url,
+      matchesEndpoint,
+    );
+  } catch (error) {
+    // Capacity ownership and admission failures must never be
+    // disguised as ordinary browser transport failures.
+    if (
+      error instanceof Error &&
+      (
+        error.name === "TransportCapacityUnavailableError" ||
+        error.name === "TransportPermitOwnershipLostError" ||
+        error.name === "AbortError"
+      )
+    ) {
+      throw error;
+    }
+
+    if (!recoveryProxy) throw error;
+  }
+
+  if (
+    !recoveryProxy ||
+    (
+      direct &&
+      direct.status !== null &&
+      direct.status >= 200 &&
+      direct.status < 300 &&
+      direct.observedEndpoint &&
+      direct.successfulResponse
+    )
+  ) {
+    if (!direct) {
+      throw new Error("Browser JSON observation returned no result.");
+    }
+    return direct;
+  }
+
+  try {
+    const recovered = await fetchBrowserJsonResponsesOnce(
+      url,
+      matchesEndpoint,
+      recoveryProxy,
+    );
+
+    if (
+      recovered.status !== null &&
+      recovered.status >= 200 &&
+      recovered.status < 300 &&
+      recovered.observedEndpoint &&
+      recovered.successfulResponse
+    ) {
+      return recovered;
+    }
+
+    return direct ?? recovered;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (
+        error.name === "TransportCapacityUnavailableError" ||
+        error.name === "TransportPermitOwnershipLostError" ||
+        error.name === "AbortError"
+      )
+    ) {
+      throw error;
+    }
+
+    if (direct) return direct;
+    throw error;
   }
 }

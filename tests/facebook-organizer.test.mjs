@@ -13,7 +13,7 @@ const source = readFileSync(
 );
 
 const start = source.indexOf(
-  "function extractFacebookOrganizerNames(",
+  "type FacebookOrganizerEvidence =",
 );
 const end = source.indexOf(
   "\nasync function fetchEventDetail(",
@@ -78,6 +78,23 @@ test("rejects conflicting Event by and Host identities", () => {
       "Host Promoter Two Suggested events",
     ),
     [],
+  );
+});
+
+test("preserves business names containing commas and and", () => {
+  assert.deepEqual(
+    extract("Event by Smith, Jones and Partners Suggested events"),
+    ["Smith, Jones and Partners"],
+  );
+});
+
+test("does not treat an address as a second organizer", () => {
+  assert.deepEqual(
+    extract(
+      "Event by Example Brewing 123 Main St, Tampa, FL " +
+      "Host Example Brewing Suggested events",
+    ),
+    ["Example Brewing"],
   );
 });
 
