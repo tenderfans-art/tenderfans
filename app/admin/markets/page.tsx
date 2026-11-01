@@ -285,7 +285,8 @@ export default function MarketsPage() {
                 aria-label="Market URL key"
                 placeholder="market-url-key"
                 value={key}
-                onChange={(event) => setKey(event.target.value)}
+                readOnly
+                title="Automatically generated from the Market name"
                 style={{ padding: 12, flex: "1 1 180px" }}
               />
               <button
