@@ -149,50 +149,32 @@ export default function MarketDashboard() {
               <div className="eyebrow" style={{ marginTop: 24 }}>
                 TENDERFANS MARKET
               </div>
-              <h1>{market.display_name}</h1>
-              <p>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 16,
+              }}>
+                <h1 style={{ margin: 0 }}>{market.display_name}</h1>
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={busy}
+                  onClick={() =>
+                    operate("set-enabled", !market.is_enabled)
+                  }
+                >
+                  {market.is_enabled ? "Disable" : "Enable"}
+                </button>
+              </div>
+              <p style={{ marginTop: 18 }}>
                 <strong>
                   {market.is_enabled ? "Enabled" : "Disabled"}
                 </strong>
                 {" · "}{market.spot_count} assigned Spots
               </p>
-              <p style={{ opacity: 0.75 }}>
-                Automated processing is controlled separately from
-                manual Admin testing and review.
-              </p>
-              <section style={{
-                border: "1px solid #ddd7cc",
-                borderRadius: 18,
-                padding: 20,
-                marginTop: 24,
-                marginBottom: 24,
-              }}>
-                <h2 style={{ marginTop: 0 }}>Market Controls</h2>
-                <div style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: 12,
-                }}>
-                  <button
-                    type="button"
-                    className="btn primary"
-                    disabled={busy}
-                    onClick={() =>
-                      operate("set-enabled", !market.is_enabled)
-                    }
-                  >
-                    {market.is_enabled
-                      ? "Disable"
-                      : "Enable"}
-                  </button>
-                </div>
-                <p style={{ opacity: 0.7, marginBottom: 0 }}>
-                  Manual review and testing remain available while
-                  automated processing is disabled.
-                </p>
-                {notice && <p role="status">{notice}</p>}
-              </section>
+              {notice && <p role="status">{notice}</p>}
               <div style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
