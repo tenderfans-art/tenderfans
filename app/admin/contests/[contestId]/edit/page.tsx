@@ -19,6 +19,7 @@ import {
 type Contest = {
   id: string;
   market_id: string | null;
+  contest_format: string;
   title: string;
   prize_text: string;
   starts_at: string;
@@ -39,6 +40,7 @@ export default function EditContestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
+  const [contestFormat, setContestFormat] = useState("shouts");
   const [title, setTitle] = useState("");
   const [prizeText, setPrizeText] = useState("");
 
@@ -93,6 +95,7 @@ export default function EditContestPage() {
         .select(`
           id,
           market_id,
+          contest_format,
           title,
           prize_text,
           starts_at,
@@ -154,6 +157,7 @@ export default function EditContestPage() {
       const start = new Date(contest.starts_at);
       const end = new Date(contest.ends_at);
 
+      setContestFormat(contest.contest_format);
       setTitle(contest.title);
       setPrizeText(contest.prize_text);
       setRulesText(contest.rules_text ?? "");
@@ -369,6 +373,7 @@ export default function EditContestPage() {
         .from("contests")
         .update({
           market_id: marketId,
+          contest_format: contestFormat,
           title: title.trim(),
           prize_text: prizeText.trim(),
           starts_at: startsAt.toISOString(),
@@ -511,6 +516,22 @@ export default function EditContestPage() {
                 Contests belong to Markets, not Spots.
                 Deactivate a contest before changing its Market.
               </span>
+            </label>
+
+            <label>
+              <strong>Contest Format</strong>
+              <select
+                className="field"
+                value={contestFormat}
+                disabled={wasActive}
+                onChange={(e) => setContestFormat(e.target.value)}
+              >
+                <option value="shouts">Shouts-based</option>
+                <option value="custom">Custom / future format</option>
+              </select>
+              <small>
+                Deactivate an active contest before changing its format.
+              </small>
             </label>
 
             <label>

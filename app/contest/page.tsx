@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 
 type Contest = {
   id: string;
+  contest_format: string;
   title: string;
   prize_text: string;
   starts_at: string;
@@ -53,7 +54,7 @@ export default function ContestPage() {
       let contestQuery = supabase
         .from("contests")
         .select(
-          "id, title, prize_text, starts_at, ends_at, flyer_url, rules_text"
+          "id, contest_format, title, prize_text, starts_at, ends_at, flyer_url, rules_text"
         )
         .eq("is_active", true)
         .lte("starts_at", now)
@@ -306,12 +307,14 @@ export default function ContestPage() {
           </div>
         )}
 
-        <Link
-          href={`/shout?contest=${encodeURIComponent(contest.id)}`}
-          className="contest-shout-hotspot"
-          aria-label="Find your Tender and give them a Shout"
-          title="Find your Tender and give them a Shout"
-        />
+        {contest.contest_format === "shouts" && (
+          <Link
+            href={`/shout?contest=${encodeURIComponent(contest.id)}`}
+            className="contest-shout-hotspot"
+            aria-label="Find your Tender and give them a Shout"
+            title="Find your Tender and give them a Shout"
+          />
+        )}
 
         <button
           type="button"

@@ -16,6 +16,7 @@ export default function NewContestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
+  const [contestFormat, setContestFormat] = useState("shouts");
   const [title, setTitle] = useState("");
   const [prizeText, setPrizeText] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -192,6 +193,7 @@ export default function NewContestPage() {
       .from("contests")
       .insert({
         market_id: marketId,
+        contest_format: contestFormat,
         title: title.trim(),
         prize_text: prizeText.trim(),
         starts_at: startsAt.toISOString(),
@@ -294,6 +296,21 @@ export default function NewContestPage() {
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label>
+              <strong>Contest Format</strong>
+              <select
+                className="field"
+                value={contestFormat}
+                onChange={(e) => setContestFormat(e.target.value)}
+              >
+                <option value="shouts">Shouts-based</option>
+                <option value="custom">Custom / future format</option>
+              </select>
+              <small>
+                Only Shouts-based contests automatically count Shouts.
+              </small>
             </label>
 
             <label>

@@ -157,6 +157,7 @@ export async function POST(request: Request) {
     const activeContestQuery = adminSupabase
       .from("contests")
       .select("id, market_id, ends_at")
+      .eq("contest_format", "shouts")
       .eq("is_active", true)
       .not("market_id", "is", null)
       .lte("starts_at", now)

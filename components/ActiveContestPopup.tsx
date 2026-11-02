@@ -13,65 +13,43 @@ type ActiveContest = {
 };
 
 export default function ActiveContestPopup() {
-  const [contest, setContest] =
-    useState<ActiveContest | null>(null);
-
-  const [open, setOpen] =
-    useState(false);
+  const [contests, setContests] = useState<ActiveContest[]>([]);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadActiveContest() {
-      const now =
-        new Date().toISOString();
+    async function loadActiveContests() {
+      const now = new Date().toISOString();
 
-      const { data, error } =
-        await supabase
-          .from("contests")
-          .select(
-            "id, title, flyer_url, starts_at, ends_at"
-          )
-          .eq("is_active", true)
-          .lte("starts_at", now)
-          .gte("ends_at", now)
-          .maybeSingle();
+      const { data, error } = await supabase
+        .from("contests")
+        .select("id, title, flyer_url, starts_at, ends_at")
+        .eq("is_active", true)
+        .lte("starts_at", now)
+        .gte("ends_at", now)
+        .order("starts_at", { ascending: false });
 
       if (cancelled) return;
 
       if (error) {
-        console.error(
-          "Homepage contest popup:",
-          error
-        );
+        console.error("Homepage contest popup:", error);
         return;
       }
 
-      if (
-        data &&
-        data.flyer_url
-      ) {
-        setContest(
-          data as ActiveContest
-        );
+      const withFlyers = (data ?? []).filter((row) => row.flyer_url);
+
+      if (withFlyers.length) {
+        setContests(withFlyers);
         setOpen(true);
       }
     }
 
-    loadActiveContest();
-
-    return () => {
-      cancelled = true;
-    };
+    loadActiveContests();
+    return () => { cancelled = true; };
   }, []);
 
-  if (
-    !contest ||
-    !contest.flyer_url ||
-    !open
-  ) {
-    return null;
-  }
+  if (!open || !contests.length) return null;
 
   return (
     <div
@@ -84,9 +62,7 @@ export default function ActiveContestPopup() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="contest-home-popup-title"
-        onClick={(event) =>
-          event.stopPropagation()
-        }
+        onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
@@ -97,33 +73,41 @@ export default function ActiveContestPopup() {
           ×
         </button>
 
-        <div
-          id="contest-home-popup-title"
-          className="sr-only"
-        >
-          {contest.title}
+        <div id="contest-home-popup-title" className="sr-only">
+          Active TenderFans Contests
         </div>
 
-        <Link
-          href="/contest"
-          className="contest-home-popup-flyer-link"
-          aria-label={`View ${contest.title}`}
-        >
-          <img
-            src={contest.flyer_url}
-            alt={contest.title}
-            className="contest-home-popup-flyer"
-          />
-        </Link>
+        <div style={{
+          maxHeight: "75vh",
+          overflowY: "auto",
+          display: "grid",
+          gap: 16,
+        }}>
+          {contests.map((contest) => (
+            <Link
+              key={contest.id}
+              href={`/contest?contest=${encodeURIComponent(contest.id)}`}
+              className="contest-home-popup-flyer-link"
+              aria-label={`View ${contest.title}`}
+            >
+              <img
+                src={contest.flyer_url ?? ""}
+                alt={contest.title}
+                className="contest-home-popup-flyer"
+              />
+            </Link>
+          ))}
+        </div>
 
         <div className="contest-home-popup-actions">
-          <Link
-            href="/contest"
-            className="btn primary"
-          >
-            View Contest
-          </Link>
-
+          {contests.length === 1 && (
+            <Link
+              href={`/contest?contest=${encodeURIComponent(contests[0].id)}`}
+              className="btn primary"
+            >
+              View Contest
+            </Link>
+          )}
           <Link
             href="/how-it-works"
             className="btn outline contest-home-popup-secondary"

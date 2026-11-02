@@ -17,6 +17,7 @@ export default async function ContestTenderPage({
     .from("contests")
     .select("id")
     .eq("is_active", true)
+    .eq("contest_format", "shouts")
     .lte("starts_at", now)
     .gte("ends_at", now);
 

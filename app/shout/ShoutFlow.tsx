@@ -14,6 +14,10 @@ export default function ShoutFlow({
   contestMode?: boolean;
   contestId?: string;
 }) {
+  const [automaticContestId, setAutomaticContestId] =
+    useState<string | null>(null);
+  const effectiveContestMode = contestMode || Boolean(automaticContestId);
+  const effectiveContestId = contestId ?? automaticContestId ?? undefined;
   const [step, setStep] = useState(1);
   const [venueQuery, setVenueQuery] = useState("");
   const [venueId, setVenueId] = useState("");
@@ -258,7 +262,7 @@ export default function ShoutFlow({
   );
   const toggleTrait = (trait:string) => setTraits(current => current.includes(trait) ? current.filter(t=>t!==trait) : current.length < 5 ? [...current, trait] : current);
 
-  async function submitContestShout() {
+  async function submitContestShout(targetContestId = effectiveContestId) {
     if (!selectedBartender || !selectedVenue) return false;
 
     setContestSubmitting(true);
@@ -274,7 +278,7 @@ export default function ShoutFlow({
           bartenderId: selectedBartender.id,
           venueId: selectedVenue.id,
           traits,
-          contestId: contestId ?? null,
+          contestId: targetContestId ?? null,
         }),
       });
 
@@ -612,7 +616,7 @@ export default function ShoutFlow({
       )}
 
       <div className="eyebrow">
-        {contestMode ? "Contest Shout" : "Step 3"}
+        {effectiveContestMode ? "Contest Shout" : "Step 3"}
       </div>
 
       <h1>What makes {selectedBartender?.display_name} great?</h1>
@@ -644,8 +648,40 @@ export default function ShoutFlow({
         onClick={async()=>{
           if(!selectedBartender || !selectedVenue) return;
 
-          if (contestMode) {
+          if (effectiveContestMode) {
             await submitContestShout();
+            return;
+          }
+
+          setContestSubmitting(true);
+          setContestMessage("");
+
+          let applicableContestId: string | null = null;
+
+          try {
+            const response = await fetch(
+              `/api/contest/eligible?bartenderId=${encodeURIComponent(selectedBartender.id)}`,
+              { cache: "no-store" }
+            );
+
+            if (!response.ok) {
+              throw new Error("Contest eligibility unavailable");
+            }
+
+            const result = await response.json();
+            applicableContestId = result.contestId ?? null;
+          } catch (error) {
+            console.error("Contest eligibility lookup failed:", error);
+            setContestMessage(
+              "Could not check active contests. Please try again."
+            );
+            setContestSubmitting(false);
+            return;
+          }
+
+          if (applicableContestId) {
+            setAutomaticContestId(applicableContestId);
+            await submitContestShout(applicableContestId);
             return;
           }
 
@@ -660,10 +696,12 @@ export default function ShoutFlow({
 
           if(error){
             console.error(error);
-            alert("Could not save shoutout.");
+            setContestMessage("Could not save your Shout.");
+            setContestSubmitting(false);
             return;
           }
 
+          setContestSubmitting(false);
           setStep(4);
         }}
       >
@@ -672,7 +710,7 @@ export default function ShoutFlow({
           : "Give 'em a Shout"}
       </button>
 
-      {contestMode && contestMessage && (
+      {contestMessage && (
         <div
           className="privacy-note"
           style={{ marginTop: "14px" }}
@@ -685,13 +723,13 @@ export default function ShoutFlow({
       <span className="success-mark">T</span>
 
       <div className="eyebrow">
-        {contestMode ? "Contest Shout counted" : "Shout sent"}
+        {effectiveContestMode ? "Contest Shout counted" : "Shout sent"}
       </div>
 
       <h1>Props delivered.</h1>
 
       <p>
-        {contestMode
+        {effectiveContestMode
           ? `Your verified Shout counts toward ${selectedBartender?.display_name}'s contest total.`
           : `Your selections add to ${selectedBartender?.display_name}'s TenderFans profile.`}
       </p>
@@ -703,7 +741,7 @@ export default function ShoutFlow({
         View their bio card
       </Link>
     </div>}
-    {contestMode && step === 5 && (
+    {effectiveContestMode && step === 5 && (
       <div className="flow-step">
         <button
           className="back"
@@ -841,7 +879,7 @@ export default function ShoutFlow({
       </div>
     )}
 
-    {contestMode && step === 6 && (
+    {effectiveContestMode && step === 6 && (
       <div className="flow-step">
         <button
           className="back"
