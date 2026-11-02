@@ -187,24 +187,8 @@ export default function NewContestPage() {
       .from("contest-flyers")
       .getPublicUrl(storagePath);
 
-    if (isActive) {
-      const { error: deactivateError } = await supabase
-        .from("contests")
-        .update({ is_active: false })
-        .eq("is_active", true);
-
-      if (deactivateError) {
-        await supabase.storage
-          .from("contest-flyers")
-          .remove([storagePath]);
-
-        setMessage(deactivateError.message);
-        setSubmitting(false);
-        return;
-      }
-    }
-
-    const { error: insertError } = await supabase
+    const { data: createdContest, error: insertError } =
+      await supabase
       .from("contests")
       .insert({
         market_id: marketId,
@@ -215,9 +199,11 @@ export default function NewContestPage() {
         flyer_url: publicUrlData.publicUrl,
         flyer_storage_path: storagePath,
         rules_text: rulesText.trim() || null,
-        is_active: isActive,
+        is_active: false,
         created_by: user.id,
-      });
+      })
+      .select("id")
+      .single();
 
     if (insertError) {
       await supabase.storage
@@ -229,7 +215,38 @@ export default function NewContestPage() {
       return;
     }
 
-    router.push("/admin/contests");
+    if (isActive) {
+      const { error: activationError } =
+        await supabase.rpc(
+          "admin_set_market_contest_active",
+          {
+            p_contest_id: createdContest.id,
+            p_active: true,
+          }
+        );
+
+      if (activationError) {
+        setMessage(
+          `Contest was saved inactive, but activation failed: ${
+            activationError.message
+          }`
+        );
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    const selectedMarket = markets.find(
+      (market) => market.id === marketId
+    );
+
+    router.push(
+      selectedMarket
+        ? `/admin/contests?market=${encodeURIComponent(
+            selectedMarket.market_key
+          )}`
+        : "/admin/contests"
+    );
   }
 
   if (loading) {

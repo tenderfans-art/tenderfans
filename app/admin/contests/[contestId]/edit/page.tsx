@@ -50,6 +50,7 @@ export default function EditContestPage() {
 
   const [rulesText, setRulesText] = useState("");
   const [isActive, setIsActive] = useState(false);
+  const [wasActive, setWasActive] = useState(false);
   const [originalMarketId, setOriginalMarketId] = useState("");
   const [marketId, setMarketId] = useState("");
   const [markets, setMarkets] = useState<ContestMarket[]>([]);
@@ -137,6 +138,7 @@ export default function EditContestPage() {
       setPrizeText(contest.prize_text);
       setRulesText(contest.rules_text ?? "");
       setIsActive(contest.is_active);
+      setWasActive(contest.is_active);
 
       setCurrentFlyerUrl(contest.flyer_url ?? "");
       setCurrentFlyerPath(
@@ -326,30 +328,6 @@ export default function EditContestPage() {
       nextFlyerPath = newFlyerPath;
     }
 
-    /*
-     * If this contest is being activated,
-     * deactivate any currently active contest first.
-     */
-    if (isActive) {
-      const { error: deactivateError } =
-        await supabase
-          .from("contests")
-          .update({ is_active: false })
-          .eq("is_active", true);
-
-      if (deactivateError) {
-        if (newFlyerPath) {
-          await supabase.storage
-            .from("contest-flyers")
-            .remove([newFlyerPath]);
-        }
-
-        setMessage(deactivateError.message);
-        setSubmitting(false);
-        return;
-      }
-    }
-
     const { error: updateError } =
       await supabase
         .from("contests")
@@ -364,7 +342,6 @@ export default function EditContestPage() {
             nextFlyerPath || null,
           rules_text:
             rulesText.trim() || null,
-          is_active: isActive,
           updated_at: new Date().toISOString(),
         })
         .eq("id", contestId);
@@ -400,6 +377,27 @@ export default function EditContestPage() {
           "Old contest flyer cleanup failed:",
           removeError
         );
+      }
+    }
+
+    if (isActive !== wasActive) {
+      const { error: activationError } =
+        await supabase.rpc(
+          "admin_set_market_contest_active",
+          {
+            p_contest_id: contestId,
+            p_active: isActive,
+          }
+        );
+
+      if (activationError) {
+        setMessage(
+          `Contest details were saved, but activation failed: ${
+            activationError.message
+          }`
+        );
+        setSubmitting(false);
+        return;
       }
     }
 
