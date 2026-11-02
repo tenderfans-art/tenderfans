@@ -14,10 +14,23 @@ export default function ShoutFlow({
   contestMode?: boolean;
   contestId?: string;
 }) {
-  const [automaticContestId, setAutomaticContestId] =
-    useState<string | null>(null);
-  const effectiveContestMode = contestMode || Boolean(automaticContestId);
-  const effectiveContestId = contestId ?? automaticContestId ?? undefined;
+  const [automaticContest, setAutomaticContest] = useState<{
+    contestId: string;
+    bartenderId: string;
+    venueId: string;
+  } | null>(null);
+
+  const automaticContestId =
+    automaticContest?.bartenderId === bartenderId &&
+    automaticContest?.venueId === venueId
+      ? automaticContest.contestId
+      : null;
+
+  const effectiveContestMode =
+    contestMode || Boolean(automaticContestId);
+
+  const effectiveContestId =
+    contestId ?? automaticContestId ?? undefined;
   const [step, setStep] = useState(1);
   const [venueQuery, setVenueQuery] = useState("");
   const [venueId, setVenueId] = useState("");
@@ -680,7 +693,11 @@ export default function ShoutFlow({
           }
 
           if (applicableContestId) {
-            setAutomaticContestId(applicableContestId);
+            setAutomaticContest({
+              contestId: applicableContestId,
+              bartenderId: selectedBartender.id,
+              venueId,
+            });
             await submitContestShout(applicableContestId);
             return;
           }
