@@ -524,7 +524,12 @@ export default function AdminContestsPage() {
 
                   <Link
                     className="btn outline"
-                    href={`/admin/contests/${contest.id}/edit`}
+                    href={
+                      `/admin/contests/${contest.id}/edit` +
+                      (marketKey
+                        ? `?market=${encodeURIComponent(marketKey)}`
+                        : "")
+                    }
                   >
                     Edit
                   </Link>

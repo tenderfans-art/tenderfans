@@ -51,6 +51,7 @@ export default function EditContestPage() {
   const [rulesText, setRulesText] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [wasActive, setWasActive] = useState(false);
+  const [scopedMarketKey, setScopedMarketKey] = useState("");
   const [originalMarketId, setOriginalMarketId] = useState("");
   const [marketId, setMarketId] = useState("");
   const [markets, setMarkets] = useState<ContestMarket[]>([]);
@@ -116,6 +117,25 @@ export default function EditContestPage() {
 
       try {
         const availableMarkets = await loadContestMarkets();
+        const requestedMarket =
+          new URLSearchParams(window.location.search).get("market");
+
+        if (requestedMarket) {
+          const scopedMarket = availableMarkets.find(
+            (market) => market.market_key === requestedMarket
+          );
+
+          if (!scopedMarket || scopedMarket.id !== contest.market_id) {
+            setMessage(
+              "This contest does not belong to the selected Market."
+            );
+            setLoading(false);
+            return;
+          }
+
+          setScopedMarketKey(requestedMarket);
+        }
+
         setMarkets(availableMarkets);
         setMarketsLoaded(true);
       } catch (cause) {
@@ -204,6 +224,22 @@ export default function EditContestPage() {
   ) {
     e.preventDefault();
     setMessage("");
+
+    if (
+      scopedMarketKey &&
+      markets.find((market) => market.market_key === scopedMarketKey)
+        ?.id !== originalMarketId
+    ) {
+      setMessage("Contest Market context has changed.");
+      return;
+    }
+
+    if (scopedMarketKey && marketId !== originalMarketId) {
+      setMessage(
+        "A Market-scoped contest cannot be transferred from this screen."
+      );
+      return;
+    }
 
     if (!marketsLoaded || !marketId) {
       setMessage("Select the Market that owns this contest.");
@@ -453,6 +489,7 @@ export default function EditContestPage() {
               <select
                 className="field"
                 value={marketId}
+                disabled={Boolean(scopedMarketKey)}
                 onChange={(event) => setMarketId(event.target.value)}
                 required
               >
@@ -640,8 +677,8 @@ export default function EditContestPage() {
                 <br />
 
                 <span style={{ color: "#697177" }}>
-                  Only one TenderFans contest can
-                  be active at a time.
+                  Only one contest can be active
+                  within its owning Market.
                 </span>
               </span>
             </label>
@@ -671,7 +708,11 @@ export default function EditContestPage() {
 
               <Link
                 className="btn outline"
-                href="/admin/contests"
+                href={
+                  scopedMarketKey
+                    ? `/admin/contests?market=${encodeURIComponent(scopedMarketKey)}`
+                    : "/admin/contests"
+                }
               >
                 Cancel
               </Link>

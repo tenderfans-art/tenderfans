@@ -405,9 +405,8 @@ export default function NewContestPage() {
                 <strong>Make this the active contest</strong>
                 <br />
                 <span style={{ color: "#697177" }}>
-                  Until market-specific activation is enabled,
-                  activating a contest still replaces the globally
-                  active contest.
+                  Activation is managed independently within
+                  the selected Market.
                 </span>
               </span>
             </label>
@@ -435,7 +434,13 @@ export default function NewContestPage() {
 
               <Link
                 className="btn outline"
-                href="/admin/contests"
+                href={
+                  markets.find((market) => market.id === marketId)
+                    ? `/admin/contests?market=${encodeURIComponent(
+                        markets.find((market) => market.id === marketId)!.market_key
+                      )}`
+                    : "/admin/contests"
+                }
               >
                 Cancel
               </Link>
