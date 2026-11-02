@@ -14,6 +14,8 @@ export default function ShoutFlow({
   contestMode?: boolean;
   contestId?: string;
 }) {
+  const [venueId, setVenueId] = useState("");
+  const [bartenderId, setBartenderId] = useState("");
   const [automaticContest, setAutomaticContest] = useState<{
     contestId: string;
     bartenderId: string;
@@ -33,9 +35,7 @@ export default function ShoutFlow({
     contestId ?? automaticContestId ?? undefined;
   const [step, setStep] = useState(1);
   const [venueQuery, setVenueQuery] = useState("");
-  const [venueId, setVenueId] = useState("");
   const [bartenderQuery, setBartenderQuery] = useState("");
-  const [bartenderId, setBartenderId] = useState("");
   const [traits, setTraits] = useState<string[]>([]);
   const [liveTraits, setLiveTraits] = useState<string[]>([]);
   const [liveVenues, setLiveVenues] = useState<any[]>([]);
