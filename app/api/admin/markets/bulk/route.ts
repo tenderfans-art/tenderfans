@@ -29,7 +29,7 @@ function parseCsv(text: string): string[][] {
   let quoted = false;
   let afterQuote = false;
 
-  const input = text.replace(/^\\uFEFF/, "").replace(/\\r\\n?/g, "\\n");
+  const input = text.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
 
   for (let i = 0; i < input.length; i++) {
     const ch = input[i];
@@ -51,7 +51,7 @@ function parseCsv(text: string): string[][] {
       row.push(cell.trim());
       cell = "";
       afterQuote = false;
-    } else if (ch === "\\n") {
+    } else if (ch === "\n") {
       row.push(cell.trim());
       if (row.some(Boolean)) rows.push(row);
       row = [];
@@ -102,7 +102,7 @@ function readRows(csv: string): ImportRow[] {
 
 function parseAddress(value: string) {
   const match = value.match(
-    /^(.+?),\\s*([^,]+),\\s*([A-Za-z]{2})\\s+(\\d{5})(?:-\\d{4})?$/
+    /^(.+?),\s*([^,]+),\s*([A-Za-z]{2})\s+(\d{5})(?:-\d{4})?$/
   );
 
   if (!match) return null;
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
 
     const fingerprint = `${row.name}|${row.address}`
       .toLowerCase()
-      .replace(/\\s+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
 
     if (seen.has(fingerprint)) {
