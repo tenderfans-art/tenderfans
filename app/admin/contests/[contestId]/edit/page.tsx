@@ -11,9 +11,14 @@ import {
   useRouter,
 } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  loadContestMarkets,
+  type ContestMarket,
+} from "@/lib/admin-contest-market";
 
 type Contest = {
   id: string;
+  market_id: string | null;
   title: string;
   prize_text: string;
   starts_at: string;
@@ -45,6 +50,10 @@ export default function EditContestPage() {
 
   const [rulesText, setRulesText] = useState("");
   const [isActive, setIsActive] = useState(false);
+  const [originalMarketId, setOriginalMarketId] = useState("");
+  const [marketId, setMarketId] = useState("");
+  const [markets, setMarkets] = useState<ContestMarket[]>([]);
+  const [marketsLoaded, setMarketsLoaded] = useState(false);
 
   const [currentFlyerUrl, setCurrentFlyerUrl] =
     useState("");
@@ -81,6 +90,7 @@ export default function EditContestPage() {
         .from("contests")
         .select(`
           id,
+          market_id,
           title,
           prize_text,
           starts_at,
@@ -102,6 +112,23 @@ export default function EditContestPage() {
       }
 
       const contest = data as Contest;
+
+      try {
+        const availableMarkets = await loadContestMarkets();
+        setMarkets(availableMarkets);
+        setMarketsLoaded(true);
+      } catch (cause) {
+        setMessage(
+          cause instanceof Error
+            ? cause.message
+            : "Unable to load Markets."
+        );
+        setLoading(false);
+        return;
+      }
+
+      setOriginalMarketId(contest.market_id ?? "");
+      setMarketId(contest.market_id ?? "");
 
       const start = new Date(contest.starts_at);
       const end = new Date(contest.ends_at);
@@ -175,6 +202,23 @@ export default function EditContestPage() {
   ) {
     e.preventDefault();
     setMessage("");
+
+    if (!marketsLoaded || !marketId) {
+      setMessage("Select the Market that owns this contest.");
+      return;
+    }
+
+    if (!markets.some((market) => market.id === marketId)) {
+      setMessage("The selected Market is invalid.");
+      return;
+    }
+
+    if (isActive && marketId !== originalMarketId) {
+      setMessage(
+        "Deactivate this contest before transferring it to another Market."
+      );
+      return;
+    }
 
     if (!title.trim()) {
       setMessage("Enter a contest title.");
@@ -310,6 +354,7 @@ export default function EditContestPage() {
       await supabase
         .from("contests")
         .update({
+          market_id: marketId,
           title: title.trim(),
           prize_text: prizeText.trim(),
           starts_at: startsAt.toISOString(),
@@ -358,7 +403,17 @@ export default function EditContestPage() {
       }
     }
 
-    router.push("/admin/contests");
+    const selectedMarket = markets.find(
+      (market) => market.id === marketId
+    );
+
+    router.push(
+      selectedMarket
+        ? `/admin/contests?market=${encodeURIComponent(
+            selectedMarket.market_key
+          )}`
+        : "/admin/contests"
+    );
   }
 
   if (loading) {
@@ -395,6 +450,34 @@ export default function EditContestPage() {
               gap: "16px",
             }}
           >
+            <label>
+              <strong>Owning Market</strong>
+              <select
+                className="field"
+                value={marketId}
+                onChange={(event) => setMarketId(event.target.value)}
+                required
+              >
+                <option value="">Select a Market</option>
+                {markets.map((market) => (
+                  <option key={market.id} value={market.id}>
+                    {market.display_name}
+                  </option>
+                ))}
+              </select>
+              <span
+                style={{
+                  display: "block",
+                  marginTop: 5,
+                  color: "#697177",
+                  fontSize: "0.8rem",
+                }}
+              >
+                Contests belong to Markets, not Spots.
+                Deactivate a contest before changing its Market.
+              </span>
+            </label>
+
             <label>
               <strong>Contest Title</strong>
               <input
