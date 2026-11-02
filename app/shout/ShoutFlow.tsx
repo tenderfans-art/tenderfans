@@ -8,9 +8,11 @@ import GooglePlacePicker from "@/components/GooglePlacePicker";
 export default function ShoutFlow({
   initialTenderSlug,
   contestMode = false,
+  contestId,
 }: {
   initialTenderSlug?: string;
   contestMode?: boolean;
+  contestId?: string;
 }) {
   const [step, setStep] = useState(1);
   const [venueQuery, setVenueQuery] = useState("");
@@ -272,6 +274,7 @@ export default function ShoutFlow({
           bartenderId: selectedBartender.id,
           venueId: selectedVenue.id,
           traits,
+          contestId: contestId ?? null,
         }),
       });
 

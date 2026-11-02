@@ -21,6 +21,11 @@ export async function POST(request: Request) {
         ? body.venueId.trim()
         : "";
 
+    const requestedContestId =
+      typeof body.contestId === "string"
+        ? body.contestId.trim()
+        : "";
+
     const traits = Array.isArray(body.traits)
       ? body.traits.filter(
           (value: unknown): value is string =>
@@ -139,22 +144,39 @@ export async function POST(request: Request) {
     }
 
     /*
-     * Contest identity is resolved server-side.
-     * The browser cannot choose which contest receives
-     * the Shout.
+     * A contest may be explicitly identified by the browser,
+     * but only the server determines whether it is eligible.
+     *
+     * When no contest ID is provided, retain compatibility
+     * only if exactly one contest is currently active.
+     *
+     * Never infer contest ownership from the selected Spot.
      */
     const now = new Date().toISOString();
 
-    const {
-      data: contest,
-      error: contestError,
-    } = await adminSupabase
+    const activeContestQuery = adminSupabase
       .from("contests")
-      .select("id, ends_at")
+      .select("id, market_id, ends_at")
       .eq("is_active", true)
+      .not("market_id", "is", null)
       .lte("starts_at", now)
-      .gte("ends_at", now)
-      .maybeSingle();
+      .gte("ends_at", now);
+
+    const {
+      data: contestRows,
+      error: contestError,
+    } = requestedContestId
+      ? await activeContestQuery.eq(
+          "id",
+          requestedContestId
+        )
+      : await activeContestQuery.limit(2);
+
+    const contest =
+      !contestError &&
+      contestRows?.length === 1
+        ? contestRows[0]
+        : null;
 
     if (contestError) {
       console.error(
@@ -174,8 +196,9 @@ export async function POST(request: Request) {
     if (!contest) {
       return NextResponse.json(
         {
-          error:
-            "There is no active TenderFans contest right now.",
+          error: requestedContestId
+            ? "The selected contest is no longer active."
+            : "Select an active Market contest before submitting a contest Shout.",
         },
         { status: 409 }
       );
