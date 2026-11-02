@@ -190,9 +190,18 @@ export default function MarketDashboard() {
                   }}>
                     <h2 style={{ fontSize: 20, marginTop: 0 }}>{title}</h2>
                     <p>{description}</p>
-                    <small>
-                      Market-scoped operations being connected
-                    </small>
+                    {title === "Contests" ? (
+                      <Link
+                        className="btn outline"
+                        href={`/admin/contests?market=${encodeURIComponent(market.market_key)}`}
+                      >
+                        Manage Contests
+                      </Link>
+                    ) : (
+                      <small>
+                        Market-scoped operations being connected
+                      </small>
+                    )}
                   </div>
                 ))}
               </div>

@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  loadContestMarkets,
+  type ContestMarket,
+} from "@/lib/admin-contest-market";
 
 type Contest = {
   id: string;
+  market_id: string | null;
   title: string;
   prize_text: string;
   starts_at: string;
@@ -28,6 +33,9 @@ type ContestLeader = {
 
 export default function AdminContestsPage() {
   const [contests, setContests] = useState<Contest[]>([]);
+  const [selectedMarket, setSelectedMarket] =
+    useState<ContestMarket | null>(null);
+  const [marketKey, setMarketKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -61,11 +69,48 @@ export default function AdminContestsPage() {
       return;
     }
 
-    const { data, error } = await supabase
+    const requestedMarket =
+      new URLSearchParams(window.location.search).get("market");
+
+    let resolvedMarket: ContestMarket | null = null;
+
+    if (requestedMarket) {
+      try {
+        const markets = await loadContestMarkets();
+        resolvedMarket = markets.find(
+          (market) => market.market_key === requestedMarket
+        ) ?? null;
+
+        if (!resolvedMarket) {
+          throw new Error("Selected Market was not found.");
+        }
+      } catch (cause) {
+        setMessage(
+          cause instanceof Error ? cause.message :
+          "Unable to resolve Market."
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
+    setSelectedMarket(resolvedMarket);
+    setMarketKey(requestedMarket);
+
+    let contestQuery = supabase
       .from("contests")
       .select(
-        "id, title, prize_text, starts_at, ends_at, is_active, flyer_url"
-      )
+        "id, market_id, title, prize_text, starts_at, ends_at, is_active, flyer_url"
+      );
+
+    if (resolvedMarket) {
+      contestQuery = contestQuery.eq(
+        "market_id",
+        resolvedMarket.id
+      );
+    }
+
+    const { data, error } = await contestQuery
       .order("starts_at", { ascending: false });
 
     if (error) {
@@ -370,7 +415,9 @@ export default function AdminContestsPage() {
           >
             <div>
               <h1 style={{ marginBottom: "6px" }}>
-                Contests
+                {selectedMarket
+                  ? `${selectedMarket.display_name} Contests`
+                  : "Contests"}
               </h1>
 
               <p className="lead-copy" style={{ marginTop: 0 }}>
@@ -378,7 +425,9 @@ export default function AdminContestsPage() {
               </p>
             </div>
 
-            <Link className="btn primary" href="/admin/contests/new">
+            <Link className="btn primary" href={marketKey
+              ? `/admin/contests/new?market=${encodeURIComponent(marketKey)}`
+              : "/admin/contests/new"}>
               New Contest
             </Link>
           </div>
@@ -393,7 +442,7 @@ export default function AdminContestsPage() {
 
           {!loading && contests.length === 0 && (
             <div className="privacy-note">
-              No contests have been created yet.
+              No contests have been created for this view.
             </div>
           )}
 

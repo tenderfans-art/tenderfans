@@ -4,6 +4,10 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  loadContestMarkets,
+  type ContestMarket,
+} from "@/lib/admin-contest-market";
 
 export default function NewContestPage() {
   const router = useRouter();
@@ -21,6 +25,9 @@ export default function NewContestPage() {
   const [rulesText, setRulesText] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [flyer, setFlyer] = useState<File | null>(null);
+  const [markets, setMarkets] = useState<ContestMarket[]>([]);
+  const [marketId, setMarketId] = useState("");
+  const [lockedMarket, setLockedMarket] = useState(false);
 
   useEffect(() => {
     async function verifyAdmin() {
@@ -42,6 +49,32 @@ export default function NewContestPage() {
       if (!admin) {
         window.location.href = "/account";
         return;
+      }
+
+      try {
+        const availableMarkets = await loadContestMarkets();
+        const requestedMarket =
+          new URLSearchParams(window.location.search).get("market");
+
+        setMarkets(availableMarkets);
+
+        if (requestedMarket) {
+          const selected = availableMarkets.find(
+            (market) => market.market_key === requestedMarket
+          );
+
+          if (!selected) {
+            throw new Error("Selected Market was not found.");
+          }
+
+          setMarketId(selected.id);
+          setLockedMarket(true);
+        }
+      } catch (cause) {
+        setMessage(
+          cause instanceof Error ? cause.message :
+          "Unable to load Markets."
+        );
       }
 
       setLoading(false);
@@ -71,6 +104,11 @@ export default function NewContestPage() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMessage("");
+
+    if (!marketId) {
+      setMessage("Select the Market that owns this contest.");
+      return;
+    }
 
     if (!title.trim()) {
       setMessage("Enter a contest title.");
@@ -169,6 +207,7 @@ export default function NewContestPage() {
     const { error: insertError } = await supabase
       .from("contests")
       .insert({
+        market_id: marketId,
         title: title.trim(),
         prize_text: prizeText.trim(),
         starts_at: startsAt.toISOString(),
@@ -222,6 +261,24 @@ export default function NewContestPage() {
             onSubmit={handleSubmit}
             style={{ display: "grid", gap: "16px" }}
           >
+            <label>
+              <strong>Owning Market</strong>
+              <select
+                className="field"
+                value={marketId}
+                disabled={lockedMarket}
+                onChange={(event) => setMarketId(event.target.value)}
+                required
+              >
+                <option value="">Select a Market</option>
+                {markets.map((market) => (
+                  <option key={market.id} value={market.id}>
+                    {market.display_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <label>
               <strong>Contest Title</strong>
               <input
@@ -331,8 +388,9 @@ export default function NewContestPage() {
                 <strong>Make this the active contest</strong>
                 <br />
                 <span style={{ color: "#697177" }}>
-                  Activating this contest will deactivate any other
-                  currently active contest.
+                  Until market-specific activation is enabled,
+                  activating a contest still replaces the globally
+                  active contest.
                 </span>
               </span>
             </label>
