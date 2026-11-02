@@ -146,6 +146,49 @@ drop index if exists public.contests_one_active_idx;
 -- cooldown and entry-creation implementation.
 -- ------------------------------------------------------------
 
+
+-- ------------------------------------------------------------
+-- A Shout may credit multiple eligible Market contests.
+-- One Shout record; one entry per qualifying contest.
+-- ------------------------------------------------------------
+
+do $$
+declare
+  v_constraint text;
+begin
+  select conname into v_constraint
+  from pg_constraint
+  where conrelid = 'public.contest_shout_entries'::regclass
+    and contype = 'u'
+    and conkey = array[
+      (
+        select attnum
+        from pg_attribute
+        where attrelid = 'public.contest_shout_entries'::regclass
+          and attname = 'shoutout_id'
+      )
+    ]::smallint[];
+
+  if v_constraint is null then
+    raise exception 'Expected unique shoutout constraint not found';
+  end if;
+
+  execute format(
+    'alter table public.contest_shout_entries drop constraint %I',
+    v_constraint
+  );
+end;
+$$;
+
+create unique index contest_shout_entries_shout_contest_idx
+on public.contest_shout_entries(shoutout_id, contest_id);
+
+-- Retire the legacy Voice-based RPC. The current API uses
+-- the five-argument version exclusively.
+drop function if exists public.create_contest_shoutout(
+  uuid, uuid, uuid, uuid, text, text[]
+);
+
 create or replace function public.create_contest_shoutout(
   p_contest_id uuid,
   p_phone_identity_id uuid,
@@ -162,12 +205,13 @@ declare
   v_shoutout_id uuid;
   v_recent_entry timestamptz;
   v_now timestamptz := now();
+  v_contest record;
 begin
+  -- Serialize all contest Shouts for this phone and Tender,
+  -- including submissions targeting different Markets.
   perform pg_advisory_xact_lock(
     hashtextextended(
-      p_contest_id::text || ':' ||
-      p_phone_identity_id::text || ':' ||
-      p_bartender_id::text,
+      p_phone_identity_id::text || ':' || p_bartender_id::text,
       0
     )
   );
@@ -181,25 +225,6 @@ begin
       and c.ends_at >= v_now
   ) then
     raise exception 'CONTEST_NOT_ACTIVE';
-  end if;
-
-  -- The selected contest must belong to a Market containing
-  -- at least one current Spot of the selected Tender.
-  if not exists (
-    select 1
-    from public.contests c
-    join public.event_processing_market_venues mv
-      on mv.market_id = c.market_id
-    join public.bartender_venues bv
-      on bv.venue_id = mv.venue_id
-    join public.venues v
-      on v.id = bv.venue_id
-    where c.id = p_contest_id
-      and bv.bartender_id = p_bartender_id
-      and bv.is_current = true
-      and v.status = 'active'
-  ) then
-    raise exception 'CONTEST_MARKET_MISMATCH';
   end if;
 
   if not exists (
@@ -236,6 +261,25 @@ begin
       and bv.is_current = true
   ) then
     raise exception 'TENDER_SPOT_MISMATCH';
+  end if;
+
+  -- Eligibility follows the Tender's current Spot associations,
+  -- not only the Spot selected for this Shout.
+  if not exists (
+    select 1
+    from public.contests c
+    join public.event_processing_market_venues mv
+      on mv.market_id = c.market_id
+    join public.bartender_venues bv
+      on bv.venue_id = mv.venue_id
+    join public.venues v
+      on v.id = bv.venue_id
+    where c.id = p_contest_id
+      and bv.bartender_id = p_bartender_id
+      and bv.is_current = true
+      and v.status = 'active'
+  ) then
+    raise exception 'CONTEST_MARKET_MISMATCH';
   end if;
 
   select e.created_at
@@ -287,27 +331,57 @@ begin
     raise exception 'INVALID_TRAITS';
   end if;
 
-  insert into public.contest_shout_entries (
-    contest_id,
-    phone_identity_id,
-    bartender_id,
-    shoutout_id,
-    created_at
-  )
-  values (
-    p_contest_id,
-    p_phone_identity_id,
-    p_bartender_id,
-    v_shoutout_id,
-    v_now
-  );
+  -- Credit every currently eligible active Market contest.
+  -- If another contest is in cooldown, skip only that contest.
+  for v_contest in
+    select c.id
+    from public.contests c
+    where c.is_active = true
+      and c.starts_at <= v_now
+      and c.ends_at >= v_now
+      and exists (
+        select 1
+        from public.event_processing_market_venues mv
+        join public.bartender_venues bv
+          on bv.venue_id = mv.venue_id
+        join public.venues v
+          on v.id = bv.venue_id
+        where mv.market_id = c.market_id
+          and bv.bartender_id = p_bartender_id
+          and bv.is_current = true
+          and v.status = 'active'
+      )
+    order by c.id
+  loop
+    if not exists (
+      select 1
+      from public.contest_shout_entries e
+      where e.contest_id = v_contest.id
+        and e.phone_identity_id = p_phone_identity_id
+        and e.bartender_id = p_bartender_id
+        and e.created_at > v_now - interval '7 days'
+    ) then
+      insert into public.contest_shout_entries (
+        contest_id,
+        phone_identity_id,
+        bartender_id,
+        shoutout_id,
+        created_at
+      )
+      values (
+        v_contest.id,
+        p_phone_identity_id,
+        p_bartender_id,
+        v_shoutout_id,
+        v_now
+      );
+    end if;
+  end loop;
 
   return v_shoutout_id;
 end;
 $function$;
 
--- Preserve server-side access; never expose contest
--- Shout creation directly to anonymous browsers.
 revoke all on function
   public.create_contest_shoutout(
     uuid, uuid, uuid, uuid, text[]

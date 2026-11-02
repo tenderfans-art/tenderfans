@@ -280,6 +280,20 @@ export async function POST(request: Request) {
 
       if (
         message.includes(
+          "CONTEST_MARKET_MISMATCH"
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "This Tender is not currently associated with a Spot in the selected contest Market.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (
+        message.includes(
           "TENDER_SPOT_MISMATCH"
         ) ||
         message.includes(
