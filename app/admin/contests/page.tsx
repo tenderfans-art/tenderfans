@@ -373,22 +373,20 @@ export default function AdminContestsPage() {
   async function setActive(contest: Contest) {
     setMessage("");
 
-    if (!contest.is_active) {
-      const { error: deactivateError } = await supabase
-        .from("contests")
-        .update({ is_active: false })
-        .eq("is_active", true);
-
-      if (deactivateError) {
-        setMessage(deactivateError.message);
-        return;
-      }
+    if (!contest.market_id) {
+      setMessage(
+        "Assign this contest to a Market before changing activation."
+      );
+      return;
     }
 
-    const { error } = await supabase
-      .from("contests")
-      .update({ is_active: !contest.is_active })
-      .eq("id", contest.id);
+    const { error } = await supabase.rpc(
+      "admin_set_market_contest_active",
+      {
+        p_contest_id: contest.id,
+        p_active: !contest.is_active,
+      }
+    );
 
     if (error) {
       setMessage(error.message);
