@@ -31,6 +31,15 @@ export default function MarketsPage() {
     address: string;
   } | null>(null);
   const [savingSpot, setSavingSpot] = useState(false);
+  const [bulkCsv, setBulkCsv] = useState("");
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkResults, setBulkResults] = useState<Array<{
+    line: number;
+    name: string;
+    status: string;
+    detail: string;
+  }>>([]);
+
 
   async function createMarket() {
     if (creating) return;
@@ -76,6 +85,89 @@ export default function MarketsPage() {
       );
     } finally {
       setCreating(false);
+    }
+  }
+
+  const [bulkOffset, setBulkOffset] = useState(0);
+
+  async function importBulk() {
+    if (!selectedMarket || !bulkCsv.trim() || bulkSaving) return;
+
+    setBulkSaving(true);
+    setError("");
+    setNotice("");
+
+    let offset = bulkOffset;
+
+    try {
+      const { data: { session } } =
+        await supabase.auth.getSession();
+
+      if (!session) throw new Error("Session expired.");
+
+      while (true) {
+        const response = await fetch("/api/admin/markets/bulk", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            marketId: selectedMarket,
+            csv: bulkCsv,
+            offset,
+          }),
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Bulk import failed.");
+        }
+
+        if (
+          !Array.isArray(payload.results) ||
+          !Number.isInteger(payload.nextOffset) ||
+          !Number.isInteger(payload.total) ||
+          payload.nextOffset <= offset
+        ) {
+          throw new Error("Invalid bulk import response.");
+        }
+
+        setBulkResults((current) => [
+          ...current,
+          ...payload.results,
+        ]);
+
+        offset = payload.nextOffset;
+        setBulkOffset(offset);
+
+        if (offset >= payload.total) {
+          setNotice(
+            `CSV import finished: ${payload.total} rows processed.`
+          );
+          break;
+        }
+      }
+
+      const refreshed = await fetch("/api/admin/markets", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: "no-store",
+      });
+
+      if (refreshed.ok) {
+        const data = await refreshed.json();
+        setMarkets(data.markets ?? []);
+      }
+    } catch (error) {
+      setError(
+        (error instanceof Error ? error.message : "Import failed.") +
+        ` Completed through row offset ${offset}; retry to resume.`
+      );
+    } finally {
+      setBulkSaving(false);
     }
   }
 
@@ -212,6 +304,9 @@ export default function MarketsPage() {
                   setSelectedMarket(
                     markets.length === 1 ? markets[0].id : ""
                   );
+                  setBulkCsv("");
+                  setBulkOffset(0);
+                  setBulkResults([]);
                   setBulkOpen(true);
                 }}
               >
@@ -391,7 +486,7 @@ export default function MarketsPage() {
               }}>
                 <button
                   type="button"
-                  disabled={savingSpot}
+                  disabled={savingSpot || bulkSaving}
                   onClick={() => {
                     setAddOpen(false);
                     setBulkOpen(false);
@@ -408,9 +503,11 @@ export default function MarketsPage() {
                 <select
                   id="market-assignment"
                   value={selectedMarket}
-                  onChange={(event) =>
-                    setSelectedMarket(event.target.value)
-                  }
+                  onChange={(event) => {
+                    setSelectedMarket(event.target.value);
+                    setBulkOffset(0);
+                    setBulkResults([]);
+                  }}
                   style={{
                     display: "block",
                     width: "100%",
@@ -447,11 +544,66 @@ export default function MarketsPage() {
                     )}
                   </>
                 ) : (
-                  <p>
-                    CSV name-and-address import will be connected to
-                    Google Places discovery and Admin Spot Review.
-                    No records are imported from this placeholder.
-                  </p>
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <p>
+                      Upload up to 1,000 Spots per CSV.
+                      Required columns: <code>name,address</code>.
+                      Quote addresses containing commas.
+                      Confident Google matches are automatically
+                      onboarded; discrepancies go to Spot Review.
+                    </p>
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      aria-label="Spot CSV file"
+                      disabled={bulkSaving}
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 250000) {
+                          setError("CSV must be 250 KB or smaller.");
+                          return;
+                        }
+                        setError("");
+                        setBulkCsv(await file.text());
+                        setBulkOffset(0);
+                        setBulkResults([]);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn primary"
+                      disabled={
+                        bulkSaving || !selectedMarket || !bulkCsv.trim()
+                      }
+                      onClick={importBulk}
+                    >
+                      {bulkSaving
+                        ? "Processing..."
+                        : bulkOffset > 0
+                          ? "Resume Import"
+                          : "Import CSV"}
+                    </button>
+                    {bulkResults.length > 0 && (
+                      <div style={{
+                        maxHeight: 300,
+                        overflowY: "auto",
+                        borderTop: "1px solid #ddd",
+                      }}>
+                        {bulkResults.map((item) => (
+                          <p key={item.line}>
+                            <strong>
+                              Row {item.line}: {item.name}
+                            </strong>
+                            {" — "}{item.status}
+                            <span style={{ display: "block" }}>
+                              {item.detail}
+                            </span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

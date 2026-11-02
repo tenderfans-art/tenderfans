@@ -190,46 +190,28 @@ export async function POST(request: Request) {
     }
 
     if (marketId) {
-      const { data: existing, error: existingError } =
-        await adminSupabase
-          .from("event_processing_market_venues")
-          .select("market_id")
-          .eq("venue_id", venueId)
-          .maybeSingle();
+      const { error: assignmentError } = await adminSupabase.rpc(
+        "assign_spot_to_market",
+        {
+          p_venue_id: venueId,
+          p_market_id: marketId,
+        }
+      );
 
-      if (existingError) {
-        return NextResponse.json(
-          { error: "Could not check Spot market assignment.", venueId },
-          { status: 500 }
+      if (assignmentError) {
+        const conflict = assignmentError.message.includes(
+          "already belongs to another market"
         );
-      }
 
-      if (existing && existing.market_id !== marketId) {
         return NextResponse.json(
           {
-            error: "This Spot already belongs to another market.",
+            error: conflict
+              ? "This Spot already belongs to another market."
+              : "Could not assign Spot to market.",
             venueId,
           },
-          { status: 409 }
+          { status: conflict ? 409 : 500 }
         );
-      }
-
-      if (!existing) {
-        const { error: assignmentError } = await adminSupabase
-          .from("event_processing_market_venues")
-          .insert({ venue_id: venueId, market_id: marketId });
-
-        if (assignmentError) {
-          return NextResponse.json(
-            {
-              error: assignmentError.code === "23505"
-                ? "Spot market assignment changed concurrently. Refresh and retry."
-                : "Could not assign Spot to market.",
-              venueId,
-            },
-            { status: 409 }
-          );
-        }
       }
     }
 
