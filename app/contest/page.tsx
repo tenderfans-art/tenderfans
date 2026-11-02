@@ -44,10 +44,24 @@ export default function ContestPage() {
   const [contestUrl, setContestUrl] = useState("");
 
   useEffect(() => {
-    setContestUrl(`${window.location.origin}/contest`);
+    const requestedContestId =
+      new URLSearchParams(window.location.search).get("contest");
 
     async function loadContest() {
       const now = new Date().toISOString();
+
+      let contestQuery = supabase
+        .from("contests")
+        .select(
+          "id, title, prize_text, starts_at, ends_at, flyer_url, rules_text"
+        )
+        .eq("is_active", true)
+        .lte("starts_at", now)
+        .gte("ends_at", now);
+
+      if (requestedContestId) {
+        contestQuery = contestQuery.eq("id", requestedContestId);
+      }
 
       const [
         contestResult,
@@ -55,15 +69,7 @@ export default function ContestPage() {
         venueResult,
         leaderboardResult,
       ] = await Promise.all([
-        supabase
-          .from("contests")
-          .select(
-            "id, title, prize_text, starts_at, ends_at, flyer_url, rules_text"
-          )
-          .eq("is_active", true)
-          .lte("starts_at", now)
-          .gte("ends_at", now)
-          .maybeSingle(),
+        contestQuery.limit(2),
 
         supabase
           .from("bartenders")
@@ -113,10 +119,21 @@ export default function ContestPage() {
         );
       }
 
+      const matchingContests =
+        (contestResult.data ?? []) as Contest[];
+
+      // An unscoped URL must never select an arbitrary Market.
       const activeContest =
-        contestResult.data as Contest | null;
+        matchingContests.length === 1
+          ? matchingContests[0]
+          : null;
 
       setContest(activeContest);
+      setContestUrl(
+        activeContest
+          ? `${window.location.origin}/contest?contest=${encodeURIComponent(activeContest.id)}`
+          : ""
+      );
 
       if (!activeContest) {
         setLeaders([]);
@@ -290,7 +307,7 @@ export default function ContestPage() {
         )}
 
         <Link
-          href="/shout"
+          href={`/shout?contest=${encodeURIComponent(contest.id)}`}
           className="contest-shout-hotspot"
           aria-label="Find your Tender and give them a Shout"
           title="Find your Tender and give them a Shout"

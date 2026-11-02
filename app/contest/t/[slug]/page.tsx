@@ -4,23 +4,30 @@ import { supabase } from "@/lib/supabase";
 
 export default async function ContestTenderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ contest?: string }>;
 }) {
   const { slug } = await params;
-
+  const { contest: contestId } = await searchParams;
   const now = new Date().toISOString();
 
-  const { data: activeContest } = await supabase
+  let contestQuery = supabase
     .from("contests")
     .select("id")
     .eq("is_active", true)
     .lte("starts_at", now)
-    .gte("ends_at", now)
-    .maybeSingle();
+    .gte("ends_at", now);
 
-  if (!activeContest) {
-    redirect(`/t/${slug}`);
+  if (contestId) {
+    contestQuery = contestQuery.eq("id", contestId);
+  }
+
+  const { data, error } = await contestQuery.limit(2);
+
+  if (error || !data || data.length !== 1) {
+    redirect(`/t/${encodeURIComponent(slug)}`);
   }
 
   return (
@@ -29,6 +36,7 @@ export default async function ContestTenderPage({
         <ShoutFlow
           initialTenderSlug={slug}
           contestMode
+          contestId={data[0].id}
         />
       </div>
     </section>
