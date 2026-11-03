@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type Finding = {
@@ -33,14 +33,23 @@ type Overview = {
   markets: Market[];
 };
 
+const columns =
+  "1.1fr 1.4fr 1.1fr 2.6fr 1fr 0.8fr";
+
+const cellStyle = {
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap" as const,
+};
+
 export default function GlobalAdapterErrors() {
-  const [overview, setOverview] = useState<Overview | null>(
-    null
-  );
+  const [overview, setOverview] =
+    useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -83,41 +92,39 @@ export default function GlobalAdapterErrors() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
+
+  const rows = overview
+    ? overview.markets.flatMap((market) =>
+        market.findings.map((finding) => ({
+          ...finding,
+          marketKey: market.market_key,
+          marketName: market.display_name,
+        }))
+      )
+    : [];
 
   return (
-    <section
-      style={{
-        border: "1px solid #d7d2c7",
-        borderRadius: 18,
-        padding: 22,
-        background: "#fff",
-        marginTop: 22,
-      }}
-    >
+    <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: 16,
           flexWrap: "wrap",
+          gap: 12,
+          marginBottom: 18,
         }}
       >
-        <div>
-          <h2 style={{ margin: 0 }}>
-            Global Adapter Errors
-          </h2>
-
-          <p style={{ marginBottom: 0, opacity: 0.7 }}>
-            Active Tier One Adapter Errors across every Market.
-            Facebook errors are tracked separately in HM.
-          </p>
-        </div>
+        <strong>
+          {overview
+            ? `${overview.totals.affectedSpots} affected Spots · ${overview.totals.failures} active Tier One failures`
+            : "Tier One overview"}
+        </strong>
 
         <button
           type="button"
@@ -125,9 +132,11 @@ export default function GlobalAdapterErrors() {
           disabled={loading}
           onClick={() => void load()}
         >
-          {loading ? "Loading..." : "Refresh"}
+          Refresh
         </button>
       </div>
+
+      {loading && <p>Loading Adapter Errors...</p>}
 
       {error && (
         <p role="alert" style={{ color: "crimson" }}>
@@ -135,206 +144,104 @@ export default function GlobalAdapterErrors() {
         </p>
       )}
 
-      {loading && <p>Loading Tier One errors...</p>}
-
       {overview && (
         <>
-          <p
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              marginTop: 22,
-            }}
-          >
-            {overview.totals.affectedSpots} affected Spots
-            {" · "}
-            {overview.totals.failures} active Tier One failures
-          </p>
-
           {overview.totals.missingMarketFailures > 0 && (
-            <p
-              role="alert"
-              style={{
-                padding: 14,
-                border: "1px solid #d5aa91",
-                borderRadius: 10,
-              }}
-            >
+            <p role="alert">
               {overview.totals.missingMarketFailures}
-              {" "}Tier One failures across{" "}
-              {overview.totals.missingMarketSpots}
-              {" "}Spots have no Market membership.
-              This is an ownership inconsistency requiring
-              investigation, not a separate review queue.
+              {" "}Tier One failures require Market attribution.
             </p>
           )}
 
           <div
             style={{
-              display: "grid",
-              gap: 14,
-              marginTop: 20,
+              border: "1px solid #ddd7cc",
+              borderRadius: 12,
+              overflowX: "auto",
             }}
           >
-            {overview.markets.map((market) => (
-              <article
-                key={market.id}
+            <div style={{ minWidth: 1080 }}>
+              <div
                 style={{
-                  border: "1px solid #ddd7cc",
-                  borderRadius: 14,
-                  padding: 18,
-                  background: "#faf9f5",
+                  display: "grid",
+                  gridTemplateColumns: columns,
+                  gap: 14,
+                  padding: "12px 16px",
+                  background: "#f5f3ec",
+                  fontSize: 12,
+                  fontWeight: 800,
                 }}
               >
+                <span>Market</span>
+                <span>Spot</span>
+                <span>Adapter</span>
+                <span>Error</span>
+                <span>Last Seen</span>
+                <span>Review</span>
+              </div>
+
+              {rows.map((finding) => (
                 <div
+                  key={finding.id}
                   style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 12,
-                  }}
-                >
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: 20,
-                    }}
-                  >
-                    {market.display_name}
-                  </h3>
-
-                  <strong>
-                    {market.affectedSpots} affected Spots
-                  </strong>
-                </div>
-
-                <p
-                  style={{
-                    margin: "10px 0 14px",
-                    opacity: 0.75,
-                  }}
-                >
-                  {market.failures} active Tier One failures
-                </p>
-
-                {market.findings.length === 0 ? (
-                  <p>No active Tier One Adapter Errors.</p>
-                ) : (
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 8,
-                      marginBottom: 16,
-                    }}
-                  >
-                    {market.findings.map((finding) => (
-                      <details
-                        key={finding.id}
-                        style={{
-                          border:
-                            "1px solid rgba(20,35,45,.12)",
-                          borderRadius: 10,
-                          background: "#fff",
-                        }}
-                      >
-                        <summary
-                          style={{
-                            padding: "10px 14px",
-                            cursor: "pointer",
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          <strong>
-                            {finding.venue_name}
-                          </strong>
-                          {" · "}
-                          {finding.source_type ?? "Unspecified"}
-                          {" · "}
-                          <span style={{ opacity: 0.75 }}>
-                            {finding.error ??
-                              "Evaluation interrupted"}
-                          </span>
-                        </summary>
-
-                        <div
-                          style={{
-                            padding: "4px 14px 14px",
-                            borderTop:
-                              "1px solid rgba(20,35,45,.1)",
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          <p>
-                            <strong>Adapter:</strong>{" "}
-                            {finding.source_type ??
-                              "Unspecified"}
-                          </p>
-
-                          <p>
-                            <strong>Error:</strong>{" "}
-                            {finding.error ??
-                              "Evaluation interrupted"}
-                          </p>
-
-                          <p>
-                            <strong>Last seen:</strong>{" "}
-                            {new Date(
-                              finding.last_seen_at
-                            ).toLocaleString()}
-                          </p>
-
-                          {finding.source_url &&
-                            /^https?:\/\//i.test(
-                              finding.source_url
-                            ) && (
-                              <a
-                                href={finding.source_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                Open source URL
-                              </a>
-                            )}
-                        </div>
-                      </details>
-                    ))}
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
+                    display: "grid",
+                    gridTemplateColumns: columns,
+                    gap: 14,
+                    padding: "11px 16px",
                     alignItems: "center",
-                    gap: 12,
+                    borderTop: "1px solid #e5e0d7",
+                    background: "#fff",
+                    fontSize: 13,
                   }}
                 >
+                  <span style={cellStyle}>
+                    {finding.marketName}
+                  </span>
+
+                  <strong style={cellStyle}>
+                    {finding.venue_name}
+                  </strong>
+
+                  <span style={cellStyle}>
+                    {finding.source_type ?? "Unspecified"}
+                  </span>
+
+                  <span
+                    style={cellStyle}
+                    title={
+                      finding.error ?? "Evaluation interrupted"
+                    }
+                  >
+                    {finding.error ??
+                      "Evaluation interrupted"}
+                  </span>
+
+                  <span style={cellStyle}>
+                    {new Date(
+                      finding.last_seen_at
+                    ).toLocaleDateString()}
+                  </span>
+
                   <Link
-                    className="btn outline"
                     href={
                       "/admin/harvester/adapter-errors?market=" +
-                      encodeURIComponent(market.market_key)
+                      encodeURIComponent(finding.marketKey)
                     }
                   >
-                    Market Adapter Errors
-                  </Link>
-
-                  <Link
-                    className="text-link"
-                    href={
-                      "/admin/markets/" +
-                      encodeURIComponent(market.market_key)
-                    }
-                  >
-                    Market Dashboard
+                    Market HM
                   </Link>
                 </div>
-              </article>
-            ))}
+              ))}
+
+              {rows.length === 0 && (
+                <p style={{ padding: 16 }}>
+                  No active Tier One Adapter Errors.
+                </p>
+              )}
+            </div>
           </div>
         </>
       )}
-    </section>
+    </>
   );
 }
