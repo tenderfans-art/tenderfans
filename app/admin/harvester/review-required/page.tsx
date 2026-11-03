@@ -18,7 +18,22 @@ const tools = [
   },
 ];
 
-export default function ReviewRequiredPage() {
+export default async function ReviewRequiredPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ market?: string }>;
+}) {
+  const params = await searchParams;
+  const marketKey =
+    typeof params.market === "string" &&
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(params.market)
+      ? params.market
+      : "";
+
+  const scopedHref = (href: string) =>
+    marketKey
+      ? `${href}${href.includes("?") ? "&" : "?"}market=${encodeURIComponent(marketKey)}`
+      : href;
   return (
     <main
       style={{
@@ -27,7 +42,7 @@ export default function ReviewRequiredPage() {
         padding: "24px 36px 60px",
       }}
     >
-      <Link href="/admin/harvester" style={{ color: "inherit" }}>
+      <Link href={scopedHref("/admin/harvester")} style={{ color: "inherit" }}>
         ← Harvester Management
       </Link>
 
@@ -60,7 +75,7 @@ export default function ReviewRequiredPage() {
         {tools.map((tool) => (
           <Link
             key={tool.title}
-            href={tool.href}
+            href={scopedHref(tool.href)}
             style={{
               display: "block",
               padding: "22px",

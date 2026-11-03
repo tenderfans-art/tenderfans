@@ -5,9 +5,13 @@ import { supabase } from "@/lib/supabase";
 
 type Props = {
   rpc: string;
+  marketVenueIds?: string[];
 };
 
-export default function BucketCount({ rpc }: Props) {
+export default function BucketCount({
+  rpc,
+  marketVenueIds,
+}: Props) {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -17,10 +21,17 @@ export default function BucketCount({ rpc }: Props) {
       const { data, error } = await supabase.rpc(rpc as never);
 
       if (active) {
+        const allowed = marketVenueIds
+          ? new Set(marketVenueIds)
+          : null;
+
         setCount(error ? null : Array.isArray(data)
           ? new Set(
-              data.map((row: { venue_id: string }) => row.venue_id)
-                .filter(Boolean)
+              data
+                .map((row: { venue_id: string }) => row.venue_id)
+                .filter((id: string) =>
+                  Boolean(id) && (!allowed || allowed.has(id))
+                )
             ).size
           : null);
       }
@@ -33,7 +44,7 @@ export default function BucketCount({ rpc }: Props) {
       active = false;
       clearInterval(timer);
     };
-  }, [rpc]);
+  }, [rpc, marketVenueIds]);
 
   return (
     <span
