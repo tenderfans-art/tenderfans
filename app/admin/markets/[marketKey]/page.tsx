@@ -197,6 +197,20 @@ export default function MarketDashboard() {
                       >
                         Harvester Management
                       </Link>
+                    ) : title === "Manage Spots" ? (
+                      <Link
+                        className="btn outline"
+                        href={`/admin/spots?market=${encodeURIComponent(market.market_key)}`}
+                      >
+                        Manage Spots
+                      </Link>
+                    ) : title === "Manage Tenders" ? (
+                      <Link
+                        className="btn outline"
+                        href={`/admin/tenders?market=${encodeURIComponent(market.market_key)}`}
+                      >
+                        Manage Tenders
+                      </Link>
                     ) : title === "Contests" ? (
                       <Link
                         className="btn outline"

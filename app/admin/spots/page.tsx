@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import GooglePlacePicker from "@/components/GooglePlacePicker";
 import { supabase } from "@/lib/supabase";
+import {
+  loadMarketDirectory,
+  performMarketDirectoryAction,
+  type MarketDirectoryInfo,
+} from "@/lib/admin-market-directory";
 
 type GooglePlace = {
   id: string;
@@ -33,6 +38,10 @@ type Spot = {
 };
 
 export default function AdminSpotsPage() {
+  const [marketKey, setMarketKey] = useState("");
+  const [market, setMarket] =
+    useState<MarketDirectoryInfo | null>(null);
+  const [displayLimit, setDisplayLimit] = useState(100);
   const [loading, setLoading] = useState(true);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [search, setSearch] = useState("");
@@ -44,7 +53,23 @@ export default function AdminSpotsPage() {
   const [saving, setSaving] = useState(false);
   const [addMessage, setAddMessage] = useState("");
 
-  async function loadSpots() {
+  async function loadSpots(key = marketKey) {
+    if (key) {
+      try {
+        const payload = await loadMarketDirectory(key, "spots");
+        setMarket(payload.market);
+        setSpots((payload.spots ?? []) as Spot[]);
+        setListMessage("");
+      } catch (error) {
+        setMarket(null);
+        setSpots([]);
+        setListMessage(
+          error instanceof Error ? error.message : "Could not load Market."
+        );
+      }
+      return;
+    }
+
     const { data, error } = await supabase.rpc("admin_list_spots");
 
     if (error) {
@@ -57,6 +82,11 @@ export default function AdminSpotsPage() {
 
   useEffect(() => {
     async function initialize() {
+      const key =
+        new URLSearchParams(window.location.search)
+          .get("market") ?? "";
+      setMarketKey(key);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -77,7 +107,7 @@ export default function AdminSpotsPage() {
         return;
       }
 
-      await loadSpots();
+      await loadSpots(key);
       setLoading(false);
     }
 
@@ -106,8 +136,11 @@ export default function AdminSpotsPage() {
         })
       : spots;
 
-    return matches.slice(0, 5);
-  }, [spots, search]);
+    return matches.slice(
+      0,
+      marketKey ? displayLimit : 5
+    );
+  }, [spots, search, marketKey, displayLimit]);
 
   async function addSpot() {
     if (!selectedPlace || saving) return;
@@ -116,13 +149,27 @@ export default function AdminSpotsPage() {
     setAddMessage("");
 
     try {
+      const session = marketKey
+        ? (await supabase.auth.getSession()).data.session
+        : null;
+
+      if (marketKey && (!market || !session?.access_token)) {
+        throw new Error("Market Admin session unavailable.");
+      }
+
       const response = await fetch("/api/google/place", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(marketKey && session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
         },
         body: JSON.stringify({
           placeId: selectedPlace.id,
+          ...(marketKey && market
+            ? { marketId: market.id }
+            : {}),
         }),
       });
 
@@ -161,12 +208,23 @@ export default function AdminSpotsPage() {
 
     setListMessage("");
 
-    const { error } = await supabase.rpc("admin_remove_spot", {
-      p_venue_id: spot.id,
-    });
+    try {
+      if (marketKey) {
+        await performMarketDirectoryAction(marketKey, {
+          action: "remove-spot",
+          venueId: spot.id,
+        });
+      } else {
+        const { error } = await supabase.rpc("admin_remove_spot", {
+          p_venue_id: spot.id,
+        });
 
-    if (error) {
-      setListMessage(error.message);
+        if (error) throw new Error(error.message);
+      }
+    } catch (error) {
+      setListMessage(
+        error instanceof Error ? error.message : "Could not remove Spot."
+      );
       return;
     }
 
@@ -212,7 +270,19 @@ export default function AdminSpotsPage() {
             margin: "0 auto",
           }}
         >
-          <div className="eyebrow">TENDERFANS ADMIN</div>
+          {marketKey && (
+            <Link
+              href={`/admin/markets/${encodeURIComponent(marketKey)}`}
+              className="text-link"
+            >
+              ← Market Dashboard
+            </Link>
+          )}
+
+          <div className="eyebrow" style={{ marginTop: 18 }}>
+            {market ? `TENDERFANS MARKET · ${market.display_name}`
+              : "TENDERFANS ADMIN"}
+          </div>
 
           <div
             style={{
@@ -233,6 +303,13 @@ export default function AdminSpotsPage() {
               + Add Spot
             </button>
           </div>
+
+          {market && (
+            <p>
+              <strong>{spots.length}</strong> assigned Spots
+              {" · "}Showing {visibleSpots.length}
+            </p>
+          )}
 
           <input
             type="search"
@@ -386,8 +463,26 @@ export default function AdminSpotsPage() {
             </div>
           )}
 
+          {marketKey &&
+            visibleSpots.length >= displayLimit &&
+            displayLimit < spots.length && (
+              <button
+                type="button"
+                className="btn outline"
+                onClick={() => setDisplayLimit(current => current + 100)}
+                style={{ marginTop: 20 }}
+              >
+                Show more Spots
+              </button>
+            )}
+
           <div style={{ marginTop: "30px" }}>
-            <Link href="/admin" className="text-link">
+            <Link
+              href={marketKey
+                ? `/admin/markets/${encodeURIComponent(marketKey)}`
+                : "/admin"}
+              className="text-link"
+            >
               ← Back to Admin Dashboard
             </Link>
           </div>

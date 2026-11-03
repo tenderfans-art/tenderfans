@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  loadMarketDirectory,
+  performMarketDirectoryAction,
+  type MarketDirectoryInfo,
+} from "@/lib/admin-market-directory";
 
 type Tender = {
   id: string;
@@ -20,9 +25,14 @@ type Spot = {
   name: string;
   city: string;
   state_region: string;
+  status?: string;
 };
 
 export default function AdminTendersPage() {
+  const [marketKey, setMarketKey] = useState("");
+  const [market, setMarket] =
+    useState<MarketDirectoryInfo | null>(null);
+  const [displayLimit, setDisplayLimit] = useState(100);
   const [loading, setLoading] = useState(true);
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [search, setSearch] = useState("");
@@ -38,6 +48,11 @@ export default function AdminTendersPage() {
 
   useEffect(() => {
     async function initialize() {
+      const key =
+        new URLSearchParams(window.location.search)
+          .get("market") ?? "";
+      setMarketKey(key);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -58,14 +73,29 @@ export default function AdminTendersPage() {
         return;
       }
 
-      await Promise.all([loadTenders(), loadSpots()]);
+      await Promise.all([loadTenders(key), loadSpots(key)]);
       setLoading(false);
     }
 
     initialize();
   }, []);
 
-  async function loadTenders() {
+  async function loadTenders(key = marketKey) {
+    if (key) {
+      try {
+        const payload = await loadMarketDirectory(key, "tenders");
+        setMarket(payload.market);
+        setTenders((payload.tenders ?? []) as Tender[]);
+        setMessage("");
+      } catch (error) {
+        setTenders([]);
+        setMessage(
+          error instanceof Error ? error.message : "Could not load Tenders."
+        );
+      }
+      return;
+    }
+
     const { data, error } = await supabase.rpc("admin_list_tenders");
 
     if (error) {
@@ -76,7 +106,23 @@ export default function AdminTendersPage() {
     setTenders((data as Tender[]) || []);
   }
 
-  async function loadSpots() {
+  async function loadSpots(key = marketKey) {
+    if (key) {
+      try {
+        const payload = await loadMarketDirectory(key, "spots");
+        setSpots(
+          ((payload.spots ?? []) as Spot[] & { status: string }[])
+            .filter(spot => spot.status === "active")
+        );
+      } catch (error) {
+        setSpots([]);
+        setAddMessage(
+          error instanceof Error ? error.message : "Could not load Spots."
+        );
+      }
+      return;
+    }
+
     const { data, error } = await supabase
       .from("venues")
       .select("id, name, city, state_region")
@@ -103,8 +149,11 @@ export default function AdminTendersPage() {
         })
       : tenders;
 
-    return filtered.slice(0, 5);
-  }, [tenders, search]);
+    return filtered.slice(
+      0,
+      marketKey ? displayLimit : 5
+    );
+  }, [tenders, search, marketKey, displayLimit]);
 
   const visibleSpots = useMemo(() => {
     const term = spotSearch.trim().toLowerCase();
@@ -132,12 +181,24 @@ export default function AdminTendersPage() {
 
     setMessage("");
 
-    const { error } = await supabase.rpc("admin_remove_tender", {
-      p_bartender_id: tender.id,
-    });
+    try {
+      if (marketKey) {
+        await performMarketDirectoryAction(marketKey, {
+          action: "remove-tender",
+          tenderId: tender.id,
+        });
+      } else {
+        const { error } = await supabase.rpc(
+          "admin_remove_tender",
+          { p_bartender_id: tender.id }
+        );
 
-    if (error) {
-      setMessage(error.message);
+        if (error) throw new Error(error.message);
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Could not remove Tender."
+      );
       return;
     }
 
@@ -166,27 +227,38 @@ export default function AdminTendersPage() {
     setSaving(true);
     setAddMessage("");
 
-    const { error } = await supabase.rpc(
-      "create_bartender_at_venue",
-      {
-        p_display_name: name,
-        p_venue_id: selectedSpot.id,
+    try {
+      if (marketKey) {
+        await performMarketDirectoryAction(marketKey, {
+          action: "add-tender",
+          name,
+          venueId: selectedSpot.id,
+        });
+      } else {
+        const { error } = await supabase.rpc(
+          "create_bartender_at_venue",
+          {
+            p_display_name: name,
+            p_venue_id: selectedSpot.id,
+          }
+        );
+
+        if (error) throw new Error(error.message);
       }
-    );
 
-    if (error) {
-      setAddMessage(error.message);
+      await loadTenders();
+
+      setTenderName("");
+      setSpotSearch("");
+      setSelectedSpot(null);
+      setAddOpen(false);
+    } catch (error) {
+      setAddMessage(
+        error instanceof Error ? error.message : "Could not add Tender."
+      );
+    } finally {
       setSaving(false);
-      return;
     }
-
-    await loadTenders();
-
-    setTenderName("");
-    setSpotSearch("");
-    setSelectedSpot(null);
-    setSaving(false);
-    setAddOpen(false);
   }
 
   function closeAddModal() {
@@ -219,7 +291,9 @@ export default function AdminTendersPage() {
           style={{ maxWidth: "1200px", margin: "0 auto" }}
         >
           <Link
-            href="/admin"
+            href={marketKey
+              ? `/admin/markets/${encodeURIComponent(marketKey)}`
+              : "/admin"}
             style={{
               display: "inline-block",
               marginBottom: "22px",
@@ -229,7 +303,11 @@ export default function AdminTendersPage() {
             ← Admin Dashboard
           </Link>
 
-          <div className="eyebrow">TENDERFANS ADMIN</div>
+          <div className="eyebrow">
+            {market
+              ? `TENDERFANS MARKET · ${market.display_name}`
+              : "TENDERFANS ADMIN"}
+          </div>
 
           <div
             style={{
@@ -263,8 +341,17 @@ export default function AdminTendersPage() {
             className="lead-copy"
             style={{ marginTop: 0, marginBottom: "24px" }}
           >
-            Search and manage Tender profiles across TenderFans.
+            {market
+              ? `Tenders currently associated with Spots in ${market.display_name}.`
+              : "Search and manage Tender profiles across TenderFans."}
           </p>
+
+          {market && (
+            <p>
+              <strong>{tenders.length}</strong> associated Tenders
+              {" · "}Showing {visibleTenders.length}
+            </p>
+          )}
 
           <input
             type="search"
@@ -298,7 +385,7 @@ export default function AdminTendersPage() {
           <div className="admin-tender-list">
             <div className="admin-tender-head">
               <span>Tender</span>
-              <span>Current Spot</span>
+              <span>{market ? "Current Market Spot(s)" : "Current Spot"}</span>
               <span>Type</span>
               <span>Status</span>
               <span style={{ textAlign: "center" }}>Action</span>
@@ -355,6 +442,19 @@ export default function AdminTendersPage() {
               </div>
             )}
           </div>
+
+          {marketKey &&
+            visibleTenders.length >= displayLimit &&
+            displayLimit < tenders.length && (
+              <button
+                type="button"
+                className="btn outline"
+                onClick={() => setDisplayLimit(current => current + 100)}
+                style={{ marginTop: 20 }}
+              >
+                Show more Tenders
+              </button>
+            )}
         </section>
       </div>
       {addOpen && (
