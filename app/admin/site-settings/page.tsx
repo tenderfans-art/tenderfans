@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import GlobalAdapterErrors from "./GlobalAdapterErrors";
 
 type MarketReview = {
   id: string;
@@ -320,6 +321,8 @@ export default function SiteSettingsPage() {
               </>
             )}
           </div>
+
+          <GlobalAdapterErrors />
 
           <div
             style={{
