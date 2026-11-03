@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteSettingsSpotReviewAlert from "./SiteSettingsSpotReviewAlert";
 
 const tools = [
   {
@@ -9,9 +10,9 @@ const tools = [
   },
   {
     title: "Site Settings",
-    description: "Global platform configuration, including Site Banners.",
-    href: null,
-    status: "COMING SOON",
+    description: "Global Spot Review, Site Banners and platform controls.",
+    href: "/admin/site-settings",
+    status: "OPEN",
   },
 ];
 
@@ -90,6 +91,9 @@ export default function AdminPage() {
                   >
                     {tool.description}
                   </p>
+                  {tool.title === "Site Settings" && (
+                    <SiteSettingsSpotReviewAlert />
+                  )}
                 </>
               );
 

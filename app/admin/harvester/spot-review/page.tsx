@@ -3,7 +3,7 @@
 import { useHarvesterBackHref } from "@/lib/harvester-market-rpc";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import HttpRedirectPanel from "./HttpRedirectPanel";
 import GoogleSpotsPanel from "./GoogleSpotsPanel";
 
@@ -17,6 +17,14 @@ const tabs: { id: Tab; label: string }[] = [
 export default function SpotReviewPage() {
   const hmBackHref = useHarvesterBackHref();
   const [activeTab, setActiveTab] = useState<Tab>("redirect");
+
+  useEffect(() => {
+    const selected =
+      new URLSearchParams(window.location.search).get("tab");
+    if (selected === "google" || selected === "redirect") {
+      setActiveTab(selected);
+    }
+  }, []);
 
   return (
     <main className="flow-page">
