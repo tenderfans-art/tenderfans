@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +23,7 @@ type Spot = {
 };
 
 export default function CalendarImagesPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [rows, setRows] = useState<Finding[]>([]);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<Record<string, string>>({});
@@ -32,8 +35,8 @@ export default function CalendarImagesPage() {
 
   const load = useCallback(async () => {
     const [findingsResult, spotsResult] = await Promise.all([
-      supabase.rpc("admin_event_harvest_calendar_image_findings"),
-      supabase.rpc("admin_list_spots"),
+      scopedHarvesterRpc("admin_event_harvest_calendar_image_findings"),
+      scopedHarvesterRpc("admin_list_spots"),
     ]);
 
     if (findingsResult.error || spotsResult.error) {
@@ -92,7 +95,7 @@ export default function CalendarImagesPage() {
     setError(null);
     setMessage("");
 
-    const { error: reviewError } = await supabase.rpc(
+    const { error: reviewError } = await scopedHarvesterRpc(
       "admin_review_calendar_image_source",
       {
         p_finding_id: finding.id,
@@ -123,7 +126,7 @@ export default function CalendarImagesPage() {
           style={{ maxWidth: 1200, margin: "0 auto" }}
         >
           <Link
-            href="/admin/harvester"
+            href={hmBackHref}
             style={{
               display: "inline-block",
               marginBottom: 22,

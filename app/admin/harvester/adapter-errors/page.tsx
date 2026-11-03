@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -66,6 +68,7 @@ function adapterAbbreviation(sourceType: string): string {
 }
 
 export default function AdapterErrorsPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [findings, setFindings] = useState<Finding[]>([]);
   const [tierOneSources, setTierOneSources] = useState<TierOneSource[]>([]);
   const [facebookSourceFilter, setFacebookSourceFilter] =
@@ -88,7 +91,7 @@ export default function AdapterErrorsPage() {
     setError(null);
 
     try {
-      const result = await supabase.rpc(
+      const result = await scopedHarvesterRpc(
         "admin_resolve_event_harvest_adapter_error",
         { p_finding_id: finding.id }
       );
@@ -122,8 +125,8 @@ export default function AdapterErrorsPage() {
 
     async function load() {
       const [result, sourcesResult] = await Promise.all([
-        supabase.rpc("admin_event_harvest_adapter_error_findings"),
-        supabase.rpc("admin_event_harvest_adapter_error_tier_one_sources"),
+        scopedHarvesterRpc("admin_event_harvest_adapter_error_findings"),
+        scopedHarvesterRpc("admin_event_harvest_adapter_error_tier_one_sources"),
       ]);
 
       if (!active) return;
@@ -226,7 +229,7 @@ export default function AdapterErrorsPage() {
           className="flow-card"
           style={{ maxWidth: 1200, margin: "0 auto" }}
         >
-          <Link href="/admin/harvester">
+          <Link href={hmBackHref}>
             ← Harvester Management
           </Link>
 

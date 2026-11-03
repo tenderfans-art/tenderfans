@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc } from "@/lib/harvester-market-rpc";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -18,7 +20,7 @@ export default function BucketCount({
     let active = true;
 
     async function refresh() {
-      const { data, error } = await supabase.rpc(rpc as never);
+      const { data, error } = await scopedHarvesterRpc(rpc as never);
 
       if (active) {
         const allowed = marketVenueIds

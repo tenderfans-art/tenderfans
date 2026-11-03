@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -129,6 +131,7 @@ function evidenceLabel(evidence: Record<string, unknown> | null, key: string) {
 }
 
 export default function AdminVenueMatchesPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [unresolved, setUnresolved] = useState<UnresolvedVenue[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<
     CalendarEventVerification[]
@@ -153,10 +156,10 @@ export default function AdminVenueMatchesPage() {
       occurrenceResult,
       spotsResult,
     ] = await Promise.all([
-      supabase.rpc("admin_pending_event_harvest_unresolved_venues"),
-      supabase.rpc("admin_list_calendar_event_verifications"),
-      supabase.rpc("admin_list_event_occurrence_reviews"),
-      supabase.rpc("admin_list_spots"),
+      scopedHarvesterRpc("admin_pending_event_harvest_unresolved_venues"),
+      scopedHarvesterRpc("admin_list_calendar_event_verifications"),
+      scopedHarvesterRpc("admin_list_event_occurrence_reviews"),
+      scopedHarvesterRpc("admin_list_spots"),
     ]);
 
     const errors = [
@@ -250,7 +253,7 @@ export default function AdminVenueMatchesPage() {
     setReviewingId(id);
     setMessage("");
 
-    const { error } = await supabase.rpc(
+    const { error } = await scopedHarvesterRpc(
       "admin_review_event_harvest_unresolved_venue",
       {
         p_unresolved_id: id,
@@ -288,7 +291,7 @@ export default function AdminVenueMatchesPage() {
     setReviewingId(id);
     setMessage("");
 
-    const { error } = await supabase.rpc(
+    const { error } = await scopedHarvesterRpc(
       "admin_review_calendar_event_verification",
       {
         p_candidate_id: id,
@@ -320,7 +323,7 @@ export default function AdminVenueMatchesPage() {
     setReviewingId(id);
     setMessage("");
 
-    const { error } = await supabase.rpc(
+    const { error } = await scopedHarvesterRpc(
       "admin_review_event_occurrence",
       {
         p_candidate_id: id,
@@ -413,7 +416,7 @@ export default function AdminVenueMatchesPage() {
           }}
         >
           <Link
-            href="/admin/harvester"
+            href={hmBackHref}
             style={{
               display: "inline-block",
               marginBottom: "22px",

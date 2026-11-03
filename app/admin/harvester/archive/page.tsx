@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import {
   useCallback,
@@ -39,6 +41,7 @@ function dateLabel(value: string | null) {
 }
 
 export default function HarvesterArchivePage() {
+  const hmBackHref = useHarvesterBackHref();
   const [rows, setRows] = useState<ArchivedSpot[]>([]);
   const [citySearch, setCitySearch] = useState("");
   const [spotSearch, setSpotSearch] = useState("");
@@ -52,7 +55,7 @@ export default function HarvesterArchivePage() {
     let active = true;
 
     async function load() {
-      const { data, error: rpcError } = await supabase.rpc(
+      const { data, error: rpcError } = await scopedHarvesterRpc(
         "admin_list_harvest_archive"
       );
 
@@ -158,7 +161,7 @@ export default function HarvesterArchivePage() {
     setBusyId(spot.venue_id);
     setError("");
 
-    const { error: rpcError } = await supabase.rpc(
+    const { error: rpcError } = await scopedHarvesterRpc(
       "admin_restore_harvest_spot",
       { p_venue_id: spot.venue_id }
     );
@@ -187,7 +190,7 @@ export default function HarvesterArchivePage() {
             margin: "0 auto",
           }}
         >
-          <Link href="/admin/harvester">
+          <Link href={hmBackHref}>
             ← Harvester Management
           </Link>
 

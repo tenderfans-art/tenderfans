@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +20,7 @@ type Finding = {
 };
 
 export default function TransportErrorsPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [rows, setRows] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +30,7 @@ export default function TransportErrorsPage() {
     let active = true;
 
     async function load() {
-      const { data, error: rpcError } = await supabase.rpc(
+      const { data, error: rpcError } = await scopedHarvesterRpc(
         "admin_event_harvest_transport_findings",
       );
 
@@ -60,7 +63,7 @@ export default function TransportErrorsPage() {
           }}
         >
           <Link
-            href="/admin/harvester"
+            href={hmBackHref}
             style={{
               display: "inline-block",
               marginBottom: "22px",

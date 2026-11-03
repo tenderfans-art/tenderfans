@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc } from "@/lib/harvester-market-rpc";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -46,7 +48,7 @@ export default function VenueSourcesPanel() {
   async function loadMatches() {
     setLoading(true);
 
-    const { data, error } = await supabase.rpc(
+    const { data, error } = await scopedHarvesterRpc(
       "admin_pending_event_harvest_venue_matches"
     );
 
@@ -68,7 +70,7 @@ export default function VenueSourcesPanel() {
     setReviewingId(id);
     setMessage("");
 
-    const { error } = await supabase.rpc(
+    const { error } = await scopedHarvesterRpc(
       "admin_review_event_harvest_venue_match",
       {
         p_match_id: id,

@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -28,6 +30,7 @@ function evidenceText(value: unknown): string {
 }
 
 export default function BrowserRequiredPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [rows, setRows] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +39,7 @@ export default function BrowserRequiredPage() {
     let active = true;
 
     async function load() {
-      const { data, error: rpcError } = await supabase.rpc(
+      const { data, error: rpcError } = await scopedHarvesterRpc(
         "admin_event_harvest_browser_required_findings",
       );
 
@@ -69,7 +72,7 @@ export default function BrowserRequiredPage() {
           }}
         >
           <Link
-            href="/admin/harvester"
+            href={hmBackHref}
             style={{
               display: "inline-block",
               marginBottom: "22px",

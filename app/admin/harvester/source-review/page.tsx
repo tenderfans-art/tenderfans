@@ -1,5 +1,7 @@
 "use client";
 
+import { useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useState } from "react";
 import CalendarImagePanel from "./CalendarImagePanel";
@@ -15,6 +17,7 @@ const tabs: { id: Tab; label: string }[] = [
 ];
 
 export default function SourceReviewPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [activeTab, setActiveTab] = useState<Tab>("calendar");
 
   return (
@@ -25,7 +28,7 @@ export default function SourceReviewPage() {
           style={{ maxWidth: 1200, margin: "0 auto" }}
         >
           <Link
-            href="/admin/harvester"
+            href={hmBackHref}
             style={{
               display: "inline-block",
               marginBottom: 22,

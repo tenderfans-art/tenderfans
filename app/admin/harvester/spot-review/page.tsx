@@ -1,5 +1,7 @@
 "use client";
 
+import { useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useState } from "react";
 import HttpRedirectPanel from "./HttpRedirectPanel";
@@ -13,6 +15,7 @@ const tabs: { id: Tab; label: string }[] = [
 ];
 
 export default function SpotReviewPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [activeTab, setActiveTab] = useState<Tab>("redirect");
 
   return (
@@ -23,7 +26,7 @@ export default function SpotReviewPage() {
           style={{ maxWidth: 1200, margin: "0 auto" }}
         >
           <Link
-            href="/admin/harvester"
+            href={hmBackHref}
             style={{
               display: "inline-block",
               marginBottom: 22,

@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, registerHarvesterGooglePlace } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import GooglePlacePicker from "@/components/GooglePlacePicker";
@@ -74,8 +76,8 @@ export default function SourceOwnershipPanel() {
 
   const load = useCallback(async () => {
     const [findingsResult, spotsResult] = await Promise.all([
-      supabase.rpc("admin_event_harvest_source_ownership_findings"),
-      supabase.rpc("admin_list_spots"),
+      scopedHarvesterRpc("admin_event_harvest_source_ownership_findings"),
+      scopedHarvesterRpc("admin_list_spots"),
     ]);
 
     if (findingsResult.error || spotsResult.error) {
@@ -133,11 +135,8 @@ export default function SourceOwnershipPanel() {
     setAddError("");
 
     try {
-      const response = await fetch("/api/google/place", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ placeId: selectedPlace.id }),
-      });
+      const response =
+        await registerHarvesterGooglePlace(selectedPlace.id);
 
       const result = await response.json();
 
@@ -216,7 +215,7 @@ export default function SourceOwnershipPanel() {
     setReviewing(finding.id);
     setActionError(null);
 
-    const { error: reviewError } = await supabase.rpc(
+    const { error: reviewError } = await scopedHarvesterRpc(
       "admin_review_html_source_ownership",
       {
         p_finding_id: finding.id,

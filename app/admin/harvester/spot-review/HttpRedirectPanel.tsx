@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc } from "@/lib/harvester-market-rpc";
+
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -20,7 +22,7 @@ export default function HttpRedirectPanel() {
   const [message, setMessage] = useState("");
 
   const load = useCallback(async () => {
-    const { data, error: loadError } = await supabase.rpc(
+    const { data, error: loadError } = await scopedHarvesterRpc(
       "admin_pending_event_harvest_venue_matches"
     );
 
@@ -50,7 +52,7 @@ export default function HttpRedirectPanel() {
     setError(null);
     setMessage("");
 
-    const { error: reviewError } = await supabase.rpc(
+    const { error: reviewError } = await scopedHarvesterRpc(
       "admin_review_event_harvest_venue_match",
       { p_match_id: id, p_approve: approve }
     );

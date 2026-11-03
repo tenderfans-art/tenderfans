@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -12,6 +14,7 @@ type Finding = {
 };
 
 export default function ChallengeEncounteredPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [rows, setRows] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +23,7 @@ export default function ChallengeEncounteredPage() {
     let active = true;
 
     void (async () => {
-      const result = await supabase.rpc(
+      const result = await scopedHarvesterRpc(
         "admin_event_harvest_challenge_findings",
       );
 
@@ -50,7 +53,7 @@ export default function ChallengeEncounteredPage() {
             margin: "0 auto",
           }}
         >
-          <Link href="/admin/harvester">
+          <Link href={hmBackHref}>
             ← Harvester Management
           </Link>
 

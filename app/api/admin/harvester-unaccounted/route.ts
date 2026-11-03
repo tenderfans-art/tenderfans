@@ -75,7 +75,55 @@ export async function GET(request: NextRequest) {
       throw new Error("Unaccounted Spot query returned invalid data.");
     }
 
-    return NextResponse.json(data, {
+    let visible = data;
+
+    const marketKey =
+      request.nextUrl.searchParams.get("market");
+
+    if (marketKey) {
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(marketKey)) {
+        return NextResponse.json(
+          { error: "Invalid Market." },
+          { status: 400 }
+        );
+      }
+
+      const { data: market, error: marketError } = await admin
+        .from("event_processing_markets")
+        .select("id")
+        .eq("market_key", marketKey)
+        .maybeSingle();
+
+      if (marketError || !market) {
+        return NextResponse.json(
+          { error: "Market not found." },
+          { status: 404 }
+        );
+      }
+
+      const allowed = new Set<string>();
+
+      for (let offset = 0; ; offset += 1000) {
+        const { data: members, error: memberError } = await admin
+          .from("event_processing_market_venues")
+          .select("venue_id")
+          .eq("market_id", market.id)
+          .order("venue_id")
+          .range(offset, offset + 999);
+
+        if (memberError) throw memberError;
+
+        for (const item of members ?? []) {
+          allowed.add(item.venue_id);
+        }
+
+        if ((members ?? []).length < 1000) break;
+      }
+
+      visible = data.filter(row => allowed.has(row.venue_id));
+    }
+
+    return NextResponse.json(visible, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

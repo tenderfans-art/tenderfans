@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc } from "@/lib/harvester-market-rpc";
+
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -65,14 +67,14 @@ export default function HarvesterBulkActions({
       try {
         const result =
           action === "archive"
-            ? await supabase.rpc(
+            ? await scopedHarvesterRpc(
                 "admin_archive_harvest_spot",
                 {
                   p_venue_id: spot.id,
                   p_bucket: bucket,
                 }
               )
-            : await supabase.rpc(
+            : await scopedHarvesterRpc(
                 "admin_remove_spot",
                 {
                   p_venue_id: spot.id,

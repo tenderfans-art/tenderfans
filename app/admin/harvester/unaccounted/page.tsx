@@ -1,5 +1,7 @@
 "use client";
 
+import { useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -11,6 +13,7 @@ type Spot = {
 };
 
 export default function UnaccountedSpotsPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +30,15 @@ export default function UnaccountedSpotsPage() {
           throw new Error("Administrator sign-in required.");
         }
 
+        const marketKey =
+          new URLSearchParams(window.location.search).get("market");
+
+        const url = marketKey
+          ? `/api/admin/harvester-unaccounted?market=${encodeURIComponent(marketKey)}`
+          : "/api/admin/harvester-unaccounted";
+
         const response = await fetch(
-          "/api/admin/harvester-unaccounted",
+          url,
           {
             headers: {
               Authorization: `Bearer ${session.access_token}`,
@@ -69,7 +79,7 @@ export default function UnaccountedSpotsPage() {
           className="flow-card"
           style={{ maxWidth: "1200px", margin: "0 auto" }}
         >
-          <Link href="/admin/harvester">
+          <Link href={hmBackHref}>
             ← Harvester Management
           </Link>
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -17,6 +19,7 @@ type Finding = {
 };
 
 export default function SourceOwnershipPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [rows, setRows] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +28,7 @@ export default function SourceOwnershipPage() {
     let active = true;
 
     async function load() {
-      const result = await supabase.rpc(
+      const result = await scopedHarvesterRpc(
         "admin_event_harvest_source_ownership_findings"
       );
 
@@ -61,7 +64,7 @@ export default function SourceOwnershipPage() {
           style={{ maxWidth: 1200, margin: "0 auto" }}
         >
           <Link
-            href="/admin/harvester"
+            href={hmBackHref}
             style={{
               display: "inline-block",
               marginBottom: 22,

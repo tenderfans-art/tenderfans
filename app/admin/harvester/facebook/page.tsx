@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc, useHarvesterBackHref } from "@/lib/harvester-market-rpc";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -17,6 +19,7 @@ type Finding = {
 };
 
 export default function FacebookAdapterPage() {
+  const hmBackHref = useHarvesterBackHref();
   const [rows, setRows] = useState<Finding[]>([]);
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -26,7 +29,7 @@ export default function FacebookAdapterPage() {
     let active = true;
 
     async function load() {
-      const { data, error: rpcError } = await supabase.rpc(
+      const { data, error: rpcError } = await scopedHarvesterRpc(
         "admin_event_harvest_facebook_findings",
       );
 
@@ -101,7 +104,7 @@ export default function FacebookAdapterPage() {
           }}
         >
           <Link
-            href="/admin/harvester"
+            href={hmBackHref}
             style={{
               display: "inline-block",
               marginBottom: "22px",

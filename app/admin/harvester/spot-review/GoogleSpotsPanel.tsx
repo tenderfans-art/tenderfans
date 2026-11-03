@@ -1,5 +1,7 @@
 "use client";
 
+import { scopedHarvesterRpc } from "@/lib/harvester-market-rpc";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -32,8 +34,8 @@ export default function GoogleSpotsPanel() {
   async function load() {
     setLoading(true);
     const [reviewResult, spotResult] = await Promise.all([
-      supabase.rpc("admin_list_google_spot_reviews"),
-      supabase.rpc("admin_list_spots"),
+      scopedHarvesterRpc("admin_list_google_spot_reviews"),
+      scopedHarvesterRpc("admin_list_spots"),
     ]);
 
     if (reviewResult.error || spotResult.error) {
@@ -61,7 +63,7 @@ export default function GoogleSpotsPanel() {
     setBusy(placeId);
     setMessage("");
 
-    const { error } = await supabase.rpc(
+    const { error } = await scopedHarvesterRpc(
       "admin_review_google_spot",
       {
         p_place_id: placeId,
