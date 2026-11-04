@@ -190,7 +190,14 @@ export default function MarketDashboard() {
                   }}>
                     <h2 style={{ fontSize: 20, marginTop: 0 }}>{title}</h2>
                     <p>{description}</p>
-                    {title === "Harvester Management" ? (
+                    {title === "Verification Requests" ? (
+                      <Link
+                        className="btn outline"
+                        href={`/admin/claims?market=${encodeURIComponent(market.market_key)}`}
+                      >
+                        Verification Requests
+                      </Link>
+                    ) : title === "Harvester Management" ? (
                       <Link
                         className="btn outline"
                         href={`/admin/harvester?market=${encodeURIComponent(market.market_key)}`}

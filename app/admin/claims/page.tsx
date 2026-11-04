@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 type Claim = {
@@ -82,10 +83,117 @@ export default function AdminClaimsPage() {
   const [eventRequests, setEventRequests] = useState<EventRequest[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [marketKey, setMarketKey] = useState("");
+  const [marketName, setMarketName] = useState("");
 
-  async function loadClaims() {
+  async function scopedReview(
+    kind: "claim" | "spot_request" | "event",
+    id: string,
+    approve: boolean
+  ): Promise<{ error: { message: string } | null }> {
+    try {
+      const { data: { session } } =
+        await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("Administrator sign-in required.");
+      }
+
+      const response = await fetch(
+        `/api/admin/markets/verification?market=${encodeURIComponent(marketKey)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ kind, id, approve }),
+          cache: "no-store",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Verification review failed."
+        );
+      }
+
+      return { error: null };
+    } catch (error) {
+      return {
+        error: {
+          message: error instanceof Error
+            ? error.message
+            : "Verification review failed.",
+        },
+      };
+    }
+  }
+
+  async function loadClaims(key = marketKey) {
     setLoading(true);
+    setLoadFailed(false);
     setMessage("");
+
+    if (key) {
+      try {
+        const { data: { session } } =
+          await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error("Administrator sign-in required.");
+        }
+
+        const response = await fetch(
+          `/api/admin/markets/verification?market=${encodeURIComponent(key)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            "Could not load Market Verification Requests."
+          );
+        }
+
+        setMarketName(result.market?.display_name ?? "");
+        setClaims((result.claims ?? []) as Claim[]);
+        setSpotRequests(
+          (result.spotRequests ?? []) as SpotRequest[]
+        );
+        setEventRequests(
+          (result.eventRequests ?? []) as EventRequest[]
+        );
+
+        // Partner verification has no Market ownership yet.
+        setPartnerRequests([]);
+      } catch (error) {
+        setClaims([]);
+        setSpotRequests([]);
+        setEventRequests([]);
+        setPartnerRequests([]);
+        setLoadFailed(true);
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not load Market Verification Requests."
+        );
+      } finally {
+        setLoading(false);
+      }
+
+      return;
+    }
 
     const [
       claimResult,
@@ -141,10 +249,12 @@ export default function AdminClaimsPage() {
 
     const claim = claims.find((item) => item.id === id);
 
-    const { error } = await supabase.rpc("admin_review_claim", {
-      p_claim_id: id,
-      p_approve: approve,
-    });
+    const { error } = marketKey
+      ? await scopedReview("claim", id, approve)
+      : await supabase.rpc("admin_review_claim", {
+          p_claim_id: id,
+          p_approve: approve,
+        });
 
     if (error) {
       setMessage(error.message);
@@ -201,13 +311,15 @@ export default function AdminClaimsPage() {
   ) {
     setMessage("");
 
-    const { error } = await supabase.rpc(
-      "review_bartender_venue_request",
-      {
-        p_request_id: id,
-        p_approve: approve,
-      }
-    );
+    const { error } = marketKey
+      ? await scopedReview("spot_request", id, approve)
+      : await supabase.rpc(
+          "review_bartender_venue_request",
+          {
+            p_request_id: id,
+            p_approve: approve,
+          }
+        );
 
     if (error) {
       setMessage(error.message);
@@ -257,13 +369,15 @@ export default function AdminClaimsPage() {
   ) {
     setMessage("");
 
-    const { error } = await supabase.rpc(
-      "admin_review_event",
-      {
-        p_event_id: id,
-        p_approve: approve,
-      }
-    );
+    const { error } = marketKey
+      ? await scopedReview("event", id, approve)
+      : await supabase.rpc(
+          "admin_review_event",
+          {
+            p_event_id: id,
+            p_approve: approve,
+          }
+        );
 
     if (error) {
       setMessage(error.message);
@@ -290,21 +404,55 @@ export default function AdminClaimsPage() {
   }
 
   useEffect(() => {
-    loadClaims();
+    const key = new URLSearchParams(
+      window.location.search
+    ).get("market") ?? "";
+
+    setMarketKey(key);
+    void loadClaims(key);
   }, []);
 
   return (
     <section className="flow-page">
       <div className="shell">
         <div className="flow-card">
-          <div className="eyebrow">TENDERFANS ADMIN</div>
-          <h1>Verification Requests</h1>
+          <div className="eyebrow">
+            {marketKey ? "TENDERFANS MARKET" : "TENDERFANS ADMIN"}
+          </div>
+
+          {marketKey && (
+            <p>
+              <Link
+                href={`/admin/markets/${encodeURIComponent(marketKey)}`}
+                className="text-link"
+              >
+                ← {marketName || "Market"} Dashboard
+              </Link>
+            </p>
+          )}
+
+          <h1>
+            {marketKey && marketName
+              ? `${marketName} Verification Requests`
+              : "Verification Requests"}
+          </h1>
+
+          {marketKey && (
+            <p>
+              Spot and Tender claims, Spot affiliations,
+              and event verifications belonging to this Market.
+              Partner verification remains in the{" "}
+              <Link href="/admin/claims">
+                global queue
+              </Link>.
+            </p>
+          )}
 
           {message && <div className="privacy-note">{message}</div>}
 
           {loading ? (
             <p>Loading claims...</p>
-          ) : claims.length === 0 &&
+          ) : loadFailed ? null : claims.length === 0 &&
             spotRequests.length === 0 &&
             partnerRequests.length === 0 &&
             eventRequests.length === 0 ? (
