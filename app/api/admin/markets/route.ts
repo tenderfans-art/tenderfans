@@ -156,6 +156,8 @@ export async function POST(request: Request) {
     action?: string;
     name?: string;
     key?: string;
+    stateRegion?: string;
+    countyName?: string;
     marketId?: string;
     enabled?: boolean;
   };
@@ -172,26 +174,49 @@ export async function POST(request: Request) {
   if (body.action === "create") {
     const name = body.name?.trim() ?? "";
     const key = body.key?.trim().toLowerCase() ?? "";
+    const stateRegion =
+      body.stateRegion?.trim().toUpperCase() ?? "";
+    const countyName =
+      body.countyName?.trim() ?? "";
 
     if (
       name.length < 2 ||
       name.length > 100 ||
-      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key)
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key) ||
+      !/^[A-Z]{2}$/.test(stateRegion) ||
+      countyName.length < 3 ||
+      countyName.length > 100
     ) {
       return NextResponse.json(
-        { error: "Enter a valid market name and URL key." },
+        { error: "Enter a Market name, URL key, state and county." },
+        { status: 400 }
+      );
+    }
+
+    const { data: createdId, error: createError } =
+      await db.rpc("create_market_with_county", {
+        p_name: name,
+        p_key: key,
+        p_country_code: "US",
+        p_state_region: stateRegion,
+        p_county_name: countyName,
+      });
+
+    if (createError || !createdId) {
+      return NextResponse.json(
+        {
+          error: createError?.code === "23505"
+            ? "Market key or geographic county already assigned."
+            : createError?.message || "Unable to create Market.",
+        },
         { status: 400 }
       );
     }
 
     const { data, error } = await db
       .from("event_processing_markets")
-      .insert({
-        display_name: name,
-        market_key: key,
-        is_enabled: false,
-      })
       .select("id, market_key, display_name, is_enabled")
+      .eq("id", createdId)
       .single();
 
     if (error) {

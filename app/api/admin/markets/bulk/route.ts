@@ -309,7 +309,9 @@ export async function POST(request: Request) {
         },
       };
 
-      const status = await recordGoogleSpotDiscovery(db, discovery);
+      const status = await recordGoogleSpotDiscovery(
+        db, discovery, marketId
+      );
 
       if (status === "rejected") {
         report(
@@ -352,7 +354,9 @@ export async function POST(request: Request) {
       // The existing registration RPC checks durable review
       // decisions, including pending reviewOnly and rejection.
       // It must never be bypassed with a direct venue upsert.
-      const venueId = await registerHarvestGoogleSpot(db, discovery);
+      const venueId = await registerHarvestGoogleSpot(
+        db, discovery, marketId
+      );
 
       if (!venueId) {
         report(

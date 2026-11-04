@@ -19,6 +19,8 @@ export default function MarketsPage() {
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
+  const [stateRegion, setStateRegion] = useState("");
+  const [countyName, setCountyName] = useState("");
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -63,6 +65,8 @@ export default function MarketsPage() {
           action: "create",
           name,
           key,
+          stateRegion,
+          countyName,
         }),
       });
 
@@ -77,6 +81,8 @@ export default function MarketsPage() {
       );
       setName("");
       setKey("");
+      setStateRegion("");
+      setCountyName("");
       setCreateOpen(false);
       setNotice("Market created. Automated processing is disabled.");
     } catch (cause) {
@@ -384,10 +390,35 @@ export default function MarketsPage() {
                 title="Automatically generated from the Market name"
                 style={{ padding: 12, flex: "1 1 180px" }}
               />
+              <input
+                aria-label="State abbreviation"
+                placeholder="State (e.g. FL)"
+                value={stateRegion}
+                maxLength={2}
+                onChange={(event) =>
+                  setStateRegion(event.target.value.toUpperCase())
+                }
+                style={{ padding: 12, width: 130 }}
+              />
+              <input
+                aria-label="County name"
+                placeholder="County (e.g. Pinellas County)"
+                value={countyName}
+                onChange={(event) =>
+                  setCountyName(event.target.value)
+                }
+                style={{ padding: 12, flex: "1 1 220px" }}
+              />
               <button
                 className="btn primary"
                 type="button"
-                disabled={creating || !name.trim() || !key.trim()}
+                disabled={
+                  creating ||
+                  !name.trim() ||
+                  !key.trim() ||
+                  !/^[A-Z]{2}$/.test(stateRegion) ||
+                  !countyName.trim()
+                }
                 onClick={createMarket}
               >
                 {creating ? "Creating..." : "+ Create Market"}

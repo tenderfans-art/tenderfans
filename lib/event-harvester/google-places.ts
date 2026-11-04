@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveGoogleSpotMarket } from "./google-market";
 
 import {
   normalizeVenueMatchText,
@@ -15,6 +16,8 @@ type GooglePlace = VenueIdentity & {
   regularHours: string[];
   formattedAddress: string;
   types: string[];
+  countryCode: string | null;
+  countyRegion: string | null;
 };
 
 function googleKey() {
@@ -54,6 +57,10 @@ function parsePlace(place: any): GooglePlace | null {
 
   return {
     id: place.id,
+    countryCode:
+      component("country")?.shortText ?? null,
+    countyRegion:
+      component("administrative_area_level_2")?.longText ?? null,
     name: place.displayName.text,
     streetAddress: [streetNumber, route]
       .filter(Boolean)
@@ -482,9 +489,21 @@ export async function upsertGoogleVenue(
   supabase: SupabaseClient,
   place: GooglePlace
 ): Promise<string> {
+  const marketId = await resolveGoogleSpotMarket(
+    supabase,
+    place
+  );
+
+  if (!marketId) {
+    throw new Error(
+      "Google Spot has no configured geographic Market."
+    );
+  }
+
   const { data, error } = await supabase.rpc(
-    "upsert_google_venue",
+    "upsert_google_venue_in_market",
     {
+      p_market_id: marketId,
       p_place_id: place.id,
       p_name: place.name,
       p_street_address:
@@ -525,7 +544,24 @@ export async function recordGoogleSpotDiscovery(
     score: number;
     evidence: Record<string, unknown>;
   },
-): Promise<"pending" | "approved" | "rejected"> {
+  explicitMarketId?: string,
+): Promise<
+  "pending" | "approved" | "rejected" | "market_unresolved"
+> {
+  const marketId = explicitMarketId ??
+    await resolveGoogleSpotMarket(supabase, result.place);
+
+  // Unmapped candidates are not inserted into a global
+  // pending-review queue or published without membership.
+  if (!marketId) {
+    console.warn(
+      "Google Spot discovery skipped: Market not configured",
+      result.place.id,
+      result.place.formattedAddress
+    );
+    return "market_unresolved";
+  }
+
   const { data, error } = await supabase.rpc(
     "record_event_harvest_google_spot",
     {
@@ -544,6 +580,22 @@ export async function recordGoogleSpotDiscovery(
     throw new Error("Unexpected Google Spot review status");
   }
 
+  if (data !== "rejected") {
+    const { data: requestStatus, error: marketError } =
+      await supabase.rpc("request_google_spot_market", {
+        p_place_id: result.place.id,
+        p_market_id: marketId,
+      });
+
+    if (marketError) {
+      throw new Error(
+        `Google Market request failed: ${marketError.message}`
+      );
+    }
+
+    if (requestStatus === "rejected") return "rejected";
+  }
+
   return data;
 }
 
@@ -557,6 +609,16 @@ export async function resolveReviewedGoogleSpot(
     evidence: Record<string, unknown>;
   },
 ): Promise<string | null> {
+  const status = await recordGoogleSpotDiscovery(
+    supabase,
+    result
+  );
+
+  if (status === "rejected" ||
+      status === "market_unresolved") {
+    return null;
+  }
+
   const { data, error } = await supabase.rpc(
     "resolved_event_harvest_google_spot",
     {
@@ -581,7 +643,19 @@ export async function registerHarvestGoogleSpot(
     score: number;
     evidence: Record<string, unknown>;
   },
+  explicitMarketId?: string,
 ): Promise<string | null> {
+  const status = await recordGoogleSpotDiscovery(
+    supabase,
+    result,
+    explicitMarketId
+  );
+
+  if (status === "rejected" ||
+      status === "market_unresolved") {
+    return null;
+  }
+
   const { data, error } = await supabase.rpc(
     "register_event_harvest_google_spot",
     {

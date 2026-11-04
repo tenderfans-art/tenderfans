@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveGoogleSpotMarket } from
+  "@/lib/event-harvester/google-market";
 
 export async function POST(request: Request) {
   try {
@@ -76,6 +78,10 @@ export async function POST(request: Request) {
 
     const verifiedPlace = {
       id: place.id,
+      countryCode:
+        component("country")?.shortText ?? null,
+      countyRegion:
+        component("administrative_area_level_2")?.longText ?? null,
       name: place.displayName?.text ?? "Unknown place",
       address: place.formattedAddress ?? "",
       latitude: place.location?.latitude ?? null,
@@ -164,9 +170,30 @@ export async function POST(request: Request) {
       }
     }
 
+    const resolvedMarketId = marketId ??
+      await resolveGoogleSpotMarket(adminSupabase, {
+        id: verifiedPlace.id,
+        countryCode: verifiedPlace.countryCode,
+        stateRegion: verifiedPlace.state,
+        countyRegion: verifiedPlace.countyRegion,
+      });
+
+    if (!resolvedMarketId) {
+      return NextResponse.json(
+        {
+          error:
+            "This Spot is outside configured TenderFans Markets " +
+            "or Google did not provide its county. " +
+            "A Market must be configured before adding it.",
+        },
+        { status: 409 }
+      );
+    }
+
     const { data: venueId, error: venueError } = await adminSupabase.rpc(
-      "upsert_google_venue",
+      "upsert_google_venue_in_market",
       {
+        p_market_id: resolvedMarketId,
         p_place_id: verifiedPlace.id,
         p_name: verifiedPlace.name,
         p_street_address: verifiedPlace.streetAddress,
@@ -182,43 +209,26 @@ export async function POST(request: Request) {
     );
 
     if (venueError) {
-      console.error("Supabase venue upsert failed:", venueError);
+      console.error("Google Market upsert failed:", venueError);
+
+      const conflict =
+        /another market|already requested|Spot Review|rejected/i
+          .test(venueError.message);
+
       return NextResponse.json(
-        { error: "Could not save verified Google Place." },
-        { status: 500 }
-      );
-    }
-
-    if (marketId) {
-      const { error: assignmentError } = await adminSupabase.rpc(
-        "assign_spot_to_market",
         {
-          p_venue_id: venueId,
-          p_market_id: marketId,
-        }
+          error: conflict
+            ? venueError.message
+            : "Could not save verified Google Spot.",
+        },
+        { status: conflict ? 409 : 500 }
       );
-
-      if (assignmentError) {
-        const conflict = assignmentError.message.includes(
-          "already belongs to another market"
-        );
-
-        return NextResponse.json(
-          {
-            error: conflict
-              ? "This Spot already belongs to another market."
-              : "Could not assign Spot to market.",
-            venueId,
-          },
-          { status: conflict ? 409 : 500 }
-        );
-      }
     }
 
     return NextResponse.json({
       venueId,
       place: verifiedPlace,
-      marketId: marketId ?? null,
+      marketId: resolvedMarketId,
     });
   } catch (error) {
     console.error("Google Place verification failed:", error);
