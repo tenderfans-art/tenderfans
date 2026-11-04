@@ -4,48 +4,41 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-type Finding = {
-  id: string;
-  venue_id: string;
-  venue_name: string;
-  source_type: string | null;
-  error: string | null;
-  source_url: string | null;
-  last_seen_at: string;
-};
-
 type Market = {
   id: string;
   market_key: string;
   display_name: string;
   affectedSpots: number;
   failures: number;
-  findings: Finding[];
+  facebookAffectedSpots: number;
+  facebookFailures: number;
 };
 
 type Overview = {
   totals: {
     failures: number;
     affectedSpots: number;
+    facebookFailures: number;
+    facebookAffectedSpots: number;
     missingMarketFailures: number;
-    missingMarketSpots: number;
+    missingMarketFacebookFailures: number;
   };
   markets: Market[];
 };
 
-const columns =
-  "1.1fr 1.4fr 1.1fr 2.6fr 1fr 0.8fr";
+const columns = "1.2fr 1.5fr 1.5fr 1.7fr";
 
-const cellStyle = {
-  minWidth: 0,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap" as const,
+const headingStyle = {
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: ".04em",
+  opacity: 0.65,
 };
 
 export default function GlobalAdapterErrors() {
   const [overview, setOverview] =
     useState<Overview | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -98,16 +91,6 @@ export default function GlobalAdapterErrors() {
     void load();
   }, [load]);
 
-  const rows = overview
-    ? overview.markets.flatMap((market) =>
-        market.findings.map((finding) => ({
-          ...finding,
-          marketKey: market.market_key,
-          marketName: market.display_name,
-        }))
-      )
-    : [];
-
   return (
     <>
       <div
@@ -122,8 +105,8 @@ export default function GlobalAdapterErrors() {
       >
         <strong>
           {overview
-            ? `${overview.totals.affectedSpots} affected Spots · ${overview.totals.failures} active Tier One failures`
-            : "Tier One overview"}
+            ? `${overview.totals.failures} Tier One errors · ${overview.totals.facebookFailures} Facebook errors`
+            : "Market Adapter Error overview"}
         </strong>
 
         <button
@@ -146,10 +129,11 @@ export default function GlobalAdapterErrors() {
 
       {overview && (
         <>
-          {overview.totals.missingMarketFailures > 0 && (
+          {(overview.totals.missingMarketFailures > 0 ||
+            overview.totals.missingMarketFacebookFailures > 0) && (
             <p role="alert">
-              {overview.totals.missingMarketFailures}
-              {" "}Tier One failures require Market attribution.
+              Some Adapter Error findings have no Market
+              membership and require investigation.
             </p>
           )}
 
@@ -160,82 +144,85 @@ export default function GlobalAdapterErrors() {
               overflowX: "auto",
             }}
           >
-            <div style={{ minWidth: 1080 }}>
+            <div style={{ minWidth: 950 }}>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: columns,
-                  gap: 14,
+                  gap: 16,
                   padding: "12px 16px",
                   background: "#f5f3ec",
-                  fontSize: 12,
-                  fontWeight: 800,
                 }}
               >
-                <span>Market</span>
-                <span>Spot</span>
-                <span>Adapter</span>
-                <span>Error</span>
-                <span>Last Seen</span>
-                <span>Review</span>
+                <span style={headingStyle}>Market</span>
+                <span style={headingStyle}>Tier One</span>
+                <span style={headingStyle}>Facebook</span>
+                <span style={headingStyle}>Review</span>
               </div>
 
-              {rows.map((finding) => (
+              {overview.markets.map((market) => (
                 <div
-                  key={finding.id}
+                  key={market.id}
                   style={{
                     display: "grid",
                     gridTemplateColumns: columns,
-                    gap: 14,
-                    padding: "11px 16px",
+                    gap: 16,
+                    padding: "12px 16px",
                     alignItems: "center",
                     borderTop: "1px solid #e5e0d7",
                     background: "#fff",
                     fontSize: 13,
                   }}
                 >
-                  <span style={cellStyle}>
-                    {finding.marketName}
+                  <strong>{market.display_name}</strong>
+
+                  <span>
+                    <strong>{market.affectedSpots}</strong>
+                    {" Spots · "}
+                    {market.failures} errors
                   </span>
 
-                  <strong style={cellStyle}>
-                    {finding.venue_name}
-                  </strong>
-
-                  <span style={cellStyle}>
-                    {finding.source_type ?? "Unspecified"}
+                  <span>
+                    <strong>
+                      {market.facebookAffectedSpots}
+                    </strong>
+                    {" Spots · "}
+                    {market.facebookFailures} errors
                   </span>
 
-                  <span
-                    style={cellStyle}
-                    title={
-                      finding.error ?? "Evaluation interrupted"
-                    }
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 14,
+                      whiteSpace: "nowrap",
+                    }}
                   >
-                    {finding.error ??
-                      "Evaluation interrupted"}
-                  </span>
+                    <Link
+                      href={
+                        "/admin/harvester/adapter-errors?market=" +
+                        encodeURIComponent(market.market_key) +
+                        "&tab=tier_one"
+                      }
+                    >
+                      Tier One Review
+                    </Link>
 
-                  <span style={cellStyle}>
-                    {new Date(
-                      finding.last_seen_at
-                    ).toLocaleDateString()}
-                  </span>
-
-                  <Link
-                    href={
-                      "/admin/harvester/adapter-errors?market=" +
-                      encodeURIComponent(finding.marketKey)
-                    }
-                  >
-                    Market HM
-                  </Link>
+                    <Link
+                      href={
+                        "/admin/harvester/adapter-errors?market=" +
+                        encodeURIComponent(market.market_key) +
+                        "&tab=facebook"
+                      }
+                    >
+                      Facebook Review
+                    </Link>
+                  </div>
                 </div>
               ))}
 
-              {rows.length === 0 && (
+              {overview.markets.length === 0 && (
                 <p style={{ padding: 16 }}>
-                  No active Tier One Adapter Errors.
+                  No Markets found.
                 </p>
               )}
             </div>

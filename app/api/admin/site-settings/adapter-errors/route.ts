@@ -25,6 +25,8 @@ type VisibleFinding = Finding & {
 type MarketSummary = Market & {
   affectedSpots: number;
   failures: number;
+  facebookAffectedSpots: number;
+  facebookFailures: number;
   findings: VisibleFinding[];
 };
 
@@ -121,16 +123,19 @@ export async function GET(request: NextRequest) {
       if (error) throw error;
 
       for (const row of data ?? []) {
-        if (
-          row.source_type !== "facebook" &&
-          row.source_type !== "facebook_events"
-        ) {
-          findings.push(row as Finding);
-        }
+        findings.push(row as Finding);
       }
 
       if ((data ?? []).length < 1000) break;
     }
+
+    // The existing HM Tier One tab excludes Facebook.
+    // Maintain that distinction in global totals.
+    const tierOneFindings = findings.filter(
+      finding =>
+        finding.source_type !== "facebook" &&
+        finding.source_type !== "facebook_events"
+    );
 
     const markets: Market[] = [];
 
@@ -187,14 +192,26 @@ export async function GET(request: NextRequest) {
         ...market,
         affectedSpots: 0,
         failures: 0,
+        facebookAffectedSpots: 0,
+        facebookFailures: 0,
         findings: [],
       });
     }
 
     const unmatchedVenues = new Set<string>();
+    const unmatchedFacebookVenues = new Set<string>();
+
+    const facebookSpotsByMarket =
+      new Map<string, Set<string>>();
+
     let unmatchedFailures = 0;
+    let unmatchedFacebookFailures = 0;
 
     for (const finding of findings) {
+      const isFacebook =
+        finding.source_type === "facebook" ||
+        finding.source_type === "facebook_events";
+
       const marketId = venueMarkets.get(finding.venue_id);
 
       const market = marketId
@@ -202,8 +219,25 @@ export async function GET(request: NextRequest) {
         : undefined;
 
       if (!market) {
-        unmatchedVenues.add(finding.venue_id);
-        unmatchedFailures += 1;
+        if (isFacebook) {
+          unmatchedFacebookVenues.add(finding.venue_id);
+          unmatchedFacebookFailures += 1;
+        } else {
+          unmatchedVenues.add(finding.venue_id);
+          unmatchedFailures += 1;
+        }
+        continue;
+      }
+
+      if (isFacebook) {
+        market.facebookFailures += 1;
+
+        const spots =
+          facebookSpotsByMarket.get(market.id) ??
+          new Set<string>();
+
+        spots.add(finding.venue_id);
+        facebookSpotsByMarket.set(market.id, spots);
         continue;
       }
 
@@ -218,13 +252,18 @@ export async function GET(request: NextRequest) {
     }
 
     let totalAffectedSpots = 0;
+    let totalFacebookSpots = 0;
 
     for (const market of overview.values()) {
       market.affectedSpots = new Set(
         market.findings.map(row => row.venue_id)
       ).size;
 
+      market.facebookAffectedSpots =
+        facebookSpotsByMarket.get(market.id)?.size ?? 0;
+
       totalAffectedSpots += market.affectedSpots;
+      totalFacebookSpots += market.facebookAffectedSpots;
 
       market.findings.sort((a, b) =>
         a.venue_name.localeCompare(b.venue_name) ||
@@ -238,11 +277,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         totals: {
-          failures: findings.length,
+          // Original fields retain Tier One-only meaning.
+          failures: tierOneFindings.length,
           affectedSpots:
             totalAffectedSpots + unmatchedVenues.size,
           missingMarketFailures: unmatchedFailures,
           missingMarketSpots: unmatchedVenues.size,
+
+          // Facebook is independent, matching the HM tab.
+          facebookFailures:
+            findings.length - tierOneFindings.length,
+          facebookAffectedSpots:
+            totalFacebookSpots + unmatchedFacebookVenues.size,
+          missingMarketFacebookFailures:
+            unmatchedFacebookFailures,
+          missingMarketFacebookSpots:
+            unmatchedFacebookVenues.size,
         },
         markets: [...overview.values()].sort(
           (a, b) =>

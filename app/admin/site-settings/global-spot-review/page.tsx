@@ -10,8 +10,6 @@ type MarketReview = {
   display_name: string;
   googlePending: number;
   redirectPending: number;
-  googleExamples: string[];
-  redirectExamples: string[];
 };
 
 type Overview = {
@@ -205,22 +203,12 @@ export default function GlobalSpotReviewPage() {
                         {market.display_name}
                       </strong>
 
-                      <span
-                        style={cellStyle}
-                        title={market.googleExamples.join(", ")}
-                      >
+                      <span style={cellStyle}>
                         <strong>{market.googlePending}</strong>
-                        {market.googleExamples.length > 0 &&
-                          ` · ${market.googleExamples.join(", ")}`}
                       </span>
 
-                      <span
-                        style={cellStyle}
-                        title={market.redirectExamples.join(", ")}
-                      >
+                      <span style={cellStyle}>
                         <strong>{market.redirectPending}</strong>
-                        {market.redirectExamples.length > 0 &&
-                          ` · ${market.redirectExamples.join(", ")}`}
                       </span>
 
                       <div

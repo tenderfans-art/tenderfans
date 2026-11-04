@@ -76,6 +76,17 @@ export default function AdapterErrorsPage() {
   const [activeTab, setActiveTab] = useState<"tier_one" | "facebook">(
     "tier_one"
   );
+
+  useEffect(() => {
+    const tab = new URLSearchParams(
+      window.location.search
+    ).get("tab");
+
+    if (tab === "tier_one" || tab === "facebook") {
+      setActiveTab(tab);
+    }
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
