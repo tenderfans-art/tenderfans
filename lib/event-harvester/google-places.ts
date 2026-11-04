@@ -562,38 +562,29 @@ export async function recordGoogleSpotDiscovery(
     return "market_unresolved";
   }
 
+  // Record the Google review and its Market request in one
+  // transaction. A Market conflict must roll back both writes.
   const { data, error } = await supabase.rpc(
-    "record_event_harvest_google_spot",
+    "record_event_harvest_google_spot_in_market",
     {
       p_place_id: result.place.id,
       p_place_data: result.place,
       p_confidence_score: result.score,
       p_evidence: result.evidence,
+      p_market_id: marketId,
     },
   );
 
   if (error) {
-    throw new Error(`Google Spot discovery failed: ${error.message}`);
+    throw new Error(
+      `Google Spot Market recording failed: ${error.message}`
+    );
   }
 
-  if (data !== "pending" && data !== "approved" && data !== "rejected") {
+  if (data !== "pending" &&
+      data !== "approved" &&
+      data !== "rejected") {
     throw new Error("Unexpected Google Spot review status");
-  }
-
-  if (data !== "rejected") {
-    const { data: requestStatus, error: marketError } =
-      await supabase.rpc("request_google_spot_market", {
-        p_place_id: result.place.id,
-        p_market_id: marketId,
-      });
-
-    if (marketError) {
-      throw new Error(
-        `Google Market request failed: ${marketError.message}`
-      );
-    }
-
-    if (requestStatus === "rejected") return "rejected";
   }
 
   return data;
