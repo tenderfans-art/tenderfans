@@ -10,7 +10,7 @@ type AdminEvent = {
   title: string;
   starts_at: string;
   ends_at: string | null;
-  status: string;
+  status: string | null;
   venue_approval_status: string;
   admin_approval_status: string;
   flyer_storage_path: string | null;
@@ -101,23 +101,59 @@ export default function AdminEventsPage() {
       return;
     }
 
-    const { data, error } = await supabase.rpc("admin_list_events");
+    /*
+     * Global Events is an Admin approval queue, not a
+     * duplicate of the full Market event inventory.
+     *
+     * Use the existing Admin-only pending-event RPC.
+     * Page through every result so the global review
+     * queue is not truncated at Supabase's row limit.
+     */
+    const pending: AdminEvent[] = [];
 
-    if (error) {
-      setMessage(error.message);
-      setLoadFailed(true);
-      return;
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase
+        .rpc("admin_pending_events")
+        .range(offset, offset + 999);
+
+      if (error) {
+        setEvents([]);
+        setMessage(error.message);
+        setLoadFailed(true);
+        return;
+      }
+
+      const rows = (data ?? []) as AdminEvent[];
+
+      pending.push(
+        ...rows.map(row => ({
+          ...row,
+          status: null,
+          flyer_storage_path: null,
+        }))
+      );
+
+      if (rows.length < 1000) break;
     }
 
-    setEvents((data as AdminEvent[]) || []);
+    setEvents(pending);
   }
 
   function eventStatus(event: AdminEvent) {
+    // Cancelled is not a pending review.
+    if (event.status === "cancelled") {
+      return "CANCELLED";
+    }
+
     if (
       event.venue_approval_status === "denied" ||
       event.admin_approval_status === "denied"
     ) {
       return "DENIED";
+    }
+
+    if (event.admin_approval_status === "pending") {
+      return "IN REVIEW";
     }
 
     if (
@@ -128,7 +164,7 @@ export default function AdminEventsPage() {
       return "APPROVED";
     }
 
-    return "PENDING";
+    return event.status?.toUpperCase() ?? "UNKNOWN";
   }
 
   function formatDateTime(value: string) {
@@ -155,8 +191,8 @@ export default function AdminEventsPage() {
         })
       : events;
 
-    return filtered.slice(0, marketKey ? displayLimit : 5);
-  }, [events, search, marketKey, displayLimit]);
+    return filtered.slice(0, displayLimit);
+  }, [events, search, displayLimit]);
 
   const matchingCount = events.filter(event => {
     const term = search.trim().toLowerCase();
@@ -298,19 +334,19 @@ export default function AdminEventsPage() {
             <h1 style={{ margin: 0 }}>
               {marketKey && marketName
                 ? `${marketName} Event Management`
-                : "Event Management"}
+                : "Global Event Review"}
             </h1>
 
             {!marketKey && (
               <Link
-                href="/partners/events/new"
+                href="/admin/claims"
                 className="button"
                 style={{
                   textDecoration: "none",
                   whiteSpace: "nowrap",
                 }}
               >
-                + Add Event
+                Review Requests
               </Link>
             )}
           </div>
@@ -324,7 +360,7 @@ export default function AdminEventsPage() {
           >
             {marketKey
               ? "Search events belonging to publishing Spots in this Market. Event submissions remain available through the authorized Spot and Partner portals."
-              : "Search for and manage events across TenderFans."}
+              : "Events awaiting Admin approval across all Markets. Harvester Event Review remains under each Market's Harvester Management."}
           </p>
 
           <input
@@ -369,7 +405,9 @@ export default function AdminEventsPage() {
               <div className="admin-event-row" key={event.id}>
                 <div className="admin-event-title">
                   <a
-                    href={`/events?event=${event.id}`}
+                    href={marketKey
+                      ? `/events?event=${event.id}`
+                      : "/admin/claims"}
                     title={event.title}
                   >
                     {event.title}
@@ -391,13 +429,22 @@ export default function AdminEventsPage() {
                   {eventStatus(event)}
                 </div>
 
-                <button
-                  type="button"
-                  className="admin-event-delete"
-                  onClick={() => deleteEvent(event)}
-                >
-                  Delete
-                </button>
+                {marketKey ? (
+                  <button
+                    type="button"
+                    className="admin-event-delete"
+                    onClick={() => deleteEvent(event)}
+                  >
+                    Delete
+                  </button>
+                ) : (
+                  <Link
+                    href="/admin/claims"
+                    className="btn outline"
+                  >
+                    Review
+                  </Link>
+                )}
               </div>
             ))}
 
@@ -408,7 +455,7 @@ export default function AdminEventsPage() {
             )}
           </div>
 
-          {marketKey && visibleEvents.length < matchingCount && (
+          {visibleEvents.length < matchingCount && (
             <button
               type="button"
               className="btn outline"
