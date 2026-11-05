@@ -14,12 +14,12 @@ type Market = {
 };
 
 const tools = [
-  ["Verification Requests", "Review claims and ownership requests."],
-  ["Harvester Management", "Detector, Harvester and review operations."],
-  ["Manage Spots", "Manage market Spot profiles."],
-  ["Manage Tenders", "Manage Tenders associated with market Spots."],
-  ["Events", "Manage market events."],
-  ["Contests", "Manage market contests."],
+  ["Verification Requests", "Review claims and ownership requests.", "/admin/claims"],
+  ["Harvester Management", "Detector, Harvester and review operations.", "/admin/harvester"],
+  ["Manage Spots", "Manage market Spot profiles.", "/admin/spots"],
+  ["Manage Tenders", "Manage Tenders associated with market Spots.", "/admin/tenders"],
+  ["Events", "Manage market events.", "/admin/events"],
+  ["Contests", "Manage market contests.", "/admin/contests"],
 ];
 
 export default function MarketDashboard() {
@@ -181,63 +181,36 @@ export default function MarketDashboard() {
                 gap: 18,
                 marginTop: 24,
               }}>
-                {tools.map(([title, description]) => (
-                  <div key={title} style={{
-                    padding: 22,
-                    border: "1px solid #ddd7cc",
-                    borderRadius: 18,
-                    background: "#f5f3ec",
-                  }}>
-                    <h2 style={{ fontSize: 20, marginTop: 0 }}>{title}</h2>
-                    <p>{description}</p>
-                    {title === "Verification Requests" ? (
-                      <Link
-                        className="btn outline"
-                        href={`/admin/claims?market=${encodeURIComponent(market.market_key)}`}
-                      >
-                        Verification Requests
-                      </Link>
-                    ) : title === "Harvester Management" ? (
-                      <Link
-                        className="btn outline"
-                        href={`/admin/harvester?market=${encodeURIComponent(market.market_key)}`}
-                      >
-                        Harvester Management
-                      </Link>
-                    ) : title === "Manage Spots" ? (
-                      <Link
-                        className="btn outline"
-                        href={`/admin/spots?market=${encodeURIComponent(market.market_key)}`}
-                      >
-                        Manage Spots
-                      </Link>
-                    ) : title === "Manage Tenders" ? (
-                      <Link
-                        className="btn outline"
-                        href={`/admin/tenders?market=${encodeURIComponent(market.market_key)}`}
-                      >
-                        Manage Tenders
-                      </Link>
-                    ) : title === "Events" ? (
-                      <Link
-                        className="btn outline"
-                        href={`/admin/events?market=${encodeURIComponent(market.market_key)}`}
-                      >
-                        Manage Events
-                      </Link>
-                    ) : title === "Contests" ? (
-                      <Link
-                        className="btn outline"
-                        href={`/admin/contests?market=${encodeURIComponent(market.market_key)}`}
-                      >
-                        Manage Contests
-                      </Link>
-                    ) : (
-                      <small>
-                        Market-scoped operations being connected
-                      </small>
-                    )}
-                  </div>
+                {tools.map(([title, description, path]) => (
+                  <Link
+                    key={title}
+                    href={`${path}?market=${encodeURIComponent(market.market_key)}`}
+                    style={{
+                      display: "block",
+                      padding: 22,
+                      border: "1px solid #ddd7cc",
+                      borderRadius: 18,
+                      background: "rgba(255,255,255,0.9)",
+                      color: "inherit",
+                      textDecoration: "none",
+                      minHeight: 145,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <h2 style={{
+                      fontSize: 20,
+                      margin: "0 0 12px",
+                    }}>
+                      {title}
+                    </h2>
+                    <p style={{
+                      margin: 0,
+                      lineHeight: 1.55,
+                      opacity: 0.75,
+                    }}>
+                      {description}
+                    </p>
+                  </Link>
                 ))}
               </div>
             </>

@@ -23,11 +23,11 @@ const tools = [
     status: "COMING SOON",
   },
   {
-    title: "Platform Controls",
+    title: "Global Events",
     description:
-      "Future global settings and administrative configuration.",
-    href: null,
-    status: "COMING SOON",
+      "View and manage events across all Markets.",
+    href: "/admin/events",
+    status: "OPEN",
   },
 ];
 
