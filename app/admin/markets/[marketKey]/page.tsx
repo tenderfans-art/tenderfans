@@ -218,6 +218,13 @@ export default function MarketDashboard() {
                       >
                         Manage Tenders
                       </Link>
+                    ) : title === "Events" ? (
+                      <Link
+                        className="btn outline"
+                        href={`/admin/events?market=${encodeURIComponent(market.market_key)}`}
+                      >
+                        Manage Events
+                      </Link>
                     ) : title === "Contests" ? (
                       <Link
                         className="btn outline"

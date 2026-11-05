@@ -22,9 +22,19 @@ export default function AdminEventsPage() {
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
+  const [marketKey, setMarketKey] = useState("");
+  const [marketName, setMarketName] = useState("");
+  const [displayLimit, setDisplayLimit] = useState(100);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     async function initialize() {
+      const key = new URLSearchParams(
+        window.location.search
+      ).get("market") ?? "";
+
+      setMarketKey(key);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -45,18 +55,57 @@ export default function AdminEventsPage() {
         return;
       }
 
-      await loadEvents();
+      await loadEvents(key);
       setLoading(false);
     }
 
     initialize();
   }, []);
 
-  async function loadEvents() {
+  async function loadEvents(key = marketKey) {
+    setMessage("");
+    setLoadFailed(false);
+
+    if (key) {
+      try {
+        const { data: { session } } =
+          await supabase.auth.getSession();
+
+        if (!session?.access_token)
+          throw new Error("Administrator sign-in required.");
+
+        const response = await fetch(
+          `/api/admin/markets/events?market=${encodeURIComponent(key)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok)
+          throw new Error(result.error || "Could not load events.");
+
+        setMarketName(result.market?.display_name ?? "");
+        setEvents((result.events ?? []) as AdminEvent[]);
+      } catch (error) {
+        setEvents([]);
+        setLoadFailed(true);
+        setMessage(
+          error instanceof Error ? error.message : "Load failed."
+        );
+      }
+      return;
+    }
+
     const { data, error } = await supabase.rpc("admin_list_events");
 
     if (error) {
       setMessage(error.message);
+      setLoadFailed(true);
       return;
     }
 
@@ -106,8 +155,15 @@ export default function AdminEventsPage() {
         })
       : events;
 
-    return filtered.slice(0, 5);
-  }, [events, search]);
+    return filtered.slice(0, marketKey ? displayLimit : 5);
+  }, [events, search, marketKey, displayLimit]);
+
+  const matchingCount = events.filter(event => {
+    const term = search.trim().toLowerCase();
+    return !term ||
+      event.title.toLowerCase().includes(term) ||
+      event.venue_name.toLowerCase().includes(term);
+  }).length;
 
   async function deleteEvent(event: AdminEvent) {
     const confirmed = window.confirm(
@@ -118,16 +174,55 @@ export default function AdminEventsPage() {
 
     setMessage("");
 
-    const { data: flyerPath, error } = await supabase.rpc(
-      "admin_delete_event",
-      {
-        p_event_id: event.id,
-      }
-    );
+    let flyerPath: string | null = null;
 
-    if (error) {
-      setMessage(error.message);
-      return;
+    if (marketKey) {
+      try {
+        const { data: { session } } =
+          await supabase.auth.getSession();
+
+        if (!session?.access_token)
+          throw new Error("Administrator sign-in required.");
+
+        const response = await fetch(
+          `/api/admin/markets/events?market=${encodeURIComponent(marketKey)}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              action: "delete",
+              eventId: event.id,
+            }),
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok)
+          throw new Error(result.error || "Deletion failed.");
+
+        flyerPath = result.flyerPath ?? null;
+      } catch (error) {
+        setMessage(
+          error instanceof Error ? error.message : "Deletion failed."
+        );
+        return;
+      }
+    } else {
+      const { data, error } = await supabase.rpc(
+        "admin_delete_event",
+        { p_event_id: event.id }
+      );
+
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+
+      flyerPath = data;
     }
 
     if (flyerPath) {
@@ -172,17 +267,23 @@ export default function AdminEventsPage() {
           style={{ maxWidth: "1200px", margin: "0 auto" }}
         >
           <Link
-            href="/admin"
+            href={marketKey
+              ? `/admin/markets/${encodeURIComponent(marketKey)}`
+              : "/admin"}
             style={{
               display: "inline-block",
               marginBottom: "22px",
               color: "inherit",
             }}
           >
-            ← Admin Dashboard
+            {marketKey
+              ? `← ${marketName || "Market"} Dashboard`
+              : "← Admin Dashboard"}
           </Link>
 
-          <div className="eyebrow">TENDERFANS ADMIN</div>
+          <div className="eyebrow">
+            {marketKey ? "TENDERFANS MARKET" : "TENDERFANS ADMIN"}
+          </div>
 
           <div
             style={{
@@ -194,18 +295,24 @@ export default function AdminEventsPage() {
               marginBottom: "8px",
             }}
           >
-            <h1 style={{ margin: 0 }}>Event Management</h1>
+            <h1 style={{ margin: 0 }}>
+              {marketKey && marketName
+                ? `${marketName} Event Management`
+                : "Event Management"}
+            </h1>
 
-            <Link
-              href="/partners/events/new"
-              className="button"
-              style={{
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-              }}
-            >
-              + Add Event
-            </Link>
+            {!marketKey && (
+              <Link
+                href="/partners/events/new"
+                className="button"
+                style={{
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                + Add Event
+              </Link>
+            )}
           </div>
 
           <p
@@ -215,7 +322,9 @@ export default function AdminEventsPage() {
               marginBottom: "24px",
             }}
           >
-            Search for and manage events across TenderFans.
+            {marketKey
+              ? "Search events belonging to publishing Spots in this Market. Event submissions remain available through the authorized Spot and Partner portals."
+              : "Search for and manage events across TenderFans."}
           </p>
 
           <input
@@ -292,12 +401,24 @@ export default function AdminEventsPage() {
               </div>
             ))}
 
-            {visibleEvents.length === 0 && (
+            {!loadFailed && visibleEvents.length === 0 && (
               <div className="admin-event-empty">
                 No events found.
               </div>
             )}
           </div>
+
+          {marketKey && visibleEvents.length < matchingCount && (
+            <button
+              type="button"
+              className="btn outline"
+              style={{ marginTop: 20 }}
+              onClick={() => setDisplayLimit(value => value + 100)}
+            >
+              Show more events
+              ({matchingCount - visibleEvents.length} remaining)
+            </button>
+          )}
         </section>
       </div>
     </main>
