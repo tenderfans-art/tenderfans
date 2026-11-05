@@ -8,13 +8,26 @@ type AdminEvent = {
   id: string;
   venue_id: string;
   title: string;
-  starts_at: string;
+  starts_at: string | null;
   ends_at: string | null;
   status: string | null;
   venue_approval_status: string;
   admin_approval_status: string;
   flyer_storage_path: string | null;
   venue_name: string;
+  reviewType?: string;
+  reviewHref?: string;
+};
+
+type HarvesterReviewRow = {
+  id: string;
+  event_title?: string | null;
+  raw_title?: string | null;
+  publisher_venue_name?: string | null;
+  venue_name?: string | null;
+  venue_id?: string | null;
+  starts_at: string | null;
+  ends_at?: string | null;
 };
 
 export default function AdminEventsPage() {
@@ -102,41 +115,138 @@ export default function AdminEventsPage() {
     }
 
     /*
-     * Global Events is an Admin approval queue, not a
-     * duplicate of the full Market event inventory.
+     * Cross-Market oversight combines the same actionable queues
+     * already used by Verification Requests and HM Event Review.
      *
-     * Use the existing Admin-only pending-event RPC.
-     * Page through every result so the global review
-     * queue is not truncated at Supabase's row limit.
+     * All reads use the existing Admin-authorized RPCs.
+     * No review decisions or publishing operations occur here.
      */
-    const pending: AdminEvent[] = [];
+    const harvesterQueues = [
+      {
+        name: "admin_pending_event_harvest_unresolved_venues",
+        label: "Publisher Match",
+      },
+      {
+        name: "admin_list_calendar_event_verifications",
+        label: "Calendar Verification",
+      },
+      {
+        name: "admin_list_event_occurrence_reviews",
+        label: "Occurrence Review",
+      },
+    ] as const;
 
-    for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await supabase
-        .rpc("admin_pending_events")
-        .range(offset, offset + 999);
+    async function readQueue(name: string) {
+      const rows: HarvesterReviewRow[] = [];
 
-      if (error) {
-        setEvents([]);
-        setMessage(error.message);
-        setLoadFailed(true);
-        return;
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase
+          .rpc(name as never, {} as never)
+          .range(offset, offset + 999);
+
+        if (error) {
+          throw new Error(`${name}: ${error.message}`);
+        }
+
+        const page = (data ?? []) as unknown as HarvesterReviewRow[];
+        rows.push(...page);
+
+        if (page.length < 1000) break;
       }
 
-      const rows = (data ?? []) as AdminEvent[];
-
-      pending.push(
-        ...rows.map(row => ({
-          ...row,
-          status: null,
-          flyer_storage_path: null,
-        }))
-      );
-
-      if (rows.length < 1000) break;
+      return rows;
     }
 
-    setEvents(pending);
+    function stillNeedsReview(
+      startsAt: string | null,
+      endsAt?: string | null
+    ) {
+      if (!startsAt) return true;
+
+      const start = Date.parse(startsAt);
+      if (!Number.isFinite(start)) return true;
+
+      const end = endsAt ? Date.parse(endsAt) : NaN;
+      const completion =
+        Number.isFinite(end) && end > start ? end : start;
+
+      return completion >= Date.now();
+    }
+
+    try {
+      const [approvals, ...harvested] = await Promise.all([
+        readQueue("admin_pending_events"),
+        ...harvesterQueues.map(queue => readQueue(queue.name)),
+      ]);
+
+      const combined: AdminEvent[] = approvals.map(row => ({
+        id: row.id,
+        title: row.event_title ?? (row as HarvesterReviewRow & {
+          title?: string;
+        }).title ?? "Untitled event",
+        venue_id: row.venue_id ?? "",
+        venue_name: row.venue_name ?? "Unknown Spot",
+        starts_at: row.starts_at,
+        ends_at: row.ends_at ?? null,
+        status: null,
+        venue_approval_status: "pending",
+        admin_approval_status: "pending",
+        flyer_storage_path: null,
+        reviewType: "Admin Approval",
+        reviewHref: "/admin/claims",
+      }));
+
+      harvesterQueues.forEach((queue, index) => {
+        for (const row of harvested[index]) {
+          if (!stillNeedsReview(row.starts_at, row.ends_at)) {
+            continue;
+          }
+
+          combined.push({
+            id: row.id,
+            title:
+              row.event_title ??
+              row.raw_title ??
+              "Untitled harvested event",
+            venue_id: row.venue_id ?? "",
+            venue_name:
+              row.publisher_venue_name ??
+              row.venue_name ??
+              "Publisher awaiting identification",
+            starts_at: row.starts_at,
+            ends_at: row.ends_at ?? null,
+            status: "needs_review",
+            venue_approval_status: "pending",
+            admin_approval_status: "pending",
+            flyer_storage_path: null,
+            reviewType: queue.label,
+            reviewHref: "/admin/venue-matches",
+          });
+        }
+      });
+
+      combined.sort((a, b) => {
+        const aDate = a.starts_at
+          ? Date.parse(a.starts_at) : NaN;
+        const bDate = b.starts_at
+          ? Date.parse(b.starts_at) : NaN;
+
+        return (
+          (Number.isFinite(aDate) ? aDate : Infinity) -
+          (Number.isFinite(bDate) ? bDate : Infinity)
+        );
+      });
+
+      setEvents(combined);
+    } catch (cause) {
+      setEvents([]);
+      setLoadFailed(true);
+      setMessage(
+        cause instanceof Error
+          ? cause.message
+          : "Could not load global event reviews."
+      );
+    }
   }
 
   function eventStatus(event: AdminEvent) {
@@ -167,8 +277,13 @@ export default function AdminEventsPage() {
     return event.status?.toUpperCase() ?? "UNKNOWN";
   }
 
-  function formatDateTime(value: string) {
+  function formatDateTime(value: string | null) {
+    if (!value) return "Date to be verified";
+
     const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) {
+      return "Date to be verified";
+    }
 
     return date.toLocaleString("en-US", {
       month: "short",
@@ -360,7 +475,7 @@ export default function AdminEventsPage() {
           >
             {marketKey
               ? "Search events belonging to publishing Spots in this Market. Event submissions remain available through the authorized Spot and Partner portals."
-              : "Events awaiting Admin approval across all Markets. Harvester Event Review remains under each Market's Harvester Management."}
+              : "Outstanding Admin approvals and Harvester Event Reviews across all Markets. Review decisions remain available through the established review workflows."}
           </p>
 
           <input
@@ -392,6 +507,14 @@ export default function AdminEventsPage() {
             </div>
           )}
 
+          {!marketKey && !loadFailed && (
+            <p role="status" style={{ marginBottom: 16 }}>
+              <strong>{events.length}</strong>{" "}
+              outstanding event review
+              {events.length === 1 ? "" : "s"} across all Markets
+            </p>
+          )}
+
           <div className="admin-event-list">
             <div className="admin-event-head">
               <span>Event</span>
@@ -402,16 +525,28 @@ export default function AdminEventsPage() {
             </div>
 
             {visibleEvents.map((event) => (
-              <div className="admin-event-row" key={event.id}>
+              <div
+                className="admin-event-row"
+                key={`${event.reviewType ?? "market"}:${event.id}`}
+              >
                 <div className="admin-event-title">
                   <a
                     href={marketKey
                       ? `/events?event=${event.id}`
-                      : "/admin/claims"}
+                      : event.reviewHref ?? "/admin/claims"}
                     title={event.title}
                   >
                     {event.title}
                   </a>
+                  {!marketKey && event.reviewType && (
+                    <div style={{
+                      fontSize: 11,
+                      opacity: 0.7,
+                      marginTop: 4,
+                    }}>
+                      {event.reviewType}
+                    </div>
+                  )}
                 </div>
 
                 <div
@@ -439,7 +574,7 @@ export default function AdminEventsPage() {
                   </button>
                 ) : (
                   <Link
-                    href="/admin/claims"
+                    href={event.reviewHref ?? "/admin/claims"}
                     className="btn outline"
                   >
                     Review
