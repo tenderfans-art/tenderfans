@@ -286,15 +286,16 @@ export async function marketHarvesterWorkflow(
       }
     }
 
-    // Continue the detector queue in a fresh durable run. The claim
-    // RPC preserves Market enablement, batch limits and lease fencing.
-    // Splitting into runs bounds the per-Workflow history size.
-    if (work.length > 0) {
-      await start(marketHarvesterWorkflow, [marketId, "", "detect"]);
-    }
-
     if (firstError !== undefined) {
       throw firstError;
+    }
+
+    // Only continue when at least one item reached a terminal result.
+    // A batch consisting entirely of deferred/expired leases must not
+    // create an unbounded chain of otherwise identical Workflow runs.
+    // The claim RPC enforces Market enablement and batch capacity.
+    if (result.completed + result.failed > 0) {
+      await start(marketHarvesterWorkflow, [marketId, "", "detect"]);
     }
 
     return result;
