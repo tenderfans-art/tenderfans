@@ -162,6 +162,76 @@ async function finalizeReservedBatch(
 }
 
 
+type NextSharedReservation = {
+  reservation_id: string;
+  selected_market_id: string;
+};
+
+async function reserveNextSharedBatch(): Promise<NextSharedReservation | null> {
+  "use step";
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !key) {
+    throw new Error("Missing Supabase service credentials");
+  }
+
+  const db = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { error: recoveryError } = await db.rpc(
+    "recover_expired_market_source_executions",
+    { p_limit: 100 },
+  );
+  if (recoveryError) {
+    throw new Error(`Shared recovery failed: ${recoveryError.message}`);
+  }
+
+  const { error: reconciliationError } = await db.rpc(
+    "reconcile_shared_harvester_reservations",
+  );
+  if (reconciliationError) {
+    throw new Error(
+      `Shared reservation reconciliation failed: ${reconciliationError.message}`,
+    );
+  }
+
+  const { data, error } = await db.rpc("reserve_shared_harvester_batch");
+  if (error) {
+    throw new Error(`Shared admission failed: ${error.message}`);
+  }
+
+  const reservation = (data as NextSharedReservation[] | null)?.[0];
+  return reservation ?? null;
+}
+
+async function releaseUnstartedSharedBatch(reservationId: string): Promise<void> {
+  "use step";
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) {
+    throw new Error("Missing Supabase service credentials");
+  }
+  const db = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await db.rpc(
+    "release_shared_harvester_reservation",
+    { p_reservation_id: reservationId },
+  );
+  if (error || data !== true) {
+    throw new Error(
+      `Could not release unstarted shared reservation: ${error?.message ?? "not reserved"}`,
+    );
+  }
+}
+
 async function claimDetectorBatch(
   marketId: string,
 ): Promise<import(
@@ -401,11 +471,31 @@ export async function marketHarvesterWorkflow(
       }
     }
 
-    return result;
   } finally {
     // Runs after success, claim failure, or execution failure.
     // The database RPC must still refuse release when a live
     // assignment retains its lease.
     await finalizeReservedBatch(reservationId);
   }
+
+  // A single reservation processes at most ten sources. On Hobby,
+  // scheduled jobs run at most daily, so chain the remaining work
+  // through newly admitted, independently fenced Workflow runs.
+  // Never chain an all-deferred or empty batch.
+  if (result.completed + result.failed > 0) {
+    const next = await reserveNextSharedBatch();
+    if (next) {
+      try {
+        await start(marketHarvesterWorkflow, [
+          next.selected_market_id,
+          next.reservation_id,
+        ]);
+      } catch (error) {
+        await releaseUnstartedSharedBatch(next.reservation_id);
+        throw error;
+      }
+    }
+  }
+
+  return result;
 }
