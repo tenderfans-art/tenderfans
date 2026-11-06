@@ -105,3 +105,13 @@ test("chains until detector queue is empty", () => {
   assert.match(workflow, /if \(firstError !== undefined\) \{\s*throw firstError/);
   assert.ok(workflow.indexOf('throw firstError;') < workflow.indexOf('await start(marketHarvesterWorkflow')));
 });
+
+test("shared queue continues with fresh admission only after progress", () => {
+  assert.match(workflow, /async function reserveNextSharedBatch\(\)[\s\S]*?"use step"/);
+  assert.match(workflow, /reserve_shared_harvester_batch/);
+  assert.match(workflow, /release_shared_harvester_reservation/);
+  assert.match(workflow, /await finalizeReservedBatch\(reservationId\)/);
+  assert.match(workflow, /if \(result\.completed \+ result\.failed > 0\) \{\s*const next = await reserveNextSharedBatch\(\)/);
+  assert.match(workflow, /next\.selected_market_id,[\s\n]*next\.reservation_id/);
+  assert.match(workflow, /await releaseUnstartedSharedBatch\(next\.reservation_id\)/);
+});
