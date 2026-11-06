@@ -160,6 +160,70 @@ async function finalizeReservedBatch(
   }
 }
 
+
+async function claimDetectorBatch(
+  marketId: string,
+): Promise<import(
+  "@/lib/event-harvester/market-detector-executor"
+).ClaimedDetectorWork[]> {
+  "use step";
+
+  const { createClient } =
+    await import("@supabase/supabase-js");
+
+  const { claimMarketDetectorBatch } = await import(
+    "@/lib/event-harvester/market-detector-executor"
+  );
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !key) {
+    throw new Error("Missing Supabase credentials");
+  }
+
+  const db = createClient(url, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return claimMarketDetectorBatch(db, marketId);
+}
+
+async function executeDetector(
+  item: import(
+    "@/lib/event-harvester/market-detector-executor"
+  ).ClaimedDetectorWork,
+): Promise<MarketBatchResult> {
+  "use step";
+
+  const { createClient } =
+    await import("@supabase/supabase-js");
+
+  const { executeMarketDetectorWorkItem } =
+    await import(
+      "@/lib/event-harvester/market-detector-executor"
+    );
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !key) {
+    throw new Error("Missing Supabase credentials");
+  }
+
+  const db = createClient(url, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return executeMarketDetectorWorkItem(db, item);
+}
+
 async function executeSource(
   item: ClaimedWork,
 ): Promise<MarketBatchResult> {
@@ -190,8 +254,43 @@ async function executeSource(
 export async function marketHarvesterWorkflow(
   marketId: string,
   reservationId?: string,
+  mode: "harvest" | "detect" = "harvest",
 ): Promise<MarketBatchResult> {
   "use workflow";
+
+  if (mode === "detect") {
+    if (reservationId) {
+      throw new Error(
+        "Detector execution cannot use a source reservation",
+      );
+    }
+
+    const work = await claimDetectorBatch(marketId);
+    const result = makeResult(work.length);
+    let firstError: unknown;
+
+    for (let offset = 0; offset < work.length; offset += 2) {
+      const outcomes = await Promise.allSettled(
+        work.slice(offset, offset + 2).map(executeDetector),
+      );
+
+      for (const outcome of outcomes) {
+        if (outcome.status === "rejected") {
+          firstError ??= outcome.reason;
+        } else {
+          result.completed += outcome.value.completed;
+          result.failed += outcome.value.failed;
+          result.deferred += outcome.value.deferred;
+        }
+      }
+    }
+
+    if (firstError !== undefined) {
+      throw firstError;
+    }
+
+    return result;
+  }
 
   // Legacy market-specific dispatch retains its original claim path.
   if (!reservationId) {

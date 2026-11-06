@@ -38,6 +38,23 @@ export async function POST(request: Request) {
     },
   });
 
+  // Replenish due work for enabled Markets only.
+  const { error: queueError } = await supabase.rpc(
+    "enqueue_due_market_processing",
+  );
+
+  if (queueError) {
+    console.error(
+      "Market queue reconciliation failed",
+      queueError,
+    );
+
+    return Response.json(
+      { error: "Market queue reconciliation failed" },
+      { status: 503 },
+    );
+  }
+
   // Recovery is bounded and only affects expired market-bound
   // executions. Standalone source executions are never recovered.
   const { error: recoveryError } = await supabase.rpc(
