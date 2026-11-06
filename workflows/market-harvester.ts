@@ -2,6 +2,7 @@ import type {
   ClaimedWork,
   MarketBatchResult,
 } from "@/lib/event-harvester/market-batch-executor";
+import { start } from "workflow/api";
 
 function makeResult(claimed: number): MarketBatchResult {
   return {
@@ -283,6 +284,13 @@ export async function marketHarvesterWorkflow(
           result.deferred += outcome.value.deferred;
         }
       }
+    }
+
+    // Continue the detector queue in a fresh durable run. The claim
+    // RPC preserves Market enablement, batch limits and lease fencing.
+    // Splitting into runs bounds the per-Workflow history size.
+    if (work.length > 0) {
+      await start(marketHarvesterWorkflow, [marketId, "", "detect"]);
     }
 
     if (firstError !== undefined) {
