@@ -98,3 +98,9 @@ test("detector dispatcher starts existing Workflow", () => {
   );
   assert.match(dispatch, /"detect"/);
 });
+
+test("chains until detector queue is empty", () => {
+  assert.ok(workflow.includes('import { start } from "workflow/api";'));
+  assert.match(workflow, /if \(work\.length > 0\) \{\s*await start\(marketHarvesterWorkflow, \[marketId, "", "detect"\]\)/);
+  assert.match(workflow, /if \(firstError !== undefined\) \{\s*throw firstError/);
+});
