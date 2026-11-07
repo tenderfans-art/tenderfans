@@ -4,6 +4,9 @@ import { marketHarvesterWorkflow } from "@/workflows/market-harvester";
 
 export const runtime = "nodejs";
 
+// Bounds starts per HTTP request; database RPCs enforce actual capacity.
+const MAX_WORKFLOW_STARTS_PER_TICK = 16;
+
 type Reservation = {
   reservation_id: string;
   selected_market_id: string;
@@ -85,60 +88,111 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data, error } = await supabase.rpc(
-    "reserve_shared_harvester_batch",
-  );
+  // One dispatcher invocation fills available reservations using
+  // the existing atomic admission RPC. No Worker admits more work.
+  const runs: Array<{
+    runId: string;
+    reservationId: string;
+    marketId: string;
+    marketKey: string;
+    batchSize: number;
+  }> = [];
 
-  if (error) {
-    console.error("Shared admission failed", error);
-    return Response.json(
-      { error: "Shared admission failed" },
-      { status: 503 },
+  for (
+    let attempt = 0;
+    attempt < MAX_WORKFLOW_STARTS_PER_TICK;
+    attempt += 1
+  ) {
+    const { data, error } = await supabase.rpc(
+      "reserve_shared_harvester_batch",
     );
-  }
 
-  const reservation = (data as Reservation[] | null)?.[0];
+    if (error) {
+      console.error("Shared admission failed", error);
+      return Response.json(
+        { error: "Shared admission failed", accepted: runs },
+        { status: 503 },
+      );
+    }
 
-  if (!reservation) {
-    return Response.json({
-      status: "idle",
-      reason: "No eligible market or available shared capacity",
-    });
-  }
+    const reservation = (data as Reservation[] | null)?.[0];
 
-  try {
-    const run = await start(marketHarvesterWorkflow, [
-      reservation.selected_market_id,
-      reservation.reservation_id,
-    ]);
+    if (!reservation) {
+      break;
+    }
 
-    return Response.json(
-      {
-        status: "accepted",
+    try {
+      // Preserve each Market's configured batch size, including
+      // the small isolation Market. Snapshot it in Workflow inputs.
+      const { data: market, error: marketError } = await supabase
+        .from("event_processing_markets")
+        .select("harvester_batch_size")
+        .eq("id", reservation.selected_market_id)
+        .single();
+
+      if (
+        marketError ||
+        !market ||
+        !Number.isSafeInteger(market.harvester_batch_size) ||
+        market.harvester_batch_size < 1 ||
+        market.harvester_batch_size > 100
+      ) {
+        throw new Error("Market harvester batch configuration unavailable");
+      }
+
+      const run = await start(marketHarvesterWorkflow, [
+        reservation.selected_market_id,
+        reservation.reservation_id,
+        "harvest",
+        market.harvester_batch_size,
+      ]);
+
+      runs.push({
         runId: run.runId,
         reservationId: reservation.reservation_id,
         marketId: reservation.selected_market_id,
         marketKey: reservation.selected_market_key,
-      },
-      { status: 202 },
-    );
-  } catch (cause) {
-    console.error("Shared dispatch failed", cause);
+        batchSize: market.harvester_batch_size,
+      });
+    } catch (cause) {
+      console.error("Shared dispatch failed", cause);
 
-    const { error: releaseError } = await supabase.rpc(
-      "release_shared_harvester_reservation",
-      { p_reservation_id: reservation.reservation_id },
-    );
+      const { error: releaseError } = await supabase.rpc(
+        "release_shared_harvester_reservation",
+        { p_reservation_id: reservation.reservation_id },
+      );
 
-    if (releaseError) {
-      console.error("Reservation release failed", releaseError);
+      if (releaseError) {
+        console.error("Reservation release failed", releaseError);
+      }
+
+      return Response.json(
+        { error: "Shared dispatch failed", accepted: runs },
+        { status: 503 },
+      );
     }
-
-    return Response.json(
-      { error: "Shared dispatch failed" },
-      { status: 503 },
-    );
   }
+
+  // Preserve original single-run response fields for operators.
+  const first = runs[0];
+
+  return Response.json(
+    {
+      status: runs.length ? "accepted" : "idle",
+      ...(first
+        ? {
+            runId: first.runId,
+            reservationId: first.reservationId,
+            marketId: first.marketId,
+            marketKey: first.marketKey,
+          }
+        : {
+            reason: "No eligible Market or available shared capacity",
+          }),
+      runs,
+    },
+    { status: runs.length ? 202 : 200 },
+  );
 }
 
 // Vercel scheduled requests use GET.

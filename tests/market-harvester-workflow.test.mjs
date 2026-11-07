@@ -13,8 +13,8 @@ test("workflow and source execution use durable directives", () => {
   assert.match(source, /async function claimBatch[\s\S]*?"use step"/);
 });
 
-test("source execution is bounded to two per group", () => {
-  assert.match(source, /const sourceConcurrency = 2;/);
+test("source execution is bounded to eight per group", () => {
+  assert.match(source, /const sourceConcurrency = Math.min\(8, maxSourcesPerRun\);/);
   assert.match(source, /offset \+= sourceConcurrency/);
   assert.match(source, /length: Math\.min\(/);
   assert.match(source, /claimReservedSource\(reservationId, offset \+ index\)/);

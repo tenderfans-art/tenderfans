@@ -255,6 +255,7 @@ export async function marketHarvesterWorkflow(
   marketId: string,
   reservationId?: string,
   mode: "harvest" | "detect" = "harvest",
+  configuredBatchSize = 10,
 ): Promise<MarketBatchResult> {
   "use workflow";
 
@@ -324,8 +325,16 @@ export async function marketHarvesterWorkflow(
   // Shared dispatch: claim only when an execution slot is ready.
   // Each durable assignment slot has an immutable claim snapshot.
   const result = makeResult(0);
-  const sourceConcurrency = 2;
-  const maxSourcesPerRun = 10;
+  // Market-configured batch size is captured at dispatch.
+  // Eight simultaneous steps per Workflow can fill a
+  // 16-source Market through two admitted Workflows.
+  // Actual source admission remains database-controlled.
+  const maxSourcesPerRun =
+    Number.isSafeInteger(configuredBatchSize) &&
+    configuredBatchSize > 0
+      ? Math.min(10, configuredBatchSize)
+      : 10;
+  const sourceConcurrency = Math.min(8, maxSourcesPerRun);
 
   try {
     for (
