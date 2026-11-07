@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ingestFirstPartySource } from "./first-party/ingest";
+import { runWithTransportRecovery } from "./transport-recovery-context";
 
 export interface MarketBatchResult {
   claimed: number;
@@ -211,23 +212,145 @@ export async function executeMarketHarvesterWorkItem(
     let ingested;
 
     try {
-      ingested = await withLeaseRenewal(
+      // Restore the established standalone harvester lifecycle metadata
+      // and recovery context while using the SAME ingestion function and
+      // the existing Market-bound source execution/lease fencing.
+      const { data: source, error: sourceError } = await supabase
+        .from("event_harvest_sources")
+        .select("id,venue_id,source_type,source_url")
+        .eq("id", item.claimed_source_id)
+        .eq("provider", "first_party")
+        .eq("is_enabled", true)
+        .single();
+
+      if (sourceError || !source) {
+        throw new Error(
+          "Could not load approved first-party source for Market work: " +
+          (sourceError?.message ?? item.claimed_source_id),
+        );
+      }
+
+      const checkedAt = new Date().toISOString();
+      const { error: checkError } = await supabase
+        .from("event_harvest_sources")
+        .update({ last_checked_at: checkedAt, updated_at: checkedAt })
+        .eq("id", source.id);
+
+      if (checkError) {
+        throw new Error(
+          "Could not record first-party source check: " +
+          checkError.message,
+        );
+      }
+
+      const ingest = () => ingestFirstPartySource(
         supabase,
-        item.work_id,
-        item.claimed_lease_token,
-        () =>
-          ingestFirstPartySource(
-            supabase,
-            item.claimed_source_id!,
-            {
-              dryRun: false,
-              marketWork: {
-                workId: item.work_id,
-                leaseToken: item.claimed_lease_token,
-              },
-            },
-          ),
+        item.claimed_source_id!,
+        {
+          dryRun: false,
+          marketWork: {
+            workId: item.work_id,
+            leaseToken: item.claimed_lease_token,
+          },
+        },
       );
+
+      const proxyUrl = process.env.TENDERFANS_TRANSPORT_PROXY_URL;
+
+      try {
+        ingested = await withLeaseRenewal(
+          supabase,
+          item.work_id,
+          item.claimed_lease_token,
+          () =>
+            proxyUrl
+              ? runWithTransportRecovery(proxyUrl, ingest)
+              : ingest(),
+        );
+      } catch (ingestError) {
+        const message =
+          ingestError instanceof Error
+            ? ingestError.message
+            : String(ingestError);
+
+        // Exact existing calendar-image adapter-error classification.
+        const technicalCalendarFailure =
+          /calendar.image page returned HTTP \\d+/i.test(message) ||
+          /calendar image asset could not be fetched as a supported image/i.test(message);
+
+        if (
+          source.source_type === "calendar_image" &&
+          source.venue_id &&
+          source.source_url &&
+          technicalCalendarFailure
+        ) {
+          const { error: findingError } = await supabase.rpc(
+            "upsert_event_harvest_detector_finding",
+            {
+              p_venue_id: source.venue_id,
+              p_category: "adapter_error",
+              p_finding_key: `adapter_error:${JSON.stringify(["calendar_image", source.source_url])}`,
+              p_detector_status: "adapter_failed",
+              p_source_type: "calendar_image",
+              p_website_url: source.source_url,
+              p_source_url: source.source_url,
+              p_fetched_url: null,
+              p_confidence: null,
+              p_evidence: [
+                "Registered calendar-image source failed during ingestion",
+              ],
+              p_error: message,
+            },
+          );
+
+          if (findingError) {
+            throw new Error(
+              "Calendar-image Adapter Error persistence failed: " +
+              findingError.message + "; original failure: " + message,
+            );
+          }
+        }
+
+        throw ingestError;
+      }
+
+      if (
+        source.source_type === "calendar_image" &&
+        source.venue_id &&
+        source.source_url
+      ) {
+        const { error: resolutionError } = await supabase.rpc(
+          "resolve_event_harvest_adapter_error",
+          {
+            p_venue_id: source.venue_id,
+            p_finding_key: `adapter_error:${JSON.stringify(["calendar_image", source.source_url])}`,
+          },
+        );
+
+        if (resolutionError) {
+          throw new Error(
+            "Calendar-image Adapter Error resolution failed: " +
+            resolutionError.message,
+          );
+        }
+      }
+
+      const succeededAt = new Date().toISOString();
+      const { error: successError } = await supabase
+        .from("event_harvest_sources")
+        .update({
+          last_success_at: succeededAt,
+          last_error: null,
+          updated_at: succeededAt,
+        })
+        .eq("id", source.id);
+
+      if (successError) {
+        throw new Error(
+          "Could not record first-party source success: " +
+          successError.message,
+        );
+      }
     } catch (cause) {
       if (isSourceBusy(cause) || cause instanceof MarketLeaseLostError) {
         result.deferred += 1;
@@ -236,6 +359,20 @@ export async function executeMarketHarvesterWorkItem(
 
       const message =
         cause instanceof Error ? cause.message : String(cause);
+
+      const failedAt = new Date().toISOString();
+      const { error: sourceFailureError } = await supabase
+        .from("event_harvest_sources")
+        .update({ last_error: message, updated_at: failedAt })
+        .eq("id", item.claimed_source_id!);
+
+      if (sourceFailureError) {
+        console.error(
+          "Could not record first-party source failure",
+          item.claimed_source_id,
+          sourceFailureError.message,
+        );
+      }
 
       const { data: recorded, error: failureError } =
         await supabase.rpc("fail_event_processing_work", {
