@@ -275,7 +275,7 @@ export async function executeMarketHarvesterWorkItem(
 
         // Exact existing calendar-image adapter-error classification.
         const technicalCalendarFailure =
-          /calendar.image page returned HTTP \\d+/i.test(message) ||
+          /calendar.image page returned HTTP \d+/i.test(message) ||
           /calendar image asset could not be fetched as a supported image/i.test(message);
 
         if (
