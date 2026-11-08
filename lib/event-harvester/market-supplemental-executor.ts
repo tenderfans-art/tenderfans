@@ -43,6 +43,7 @@ export async function executeMarketSupplementalWorkItem(
   }
 
   let details: Record<string, unknown>;
+  let providerBusyDeferralAttempted = false;
 
   try {
     if (mode === "provider") {
@@ -82,6 +83,36 @@ export async function executeMarketSupplementalWorkItem(
       );
 
       const body = await response.json() as Record<string, unknown>;
+
+      // Contention is not an ingestion failure.
+      // Release this work lease and retry without consuming
+      // the attempt that the shared assignment just claimed.
+      if (
+        response.status === 409 &&
+        body.error === "ticketmaster_provider_busy"
+      ) {
+        providerBusyDeferralAttempted = true;
+
+        const { data: deferred, error: deferralError } =
+          await supabase.rpc(
+            "defer_shared_market_provider_work",
+            {
+              p_work_id: item.work_id,
+              p_lease_token: item.claimed_lease_token,
+              p_delay_seconds: 60,
+            },
+          );
+
+        if (deferralError || deferred !== true) {
+          throw new Error(
+            "Provider contention deferral failed: " +
+            (deferralError?.message ?? "Lease ownership lost")
+          );
+        }
+
+        result.deferred = 1;
+        return result;
+      }
 
       if (
         !response.ok ||
@@ -157,6 +188,12 @@ export async function executeMarketSupplementalWorkItem(
       };
     }
   } catch (cause) {
+    // A failed deferral must not be converted into an
+    // ingestion failure that consumes retry attempts.
+    if (providerBusyDeferralAttempted) {
+      throw cause;
+    }
+
     const message =
       cause instanceof Error ? cause.message : String(cause);
 
