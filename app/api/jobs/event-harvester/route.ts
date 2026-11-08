@@ -398,6 +398,55 @@ export async function POST(
         : "";
 
     /*
+     * Explicit Market scope for future shared provider jobs.
+     * The existing global cron sends no marketId and retains
+     * its original behavior.
+     */
+    const hasMarketScope =
+      body !== null &&
+      typeof body === "object" &&
+      "marketId" in body;
+
+    const requestedMarketId =
+      hasMarketScope &&
+      typeof body.marketId === "string"
+        ? body.marketId.trim()
+        : "";
+
+    if (
+      hasMarketScope &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        .test(requestedMarketId)
+    ) {
+      return NextResponse.json(
+        { error: "A valid marketId UUID is required." },
+        { status: 400 }
+      );
+    }
+
+    if (requestedMarketId) {
+      const { data: market, error: marketError } =
+        await supabase
+          .from("event_processing_markets")
+          .select("id,is_enabled")
+          .eq("id", requestedMarketId)
+          .maybeSingle();
+
+      if (marketError) {
+        throw new Error(
+          `Could not verify Market scope: ${marketError.message}`
+        );
+      }
+
+      if (!market || !market.is_enabled) {
+        return NextResponse.json(
+          { error: "Market is missing or disabled." },
+          { status: 409 }
+        );
+      }
+    }
+
+    /*
      * This first provider pass is deliberately read-only.
      * It only previews events for Ticketmaster identities
      * already attached to existing TenderFans Spots.
@@ -435,6 +484,7 @@ export async function POST(
      * This initial pass is observation-only. It does not write
      * mappings or review candidates yet.
      */
+    // Preserve the original global query unchanged.
     let unmappedVenuesQuery = supabase
       .from("venues")
       .select(`
@@ -449,18 +499,48 @@ export async function POST(
       `)
       .eq("status", "active");
 
+    // A separate literal select keeps Supabase's typed
+    // relationship parser valid and enforces Market membership.
+    let scopedVenuesQuery = supabase
+      .from("venues")
+      .select(`
+        id,
+        name,
+        street_address,
+        city,
+        state_region,
+        postal_code,
+        latitude,
+        longitude,
+        event_processing_market_venues!inner(market_id)
+      `)
+      .eq("status", "active");
+
+    if (requestedMarketId) {
+      scopedVenuesQuery = scopedVenuesQuery.eq(
+        "event_processing_market_venues.market_id",
+        requestedMarketId
+      );
+    }
+
     if (requestedVenueId) {
-      unmappedVenuesQuery =
-        unmappedVenuesQuery.eq(
-          "id",
-          requestedVenueId
-        );
+      unmappedVenuesQuery = unmappedVenuesQuery.eq(
+        "id",
+        requestedVenueId
+      );
+
+      scopedVenuesQuery = scopedVenuesQuery.eq(
+        "id",
+        requestedVenueId
+      );
     }
 
     const {
       data: activeVenuesData,
       error: activeVenuesError,
-    } = await unmappedVenuesQuery;
+    } = requestedMarketId
+      ? await scopedVenuesQuery
+      : await unmappedVenuesQuery;
 
     if (activeVenuesError) {
       throw new Error(
@@ -482,6 +562,32 @@ export async function POST(
 
     const activeVenueIds =
       activeVenues.map((venue) => venue.id);
+
+    /*
+     * Do not fall through into the global mapped-Spot query
+     * when a scoped Market has no active Spots.
+     */
+    if (requestedMarketId && activeVenueIds.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        dryRun,
+        provider: "ticketmaster",
+        sourceId: source.id,
+        marketId: requestedMarketId,
+        venueMatcher: {
+          spotsChecked: 0,
+          autoAttach: 0,
+          needsReview: 0,
+          noMatch: 0,
+          matches: [],
+        },
+        spotsChecked: 0,
+        eventsFound: 0,
+        directLifecycleChecked: 0,
+        lifecycle: [],
+        spots: [],
+      });
+    }
 
     let mappedVenueIds = new Set<string>();
 
@@ -958,6 +1064,18 @@ export async function POST(
       refsQuery = refsQuery.eq(
         "venue_id",
         requestedVenueId
+      );
+    }
+
+    /*
+     * Scope mapped event discovery and lifecycle verification
+     * to the same Spot set used by the venue matcher.
+     * This is a membership filter, NOT event reassignment.
+     */
+    if (requestedMarketId) {
+      refsQuery = refsQuery.in(
+        "venue_id",
+        activeVenueIds
       );
     }
 
@@ -1720,6 +1838,9 @@ export async function POST(
       dryRun,
       provider: "ticketmaster",
       sourceId: source.id,
+      ...(requestedMarketId
+        ? { marketId: requestedMarketId }
+        : {}),
       venueMatcher: {
         spotsChecked: venueMatchPreviews.length,
         autoAttach: venueMatchPreviews.filter(

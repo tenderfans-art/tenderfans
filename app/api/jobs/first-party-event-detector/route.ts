@@ -136,6 +136,27 @@ export async function GET(request: Request) {
   const archiveMode =
     requestUrl.searchParams.get("mode") === "archive-recheck";
 
+  const archiveMarketId =
+    requestUrl.searchParams.get("market_id");
+
+  /*
+   * Market scope is allowed ONLY for archive rechecks.
+   * Normal detector and manual recovery paths are unchanged.
+   */
+  if (
+    archiveMarketId !== null &&
+    (
+      !archiveMode ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        .test(archiveMarketId)
+    )
+  ) {
+    return NextResponse.json(
+      { error: "Invalid Market archive scope." },
+      { status: 400 }
+    );
+  }
+
   const recoveryIdsParam = requestUrl.searchParams.get("venue_ids");
 
   if ((recoveryMode || fullScanMode || archiveMode) && venueId) {
@@ -180,8 +201,15 @@ export async function GET(request: Request) {
 
     const { data: due, error: dueError } =
       await supabase.rpc(
-        "claim_event_harvest_archive_rechecks",
-        { p_limit: archiveBatchSize }
+        archiveMarketId
+          ? "claim_market_event_harvest_archive_rechecks"
+          : "claim_event_harvest_archive_rechecks",
+        archiveMarketId
+          ? {
+              p_market_id: archiveMarketId,
+              p_limit: archiveBatchSize,
+            }
+          : { p_limit: archiveBatchSize }
       );
 
     if (dueError) {
