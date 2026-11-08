@@ -94,7 +94,7 @@ test("migration neither activates Markets nor alters legacy crons", () => {
   assert.match(migration, /auth\.role\(\) <> 'service_role'/);
   assert.match(migration, /to service_role/);
   assert.doesNotMatch(migration, /update public\.event_processing_markets/i);
-  assert.equal(cron.crons.length, 4);
+  assert.equal(cron.crons.filter(c => c.path !== "/api/jobs/shared-market-dispatch").length, 4);
   assert.ok(
     cron.crons.some((item) =>
       item.path === "/api/jobs/event-harvester"

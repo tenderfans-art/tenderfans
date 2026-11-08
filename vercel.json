@@ -15,6 +15,10 @@
     {
       "path": "/api/jobs/first-party-event-harvester",
       "schedule": "30 10 * * *"
+    },
+    {
+      "path": "/api/jobs/shared-market-dispatch",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

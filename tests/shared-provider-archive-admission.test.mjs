@@ -92,7 +92,7 @@ test("manual Market endpoint cannot bypass shared admission", () => {
 });
 
 test("legacy crons and disabled-by-default Market policy remain", () => {
-  assert.equal(cron.crons.length, 4);
+  assert.equal(cron.crons.filter(c => c.path !== "/api/jobs/shared-market-dispatch").length, 4);
   assert.match(sql, /^begin;/m);
   assert.match(sql, /^commit;/m);
   assert.doesNotMatch(sql, /set\s+is_enabled\s*=/i);

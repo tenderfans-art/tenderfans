@@ -66,5 +66,5 @@ test("completion and archive paths remain separate", () => {
     sql,
     /update public\.event_processing_markets/i
   );
-  assert.equal(JSON.parse(read("vercel.json")).crons.length, 4);
+  assert.equal(JSON.parse(read("vercel.json")).crons.filter(c => c.path !== "/api/jobs/shared-market-dispatch").length, 4);
 });
