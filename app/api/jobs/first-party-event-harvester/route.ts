@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { ingestFirstPartySource } from "@/lib/event-harvester/first-party/ingest";
-import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
+import {
+  runRegisteredFirstPartySource,
+  recordFirstPartySourceFailure,
+} from "@/lib/event-harvester/first-party/registered-source-runner";
 
 export const maxDuration = 1800;
 
@@ -101,118 +103,10 @@ export async function GET(request: NextRequest) {
 
     for (const source of sources ?? []) {
       try {
-        const checkedAt = new Date().toISOString();
-
-        const { error: checkedError } = await supabase
-          .from("event_harvest_sources")
-          .update({
-            last_checked_at: checkedAt,
-            updated_at: checkedAt,
-          })
-          .eq("id", source.id);
-
-        if (checkedError) {
-          throw new Error(
-            `Could not record source check: ${checkedError.message}`
-          );
-        }
-
-        let result: Awaited<ReturnType<typeof ingestFirstPartySource>>;
-
-        try {
-          const ingest = () => ingestFirstPartySource(
-            supabase,
-            source.id,
-            { dryRun: false }
-          );
-
-          const proxyUrl =
-            process.env.TENDERFANS_TRANSPORT_PROXY_URL;
-
-          result = proxyUrl
-            ? await runWithTransportRecovery(proxyUrl, ingest)
-            : await ingest();
-        } catch (ingestError) {
-          const message = safeError(ingestError);
-
-          // Only technical calendar-image execution failures belong
-          // in Adapter Errors. Content qualification stays in its
-          // existing review/evaluation workflow.
-          const technicalCalendarFailure =
-            /calendar.image page returned HTTP \d+/i.test(message) ||
-            /calendar image asset could not be fetched as a supported image/i.test(message);
-
-          if (
-            source.source_type === "calendar_image" &&
-            source.venue_id &&
-            source.source_url &&
-            technicalCalendarFailure
-          ) {
-            const { error: findingError } = await supabase.rpc(
-              "upsert_event_harvest_detector_finding",
-              {
-                p_venue_id: source.venue_id,
-                p_category: "adapter_error",
-                p_finding_key: `adapter_error:${JSON.stringify(["calendar_image", source.source_url])}`,
-                p_detector_status: "adapter_failed",
-                p_source_type: "calendar_image",
-                p_website_url: source.source_url,
-                p_source_url: source.source_url,
-                p_fetched_url: null,
-                p_confidence: null,
-                p_evidence: [
-                  "Registered calendar-image source failed during ingestion",
-                ],
-                p_error: message,
-              }
-            );
-
-            if (findingError) {
-              throw new Error(
-                `Calendar-image Adapter Error persistence failed: ${findingError.message}; original failure: ${message}`
-              );
-            }
-          }
-
-          throw ingestError;
-        }
-
-        if (
-          source.source_type === "calendar_image" &&
-          source.venue_id &&
-          source.source_url
-        ) {
-          const { error: resolutionError } = await supabase.rpc(
-            "resolve_event_harvest_adapter_error",
-            {
-              p_venue_id: source.venue_id,
-              p_finding_key: `adapter_error:${JSON.stringify(["calendar_image", source.source_url])}`,
-            }
-          );
-
-          if (resolutionError) {
-            throw new Error(
-              `Calendar-image Adapter Error resolution failed: ${resolutionError.message}`
-            );
-          }
-        }
-
-        const succeededAt = new Date().toISOString();
-
-        const { error: successError } = await supabase
-          .from("event_harvest_sources")
-          .update({
-            last_success_at: succeededAt,
-            last_error: null,
-            updated_at: succeededAt,
-          })
-          .eq("id", source.id);
-
-        if (successError) {
-          throw new Error(
-            `Could not record source success: ${successError.message}`
-          );
-        }
+        const result = await runRegisteredFirstPartySource(
+          supabase,
+          source,
+        );
 
         results.push({
           sourceId: source.id,
@@ -221,28 +115,18 @@ export async function GET(request: NextRequest) {
           result,
         });
       } catch (error) {
-        /*
-         * One broken Spot feed must not prevent the remaining
-         * first-party sources from being harvested.
-         */
-        const message = safeError(error);
-        const failedAt = new Date().toISOString();
-
-        const { error: failureRecordError } = await supabase
-          .from("event_harvest_sources")
-          .update({
-            last_error: message,
-            updated_at: failedAt,
-          })
-          .eq("id", source.id);
+        // One broken feed must not stop remaining sources.
+        const message = await recordFirstPartySourceFailure(
+          supabase,
+          source.id,
+          error,
+        );
 
         results.push({
           sourceId: source.id,
           sourceName: source.name,
           ok: false,
-          error: failureRecordError
-            ? `${message} (Could not record source failure: ${failureRecordError.message})`
-            : message,
+          error: message,
         });
       }
     }

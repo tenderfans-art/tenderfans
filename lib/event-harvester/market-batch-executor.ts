@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ingestFirstPartySource } from "./first-party/ingest";
+import {
+  loadRegisteredFirstPartySource,
+  runRegisteredFirstPartySource,
+  recordFirstPartySourceFailure,
+} from "./first-party/registered-source-runner";
 
 export interface MarketBatchResult {
   claimed: number;
@@ -215,18 +219,23 @@ export async function executeMarketHarvesterWorkItem(
         supabase,
         item.work_id,
         item.claimed_lease_token,
-        () =>
-          ingestFirstPartySource(
+        async () => {
+          const source = await loadRegisteredFirstPartySource(
             supabase,
             item.claimed_source_id!,
+          );
+
+          return runRegisteredFirstPartySource(
+            supabase,
+            source,
             {
-              dryRun: false,
               marketWork: {
                 workId: item.work_id,
                 leaseToken: item.claimed_lease_token,
               },
             },
-          ),
+          );
+        },
       );
     } catch (cause) {
       if (isSourceBusy(cause) || cause instanceof MarketLeaseLostError) {
@@ -234,8 +243,24 @@ export async function executeMarketHarvesterWorkItem(
         return result;
       }
 
-      const message =
+      let message =
         cause instanceof Error ? cause.message : String(cause);
+
+      try {
+        message = await recordFirstPartySourceFailure(
+          supabase,
+          item.claimed_source_id!,
+          cause,
+        );
+      } catch (trackingError) {
+        const trackingMessage =
+          trackingError instanceof Error
+            ? trackingError.message
+            : String(trackingError);
+
+        message +=
+          ` (Could not record source failure: ${trackingMessage})`;
+      }
 
       const { data: recorded, error: failureError } =
         await supabase.rpc("fail_event_processing_work", {

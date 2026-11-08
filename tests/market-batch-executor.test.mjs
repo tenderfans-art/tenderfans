@@ -7,8 +7,13 @@ const source = readFileSync(
   "utf8",
 );
 
-test("uses the existing first-party ingestion path", () => {
-  assert.match(source, /ingestFirstPartySource\(/);
+test("uses the shared first-party ingestion path", () => {
+  const runner = readFileSync(
+    "lib/event-harvester/first-party/registered-source-runner.ts",
+    "utf8",
+  );
+  assert.match(source, /runRegisteredFirstPartySource\(/);
+  assert.match(runner, /ingestFirstPartySource\(/);
 });
 
 test("claims only harvest_source work", () => {
