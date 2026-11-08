@@ -157,6 +157,40 @@ export async function GET(request: Request) {
     );
   }
 
+  const targetVenueId =
+    requestUrl.searchParams.get("target_venue_id");
+  const targetWorkId =
+    requestUrl.searchParams.get("market_work_id");
+  const targetWorkLease =
+    requestUrl.searchParams.get("market_lease_token");
+
+  const hasArchiveTarget =
+    targetVenueId !== null ||
+    targetWorkId !== null ||
+    targetWorkLease !== null;
+
+  const validUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (
+    hasArchiveTarget &&
+    (
+      !archiveMode ||
+      !archiveMarketId ||
+      !targetVenueId ||
+      !targetWorkId ||
+      !targetWorkLease ||
+      !validUuid.test(targetVenueId) ||
+      !validUuid.test(targetWorkId) ||
+      !validUuid.test(targetWorkLease)
+    )
+  ) {
+    return NextResponse.json(
+      { error: "Invalid leased archive target." },
+      { status: 400 }
+    );
+  }
+
   const recoveryIdsParam = requestUrl.searchParams.get("venue_ids");
 
   if ((recoveryMode || fullScanMode || archiveMode) && venueId) {
@@ -199,17 +233,28 @@ export async function GET(request: Request) {
         ? configuredBatchSize
         : 30;
 
+    const archiveRpc = archiveMarketId
+      ? "claim_market_event_harvest_archive_rechecks"
+      : "claim_event_harvest_archive_rechecks";
+
     const { data: due, error: dueError } =
       await supabase.rpc(
-        archiveMarketId
-          ? "claim_market_event_harvest_archive_rechecks"
-          : "claim_event_harvest_archive_rechecks",
-        archiveMarketId
+        targetVenueId
+          ? "claim_market_event_harvest_archive_target"
+          : archiveRpc,
+        targetVenueId
           ? {
               p_market_id: archiveMarketId,
-              p_limit: archiveBatchSize,
+              p_venue_id: targetVenueId,
+              p_work_id: targetWorkId,
+              p_work_lease_token: targetWorkLease,
             }
-          : { p_limit: archiveBatchSize }
+          : archiveMarketId
+            ? {
+                p_market_id: archiveMarketId,
+                p_limit: archiveBatchSize,
+              }
+            : { p_limit: archiveBatchSize }
       );
 
     if (dueError) {
@@ -2317,12 +2362,22 @@ export async function GET(request: Request) {
 
       const { error: finishError } =
         await supabase.rpc(
-          "finish_event_harvest_archive_recheck",
-          {
-            p_venue_id: venue.id,
-            p_scan_succeeded: scanSucceeded,
-            p_lease_token: archiveLeases.get(venue.id),
-          }
+          targetVenueId
+            ? "finish_market_event_harvest_archive_target"
+            : "finish_event_harvest_archive_recheck",
+          targetVenueId
+            ? {
+                p_venue_id: venue.id,
+                p_scan_succeeded: scanSucceeded,
+                p_archive_lease_token: archiveLeases.get(venue.id),
+                p_work_id: targetWorkId,
+                p_work_lease_token: targetWorkLease,
+              }
+            : {
+                p_venue_id: venue.id,
+                p_scan_succeeded: scanSucceeded,
+                p_lease_token: archiveLeases.get(venue.id),
+              }
         );
 
       if (finishError) {

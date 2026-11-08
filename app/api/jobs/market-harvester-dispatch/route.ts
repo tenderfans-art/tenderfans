@@ -1,6 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
-import { start } from "workflow/api";
-import { marketHarvesterWorkflow } from "@/workflows/market-harvester";
+import { POST as dispatchShared } from
+  "@/app/api/jobs/shared-market-dispatch/route";
 
 export const runtime = "nodejs";
 
@@ -17,16 +16,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SECRET_KEY;
-
-  if (!url || !serviceKey) {
-    return Response.json(
-      { error: "Supabase service credentials unavailable" },
-      { status: 503 },
-    );
-  }
-
   let payload: unknown;
 
   try {
@@ -39,13 +28,12 @@ export async function POST(request: Request) {
   }
 
   if (
+    !payload ||
     typeof payload !== "object" ||
-    payload === null ||
     !("marketId" in payload) ||
     typeof payload.marketId !== "string" ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      payload.marketId,
-    )
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      .test(payload.marketId)
   ) {
     return Response.json(
       { error: "A valid marketId UUID is required" },
@@ -53,59 +41,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const marketId = payload.marketId;
+  const headers = new Headers(request.headers);
+  headers.set("content-type", "application/json");
 
-  const supabase = createClient(url, serviceKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  const { data: market, error } = await supabase
-    .from("event_processing_markets")
-    .select("id,is_enabled")
-    .eq("id", marketId)
-    .maybeSingle();
-
-  if (error) {
-    return Response.json(
-      { error: "Market lookup failed" },
-      { status: 503 },
-    );
-  }
-
-  if (!market) {
-    return Response.json(
-      { error: "Market not found" },
-      { status: 404 },
-    );
-  }
-
-  if (!market.is_enabled) {
-    return Response.json(
-      { error: "Market is disabled" },
-      { status: 409 },
-    );
-  }
-
-  try {
-    const run = await start(marketHarvesterWorkflow, [marketId]);
-
-    return Response.json(
-      {
-        status: "accepted",
-        runId: run.runId,
-        marketId,
-      },
-      { status: 202 },
-    );
-  } catch (cause) {
-    console.error("Market workflow dispatch failed", cause);
-
-    return Response.json(
-      { error: "Workflow dispatch failed" },
-      { status: 503 },
-    );
-  }
+  return dispatchShared(
+    new Request(request.url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ marketId: payload.marketId }),
+    }),
+  );
 }

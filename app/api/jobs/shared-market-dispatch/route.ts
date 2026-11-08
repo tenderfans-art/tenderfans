@@ -34,6 +34,46 @@ export async function POST(request: Request) {
     );
   }
 
+  let requestedMarketId: string | null = null;
+
+  if (request.method === "POST") {
+    const raw = await request.text();
+
+    if (raw.trim()) {
+      let payload: unknown;
+
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        return Response.json(
+          { error: "Invalid JSON" },
+          { status: 400 },
+        );
+      }
+
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "marketId" in payload
+      ) {
+        const marketId = payload.marketId;
+
+        if (
+          typeof marketId !== "string" ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(marketId)
+        ) {
+          return Response.json(
+            { error: "Invalid Market ID" },
+            { status: 400 },
+          );
+        }
+
+        requestedMarketId = marketId;
+      }
+    }
+  }
+
   const supabase = createClient(url, key, {
     auth: {
       persistSession: false,
@@ -41,9 +81,42 @@ export async function POST(request: Request) {
     },
   });
 
+  if (requestedMarketId) {
+    const { data: requestedMarket, error: requestedError } =
+      await supabase
+        .from("event_processing_markets")
+        .select("id,is_enabled")
+        .eq("id", requestedMarketId)
+        .maybeSingle();
+
+    if (requestedError) {
+      return Response.json(
+        { error: "Market lookup failed" },
+        { status: 503 },
+      );
+    }
+
+    if (!requestedMarket) {
+      return Response.json(
+        { error: "Market not found" },
+        { status: 404 },
+      );
+    }
+
+    if (!requestedMarket.is_enabled) {
+      return Response.json(
+        { error: "Market is disabled" },
+        { status: 409 },
+      );
+    }
+  }
+
   // Replenish due work for enabled Markets only.
   const { error: queueError } = await supabase.rpc(
     "enqueue_due_market_processing",
+    requestedMarketId
+      ? { p_market_id: requestedMarketId }
+      : {},
   );
 
   if (queueError) {
@@ -54,6 +127,21 @@ export async function POST(request: Request) {
 
     return Response.json(
       { error: "Market queue reconciliation failed" },
+      { status: 503 },
+    );
+  }
+
+  const { error: supplementalQueueError } =
+    await supabase.rpc(
+      "enqueue_due_market_supplemental_processing",
+      requestedMarketId
+        ? { p_market_id: requestedMarketId }
+        : {},
+    );
+
+  if (supplementalQueueError) {
+    return Response.json(
+      { error: "Supplemental Market queue failed" },
       { status: 503 },
     );
   }
@@ -96,7 +184,7 @@ export async function POST(request: Request) {
     marketId: string;
     marketKey: string;
     batchSize: number;
-    mode: "harvest" | "detect";
+    mode: "harvest" | "detect" | "provider" | "archive";
   }> = [];
 
   for (
@@ -104,9 +192,14 @@ export async function POST(request: Request) {
     attempt < MAX_WORKFLOW_STARTS_PER_TICK;
     attempt += 1
   ) {
-    const { data, error } = await supabase.rpc(
-      "reserve_shared_harvester_batch",
-    );
+    const { data, error } = requestedMarketId
+      ? await supabase.rpc(
+          "reserve_shared_harvester_batch_for_market",
+          { p_market_id: requestedMarketId },
+        )
+      : await supabase.rpc(
+          "reserve_shared_harvester_batch",
+        );
 
     if (error) {
       console.error("Shared admission failed", error);
@@ -135,7 +228,12 @@ export async function POST(request: Request) {
       if (
         reservedError ||
         !reservedWork ||
-        !["harvest_source", "detect_spot"].includes(
+        ![
+          "harvest_source",
+          "detect_spot",
+          "archive_recheck",
+          "harvest_provider",
+        ].includes(
           reservedWork.work_type,
         )
       ) {
@@ -155,12 +253,20 @@ export async function POST(request: Request) {
       const mode =
         reservedWork.work_type === "detect_spot"
           ? "detect"
-          : "harvest";
+          : reservedWork.work_type === "archive_recheck"
+            ? "archive"
+            : reservedWork.work_type === "harvest_provider"
+              ? "provider"
+              : "harvest";
 
       const batchSize =
-        mode === "detect"
-          ? market.detector_batch_size
-          : market.harvester_batch_size;
+        mode === "provider"
+          ? 1
+          : mode === "archive"
+            ? market.detector_batch_size
+            : mode === "detect"
+              ? market.detector_batch_size
+              : market.harvester_batch_size;
 
       if (
         !Number.isSafeInteger(batchSize) ||

@@ -251,13 +251,54 @@ async function executeSource(
   return executeMarketHarvesterWorkItem(supabase, item);
 }
 
+async function executeSupplemental(
+  item: ClaimedWork,
+  marketId: string,
+  mode: "provider" | "archive",
+): Promise<MarketBatchResult> {
+  "use step";
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const { executeMarketSupplementalWorkItem } = await import(
+    "@/lib/event-harvester/market-supplemental-executor"
+  );
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const secret = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !secret) {
+    throw new Error("Missing Supabase service credentials");
+  }
+
+  const db = createClient(url, secret, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return executeMarketSupplementalWorkItem(
+    db,
+    marketId,
+    mode,
+    item as ClaimedWork & { claimed_venue_id: string | null },
+  );
+}
+
 export async function marketHarvesterWorkflow(
   marketId: string,
   reservationId?: string,
-  mode: "harvest" | "detect" = "harvest",
+  mode: "harvest" | "detect" | "provider" | "archive" = "harvest",
   configuredBatchSize = 10,
 ): Promise<MarketBatchResult> {
   "use workflow";
+
+  if (
+    !reservationId &&
+    (mode === "provider" || mode === "archive")
+  ) {
+    throw new Error("Supplemental work requires shared reservation");
+  }
 
   if (mode === "detect" && !reservationId) {
     const work = await claimDetectorBatch(marketId);
@@ -375,7 +416,11 @@ export async function marketHarvesterWorkflow(
                 ).ClaimedDetectorWork,
               ),
             )
-          : work.map(executeSource),
+          : mode === "harvest"
+            ? work.map(executeSource)
+            : work.map((item) =>
+                executeSupplemental(item, marketId, mode)
+              ),
       );
 
       let executionError: unknown;
