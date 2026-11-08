@@ -231,7 +231,8 @@ function sleep(ms: number) {
 }
 
 async function fetchTicketmasterVenueSearch(
-  url: string
+  url: string,
+  pacedFetch: typeof fetch,
 ): Promise<Response | null> {
   for (
     let attempt = 1;
@@ -243,11 +244,7 @@ async function fetchTicketmasterVenueSearch(
      * that an unrestricted Spot-matching loop can receive HTTP 429.
      * Keep venue discovery deliberately paced.
      */
-    await sleep(
-      TICKETMASTER_VENUE_REQUEST_DELAY_MS
-    );
-
-    const response = await fetch(url, {
+    const response = await pacedFetch(url, {
       cache: "no-store",
     });
 
@@ -318,6 +315,11 @@ export async function POST(
   }
 
   let dryRun = true;
+  let providerToken: string | null = null;
+  let providerDB: ReturnType<typeof getAdminClient> | null = null;
+  let providerHeartbeat: ReturnType<typeof setInterval> | null = null;
+  let providerRenewal: Promise<void> | null = null;
+  const providerAbort = new AbortController();
 
   try {
     const body =
@@ -445,6 +447,149 @@ export async function POST(
         );
       }
     }
+
+    const marketWorkId =
+      body && typeof body === "object" &&
+      typeof body.marketWorkId === "string"
+        ? body.marketWorkId.trim()
+        : "";
+
+    const marketLeaseToken =
+      body && typeof body === "object" &&
+      typeof body.marketLeaseToken === "string"
+        ? body.marketLeaseToken.trim()
+        : "";
+
+    const uuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (
+      (requestedMarketId && !dryRun &&
+        (!uuid.test(marketWorkId) ||
+         !uuid.test(marketLeaseToken))) ||
+      (!requestedMarketId &&
+        (marketWorkId || marketLeaseToken))
+    ) {
+      return NextResponse.json(
+        { error: "Valid Market provider lease required." },
+        { status: 400 }
+      );
+    }
+
+    const { data: acquired, error: acquireError } =
+      await supabase.rpc(
+        "acquire_ticketmaster_provider_run",
+        {
+          p_market_id:
+            requestedMarketId && !dryRun
+              ? requestedMarketId : null,
+          p_market_work_id:
+            requestedMarketId && !dryRun
+              ? marketWorkId : null,
+          p_market_lease_token:
+            requestedMarketId && !dryRun
+              ? marketLeaseToken : null,
+        }
+      );
+
+    if (acquireError) {
+      throw new Error(
+        "Ticketmaster admission failed: " +
+        acquireError.message
+      );
+    }
+
+    if (typeof acquired !== "string") {
+      return NextResponse.json(
+        { error: "ticketmaster_provider_busy" },
+        { status: 409 }
+      );
+    }
+
+    providerToken = acquired;
+    providerDB = supabase;
+
+    // Renew the shared provider lease during long harvests.
+    // A failed renewal permanently stops this execution.
+    providerHeartbeat = setInterval(() => {
+      if (providerAbort.signal.aborted || providerRenewal) {
+        return;
+      }
+
+      providerRenewal = (async () => {
+        try {
+          const { data, error } = await supabase.rpc(
+            "renew_ticketmaster_provider_run",
+            { p_token: acquired }
+          );
+
+          if (error || data !== true) {
+            throw new Error(
+              "Ticketmaster provider lease renewal failed: " +
+              (error?.message ?? "Ownership expired")
+            );
+          }
+        } catch (cause) {
+          providerAbort.abort(
+            cause instanceof Error
+              ? cause
+              : new Error(String(cause))
+          );
+        }
+      })().finally(() => {
+        providerRenewal = null;
+      });
+    }, 30_000);
+
+    // All Ticketmaster HTTP requests share one paced stream.
+    // Losing the provider lease aborts active requests and
+    // prevents subsequent requests from starting.
+    let nextTicketmasterRequestAt = 0;
+
+    const pacedFetch: typeof fetch = async (input, init) => {
+      providerAbort.signal.throwIfAborted();
+
+      const pause = Math.max(
+        0,
+        nextTicketmasterRequestAt - Date.now()
+      );
+
+      if (pause > 0) {
+        await sleep(pause);
+      }
+
+      providerAbort.signal.throwIfAborted();
+
+      nextTicketmasterRequestAt =
+        Date.now() + TICKETMASTER_VENUE_REQUEST_DELAY_MS;
+
+      return fetch(input, {
+        ...init,
+        signal: providerAbort.signal,
+      });
+    };
+
+    // Every Ticketmaster write checks provider ownership
+    // inside the SAME database transaction as the write.
+    const ticketmasterWrite = (
+      operation: string,
+      args: Record<string, unknown>,
+    ) => {
+      providerAbort.signal.throwIfAborted();
+
+      return supabase.rpc(
+        "execute_fenced_ticketmaster_operation",
+        {
+          p_execution_token: acquired,
+          p_market_work_id:
+            requestedMarketId && !dryRun ? marketWorkId : null,
+          p_market_lease_token:
+            requestedMarketId && !dryRun ? marketLeaseToken : null,
+          p_operation: operation,
+          p_args: args,
+        },
+      );
+    };
 
     /*
      * This first provider pass is deliberately read-only.
@@ -757,7 +902,8 @@ export async function POST(
 
       const venueResponse =
         await fetchTicketmasterVenueSearch(
-          venueUrl.toString()
+          venueUrl.toString(),
+          pacedFetch,
         );
 
       /*
@@ -767,7 +913,7 @@ export async function POST(
       if (!venueResponse) {
         if (!dryRun) {
           const { error: scanError } =
-            await supabase.rpc(
+            await ticketmasterWrite(
               "record_event_harvest_venue_scan",
               {
                 p_venue_id: venue.id,
@@ -880,7 +1026,7 @@ export async function POST(
         const {
           data: matchId,
           error: upsertMatchError,
-        } = await supabase.rpc(
+        } = await ticketmasterWrite(
           "upsert_event_harvest_venue_match",
           {
             p_venue_id: venue.id,
@@ -921,7 +1067,7 @@ export async function POST(
         ) {
           const {
             error: approveMatchError,
-          } = await supabase.rpc(
+          } = await ticketmasterWrite(
             "auto_approve_event_harvest_venue_match",
             {
               p_match_id: matchId,
@@ -939,7 +1085,7 @@ export async function POST(
       if (!best || best.match.score < 0.65) {
         if (!dryRun) {
           const { error: scanError } =
-            await supabase.rpc(
+            await ticketmasterWrite(
               "record_event_harvest_venue_scan",
               {
                 p_venue_id: venue.id,
@@ -1001,7 +1147,7 @@ export async function POST(
               : "no_match";
 
         const { error: scanError } =
-          await supabase.rpc(
+          await ticketmasterWrite(
             "record_event_harvest_venue_scan",
             {
               p_venue_id: venue.id,
@@ -1182,7 +1328,7 @@ export async function POST(
           String(pageNumber)
         );
 
-        const response = await fetch(url, {
+        const response = await pacedFetch(url, {
           headers: {
             accept: "application/json",
           },
@@ -1347,7 +1493,7 @@ export async function POST(
             const {
               data: syncedEventId,
               error: syncError,
-            } = await supabase.rpc(
+            } = await ticketmasterWrite(
               "sync_ticketmaster_event",
               {
                 p_candidate_id: candidateId,
@@ -1404,7 +1550,7 @@ export async function POST(
              * start instant before TenderFans will create it.
              */
             const { data, error } =
-              await supabase.rpc(
+              await ticketmasterWrite(
                 "upsert_event_harvest_candidate",
                 {
                   p_source_id: source.id,
@@ -1465,7 +1611,7 @@ export async function POST(
               const {
                 data: linkedEventId,
                 error: linkError,
-              } = await supabase.rpc(
+              } = await ticketmasterWrite(
                 "link_harvest_candidate_to_existing_event",
                 {
                   p_candidate_id: candidateId,
@@ -1487,7 +1633,7 @@ export async function POST(
                 const {
                   data: graduatedEventId,
                   error: graduateError,
-                } = await supabase.rpc(
+                } = await ticketmasterWrite(
                   "graduate_harvest_candidate",
                   {
                     p_candidate_id: candidateId,
@@ -1516,7 +1662,7 @@ export async function POST(
               if (canonicalEventId) {
                 const {
                   error: initialSyncError,
-                } = await supabase.rpc(
+                } = await ticketmasterWrite(
                   "sync_ticketmaster_event",
                   {
                     p_candidate_id: candidateId,
@@ -1685,7 +1831,7 @@ export async function POST(
           ticketmasterKey
         );
 
-        const response = await fetch(eventUrl, {
+        const response = await pacedFetch(eventUrl, {
           headers: {
             accept: "application/json",
           },
@@ -1763,7 +1909,7 @@ export async function POST(
           const {
             data: syncedEventId,
             error: syncError,
-          } = await supabase.rpc(
+          } = await ticketmasterWrite(
             "sync_ticketmaster_event",
             {
               p_candidate_id: candidateId,
@@ -1872,6 +2018,35 @@ export async function POST(
       },
       { status: 500 }
     );
+  } finally {
+    if (providerHeartbeat) {
+      clearInterval(providerHeartbeat);
+    }
+
+    if (providerRenewal) {
+      await providerRenewal;
+    }
+
+    if (providerDB && providerToken) {
+      try {
+        const { error } = await providerDB.rpc(
+          "release_ticketmaster_provider_run",
+          { p_token: providerToken }
+        );
+
+        if (error) {
+          console.error(
+            "Ticketmaster lease release failed",
+            error
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Ticketmaster lease release failed",
+          error
+        );
+      }
+    }
   }
 }
 

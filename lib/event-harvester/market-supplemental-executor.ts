@@ -68,6 +68,8 @@ export async function executeMarketSupplementalWorkItem(
             source: "ticketmaster",
             dryRun: false,
             marketId,
+            marketWorkId: item.work_id,
+            marketLeaseToken: item.claimed_lease_token,
           }),
         },
       );
