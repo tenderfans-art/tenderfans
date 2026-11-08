@@ -96,6 +96,7 @@ export async function POST(request: Request) {
     marketId: string;
     marketKey: string;
     batchSize: number;
+    mode: "harvest" | "detect";
   }> = [];
 
   for (
@@ -122,29 +123,58 @@ export async function POST(request: Request) {
     }
 
     try {
-      // Preserve each Market's configured batch size, including
-      // the small isolation Market. Snapshot it in Workflow inputs.
+      // Reservation identity and work type remain database-owned.
+      const { data: reservedWork, error: reservedError } =
+        await supabase
+          .from("event_processing_dispatch_reservations")
+          .select("work_type")
+          .eq("id", reservation.reservation_id)
+          .eq("market_id", reservation.selected_market_id)
+          .single();
+
+      if (
+        reservedError ||
+        !reservedWork ||
+        !["harvest_source", "detect_spot"].includes(
+          reservedWork.work_type,
+        )
+      ) {
+        throw new Error("Shared reservation work type unavailable");
+      }
+
       const { data: market, error: marketError } = await supabase
         .from("event_processing_markets")
-        .select("harvester_batch_size")
+        .select("harvester_batch_size,detector_batch_size")
         .eq("id", reservation.selected_market_id)
         .single();
 
+      if (marketError || !market) {
+        throw new Error("Market processing configuration unavailable");
+      }
+
+      const mode =
+        reservedWork.work_type === "detect_spot"
+          ? "detect"
+          : "harvest";
+
+      const batchSize =
+        mode === "detect"
+          ? market.detector_batch_size
+          : market.harvester_batch_size;
+
       if (
-        marketError ||
-        !market ||
-        !Number.isSafeInteger(market.harvester_batch_size) ||
-        market.harvester_batch_size < 1 ||
-        market.harvester_batch_size > 100
+        !Number.isSafeInteger(batchSize) ||
+        batchSize < 1 ||
+        batchSize > 100
       ) {
-        throw new Error("Market harvester batch configuration unavailable");
+        throw new Error("Invalid Market batch configuration");
       }
 
       const run = await start(marketHarvesterWorkflow, [
         reservation.selected_market_id,
         reservation.reservation_id,
-        "harvest",
-        market.harvester_batch_size,
+        mode,
+        batchSize,
       ]);
 
       runs.push({
@@ -152,7 +182,8 @@ export async function POST(request: Request) {
         reservationId: reservation.reservation_id,
         marketId: reservation.selected_market_id,
         marketKey: reservation.selected_market_key,
-        batchSize: market.harvester_batch_size,
+        batchSize,
+        mode,
       });
     } catch (cause) {
       console.error("Shared dispatch failed", cause);

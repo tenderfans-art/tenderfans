@@ -259,13 +259,7 @@ export async function marketHarvesterWorkflow(
 ): Promise<MarketBatchResult> {
   "use workflow";
 
-  if (mode === "detect") {
-    if (reservationId) {
-      throw new Error(
-        "Detector execution cannot use a source reservation",
-      );
-    }
-
+  if (mode === "detect" && !reservationId) {
     const work = await claimDetectorBatch(marketId);
     const result = makeResult(work.length);
     let firstError: unknown;
@@ -373,7 +367,15 @@ export async function marketHarvesterWorkflow(
       result.claimed += work.length;
 
       const outcomes = await Promise.allSettled(
-        work.map(executeSource),
+        mode === "detect"
+          ? work.map((item) =>
+              executeDetector(
+                item as import(
+                  "@/lib/event-harvester/market-detector-executor"
+                ).ClaimedDetectorWork,
+              ),
+            )
+          : work.map(executeSource),
       );
 
       let executionError: unknown;

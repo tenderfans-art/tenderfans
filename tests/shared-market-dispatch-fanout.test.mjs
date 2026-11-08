@@ -37,10 +37,21 @@ test("dispatcher fills multiple reservations but bounds starts", () => {
 });
 
 test("the Market batch limit is captured in Workflow arguments", () => {
-  assert.match(dispatch, /\.select\("harvester_batch_size"\)/);
   assert.match(
     dispatch,
-    /"harvest",\s*market\.harvester_batch_size/,
+    /\.select\("harvester_batch_size,detector_batch_size"\)/,
+  );
+  assert.match(
+    dispatch,
+    /reservedWork\.work_type === "detect_spot"/,
+  );
+  assert.match(
+    dispatch,
+    /mode === "detect"\s*\?\s*market\.detector_batch_size\s*:\s*market\.harvester_batch_size/,
+  );
+  assert.match(
+    dispatch,
+    /reservation\.reservation_id,\s*mode,\s*batchSize/,
   );
   assert.match(workflow, /configuredBatchSize = 10/);
   assert.match(workflow, /Math\.min\(10, configuredBatchSize\)/);

@@ -80,21 +80,19 @@ test("existing Workflow has durable detector steps", () => {
   );
 });
 
-test("both dispatchers replenish due work", () => {
-  assert.match(
-    dispatch,
-    /enqueue_due_market_processing/,
-  );
-  assert.match(
-    shared,
-    /enqueue_due_market_processing/,
-  );
+test("shared dispatcher replenishes due work", () => {
+  assert.match(shared, /enqueue_due_market_processing/);
+  assert.match(shared, /reserve_shared_harvester_batch/);
 });
 
-test("detector dispatcher starts existing Workflow", () => {
-  assert.match(
-    dispatch,
-    /start\(\s*marketHarvesterWorkflow/,
-  );
-  assert.match(dispatch, /"detect"/);
+test("detector endpoint cannot bypass shared admission", () => {
+  assert.match(dispatch, /shared-market-dispatch\/route/);
+  assert.doesNotMatch(dispatch, /list_due_market_detector_work/);
+  assert.doesNotMatch(dispatch, /start\(/);
+});
+
+test("shared dispatcher starts the original Workflow", () => {
+  assert.match(shared, /start\(marketHarvesterWorkflow/);
+  assert.match(shared, /"detect_spot"/);
+  assert.match(shared, /"detect"/);
 });
