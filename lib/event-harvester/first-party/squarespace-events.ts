@@ -5,47 +5,7 @@ import type {
   FirstPartyHarvestEvent,
 } from "./types";
 
-function decodeHtmlText(
-  value: string
-): string {
-  return value
-    .replaceAll("&amp;", "&")
-    .replaceAll("&#38;", "&")
-    .replaceAll("&#x26;", "&")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replaceAll("&#x27;", "'")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">");
-}
-
-function decodeHtmlAttribute(
-  value: string
-): string {
-  return decodeHtmlText(value);
-}
-
-function discoverIcalUrls(
-  html: string,
-  pageUrl: string
-): string[] {
-  const urls = new Set<string>();
-
-  const pattern =
-    /href=["']([^"']+\?format=ical(?:&[^"']*)?)["']/gi;
-
-  for (const match of html.matchAll(pattern)) {
-    const href = decodeHtmlAttribute(match[1]);
-
-    try {
-      urls.add(new URL(href, pageUrl).href);
-    } catch {
-      // Ignore malformed links from source markup.
-    }
-  }
-
-  return [...urls];
-}
+import { decodeHtmlText, discoverIcalUrls } from "./squarespace-inventory";
 
 function eventPageUrl(
   icalUrl: string

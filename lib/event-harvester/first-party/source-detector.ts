@@ -5,6 +5,7 @@ import { parseMetadataRecurringSchedule } from "./html-metadata-recurring";
 import { isVerificationInterstitial } from "../access-challenge";
 import { extractSchemaOrgEvents } from "./schema-org-events";
 import { isSchemaOrgInventoryPage } from "./schema-org-inventory";
+import { isSquarespaceInventoryPage } from "./squarespace-inventory";
 import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
 import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
@@ -1284,7 +1285,7 @@ function inspectPage(
     });
   }
 
-  if (/href=["'][^"']+\?format=ical(?:&[^"']*)?["']/i.test(html)) {
+  if (isSquarespaceInventoryPage(html, pageUrl)) {
     pushDetection(detections, {
       sourceType: "squarespace_events",
       url: pageUrl,
