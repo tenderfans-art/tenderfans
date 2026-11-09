@@ -1,5 +1,6 @@
 import { chromium as playwright, type Page } from "playwright-core";
 import Chromium from "@sparticuz/chromium";
+import { withTransportPermit } from "../transport-capacity-permits";
 
 export type FacebookEvent = {
   externalEventId: string;
@@ -952,13 +953,44 @@ export async function fetchFacebookEvents(
   sourceUrl: string,
   options: { validatePageIdentity?: boolean } = {},
 ): Promise<FacebookEvent[]> {
+  return withTransportPermit("browser", (permitSignal) =>
+    fetchFacebookEventsUnderPermit(sourceUrl, options, permitSignal),
+  );
+}
+
+async function fetchFacebookEventsUnderPermit(
+  sourceUrl: string,
+  options: { validatePageIdentity?: boolean },
+  permitSignal: AbortSignal,
+): Promise<FacebookEvent[]> {
+  permitSignal.throwIfAborted();
+
   const browser = await playwright.launch({
     args: Chromium.args,
     executablePath: await Chromium.executablePath(),
     headless: true,
   });
 
+  // Abort and normal completion share one browser-close promise.
+  // The permit must not be released before browser cleanup finishes.
+  let closePromise: Promise<void> | null = null;
+
+  const closeBrowser = (): Promise<void> => {
+    closePromise ??= browser.close();
+    return closePromise;
+  };
+
+  const onAbort = () => {
+    void closeBrowser().catch(() => {});
+  };
+
+  permitSignal.addEventListener("abort", onAbort, {
+    once: true,
+  });
+
   try {
+    permitSignal.throwIfAborted();
+
     const page = await browser.newPage({
       viewport: { width: 1440, height: 1600 },
       userAgent: USER_AGENT,
@@ -1230,6 +1262,7 @@ export async function fetchFacebookEvents(
 
     return events;
   } finally {
-    await browser.close();
+    permitSignal.removeEventListener("abort", onAbort);
+    await closeBrowser();
   }
 }
