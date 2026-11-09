@@ -6,6 +6,7 @@ import { isVerificationInterstitial } from "../access-challenge";
 import { extractSchemaOrgEvents } from "./schema-org-events";
 import { isSchemaOrgInventoryPage } from "./schema-org-inventory";
 import { isSquarespaceInventoryPage } from "./squarespace-inventory";
+import { isNextRscInventoryPage } from "./next-rsc-inventory";
 import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
 import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
@@ -1338,12 +1339,7 @@ function inspectPage(
     });
   }
 
-  if (
-    /self\.__next_f\.push/i.test(html) &&
-    (/"startDate"/i.test(html) ||
-      /"startTime"/i.test(html) ||
-      /"isDraft"/i.test(html))
-  ) {
+  if (isNextRscInventoryPage(html, pageUrl)) {
     pushDetection(detections, {
       sourceType: "next_rsc_events",
       url: pageUrl,
