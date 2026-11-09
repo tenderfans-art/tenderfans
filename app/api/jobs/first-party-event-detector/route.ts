@@ -1763,17 +1763,20 @@ export async function GET(request: Request) {
                 validation.error ?? "",
               );
 
-            if (facebookCompletedWithoutSupportedSource) {
-              // Preserve Facebook -> No Sources fallback for sources
-              // that cannot be validated.
-              facebookExhausted = true;
-            }
-
             const facebookAccessRestricted =
               candidate.sourceType === "facebook" &&
               /Facebook Events page is unavailable or access restricted/i.test(
                 validation.error ?? "",
               );
+
+            // An inaccessible Facebook Page is not proof that its
+            // Events source is absent. Preserve its review evidence.
+            if (
+              facebookCompletedWithoutSupportedSource &&
+              !facebookAccessRestricted
+            ) {
+              facebookExhausted = true;
+            }
 
             if (
               validation.status === "validation_failed" &&
@@ -1795,6 +1798,25 @@ export async function GET(request: Request) {
                 candidate.sourceType,
                 candidate.url,
               );
+            }
+
+            /*
+             * A recognized Facebook page-level outcome is not a
+             * failed Spot detector execution.
+             *
+             * Access restrictions retain their independent Adapter
+             * Error, persisted above. Unsupported public surfaces
+             * retain the existing Facebook/No Sources fallback.
+             *
+             * Never mark the candidate validated, register a source,
+             * clear unrelated errors, or consume Market detector
+             * retries for these classified outcomes.
+             *
+             * Registered-source harvesting retains its independent
+             * source-health and retry lifecycle.
+             */
+            if (facebookCompletedWithoutSupportedSource) {
+              continue;
             }
 
             failed += 1;
