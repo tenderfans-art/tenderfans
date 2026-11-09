@@ -78,8 +78,9 @@ export default function SourceOwnershipPage() {
           <h1>Source Ownership</h1>
 
           <p className="lead-copy">
-            HTML event sources with unresolved publisher ownership.
-            Review source evidence before approving any ownership changes.
+            HTML and Eventbrite sources with unresolved publisher ownership.
+            Review the evidence before any ownership decision.
+            Eventbrite attribution requires separate publisher verification.
           </p>
 
           {loading ? (

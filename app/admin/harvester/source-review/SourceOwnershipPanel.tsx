@@ -279,6 +279,21 @@ export default function SourceOwnershipPanel() {
             const sourceUrl =
               finding.source_url ?? finding.website_url;
 
+            // The current approval RPC accepts validated HTML only.
+            // Eventbrite attribution needs separate publisher verification.
+            const eventbriteReview = (() => {
+              try {
+                const hostname = new URL(
+                  finding.source_url ?? ""
+                ).hostname.toLowerCase();
+
+                return hostname === "eventbrite.com" ||
+                  hostname.endsWith(".eventbrite.com");
+              } catch {
+                return false;
+              }
+            })();
+
             return (
               <div key={finding.id} style={{
                 display: "grid",
@@ -339,6 +354,19 @@ export default function SourceOwnershipPanel() {
                   {finding.error ?? "Ownership review"}
                 </span>
 
+                {eventbriteReview ? (
+                  <div style={{
+                    gridColumn: "3 / 7",
+                    fontSize: ".8rem",
+                    padding: "7px 0",
+                    opacity: .8,
+                  }}>
+                    Eventbrite publisher attribution requires manual
+                    verification. HTML source approval does not apply.
+                    Review the evidence before assigning any ownership.
+                  </div>
+                ) : (
+                  <>
                 <input
                   type="search"
                   value={spotSearch[finding.id] ?? ""}
@@ -429,6 +457,8 @@ export default function SourceOwnershipPanel() {
                   }}>
                   Reject
                 </button>
+                  </>
+                )}
               </div>
             );
           })}

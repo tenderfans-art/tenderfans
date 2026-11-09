@@ -1591,6 +1591,45 @@ export async function GET(request: Request) {
           });
 
           if (ratification.status !== "ratified" || !ratification.source) {
+            // Preserve attribution ambiguity for Admin review.
+            // Never register the organizer under the physical host.
+            if (ratification.status === "review_required") {
+              const { error: reviewError } = await supabase.rpc(
+                "upsert_event_harvest_detector_finding",
+                {
+                  p_venue_id: venue.id,
+                  p_category: "source_ownership",
+                  p_finding_key:
+                    `source_ownership:review:${JSON.stringify([
+                      candidate.sourceType,
+                      candidate.url,
+                    ])}`,
+                  p_detector_status: detection.status,
+                  p_source_type: candidate.sourceType,
+                  p_website_url: detection.websiteUrl,
+                  p_source_url: candidate.url,
+                  p_fetched_url: detection.fetchedUrl,
+                  p_confidence: candidate.confidence,
+                  p_evidence: ratification.evidence,
+                  p_error: ratification.error,
+                },
+              );
+
+              if (reviewError) {
+                throw new Error(
+                  `Could not persist attribution review: ${reviewError.message}`
+                );
+              }
+
+              continue;
+            }
+
+            // An explicitly unrelated candidate is not an
+            // execution failure and must not consume retries.
+            if (ratification.status === "rejected") {
+              continue;
+            }
+
             if (
               ratification.status === "ratification_failed" &&
               ratification.evidence.includes(

@@ -36,6 +36,13 @@ export type SourceRatification =
       error: null;
     }
   | {
+      // Attribution ambiguity is reviewable, not retryable.
+      status: "review_required";
+      source: null;
+      evidence: string[];
+      error: string;
+    }
+  | {
       status: "ratification_failed";
       source: null;
       evidence: string[];
@@ -130,7 +137,7 @@ async function ratifyEventbrite(
     }
 
     return {
-      status: "ratification_failed",
+      status: "review_required",
       source: null,
       evidence: [
         ...detection.evidence,
@@ -159,7 +166,7 @@ async function ratifyEventbrite(
 
     if (!identity.venue) {
       return {
-        status: "ratification_failed",
+        status: "review_required",
         source: null,
         evidence: [
           ...detection.evidence,
@@ -178,7 +185,7 @@ async function ratifyEventbrite(
       external.longitude === null
     ) {
       return {
-        status: "ratification_failed",
+        status: "review_required",
         source: null,
         evidence: [
           ...detection.evidence,
@@ -211,7 +218,7 @@ async function ratifyEventbrite(
 
     if (miles > 0.25) {
       return {
-        status: "ratification_failed",
+        status: "review_required",
         source: null,
         evidence: [
           ...detection.evidence,
@@ -248,7 +255,7 @@ async function ratifyEventbrite(
 
     if (!venueMatch.autoAttach) {
       return {
-        status: "ratification_failed",
+        status: "review_required",
         source: null,
         evidence: [
           ...detection.evidence,
@@ -270,7 +277,7 @@ async function ratifyEventbrite(
 
     if (!organizerId || !organizerUrl) {
       return {
-        status: "ratification_failed",
+        status: "review_required",
         source: null,
         evidence: [
           ...detection.evidence,
@@ -288,7 +295,7 @@ async function ratifyEventbrite(
      * never auto-register the organizer under the physical host.
      */
     return {
-      status: "ratification_failed",
+      status: "review_required",
       source: null,
       evidence: [
         ...detection.evidence,

@@ -12,7 +12,7 @@ type Tab = "calendar" | "ownership" | "venues";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "calendar", label: "Calendar Image" },
-  { id: "ownership", label: "HTML Source" },
+  { id: "ownership", label: "Source Ownership" },
   { id: "venues", label: "Venue Sources" },
 ];
 
@@ -42,8 +42,8 @@ export default function SourceReviewPage() {
           <h1 style={{ marginBottom: 8 }}>Source Review</h1>
 
           <p className="lead-copy" style={{ marginBottom: 24 }}>
-            Review discovered calendar and HTML sources, including ownership
-            conflicts, before validation and harvesting.
+            Review calendar sources and publisher ownership evidence before
+            registration and harvesting.
           </p>
 
           <div
