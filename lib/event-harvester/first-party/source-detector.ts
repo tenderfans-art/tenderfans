@@ -3,6 +3,8 @@ import { inspectToastDigitalStorefront } from "./toast-digital-storefront";
 import { inspectSquareOnline } from "./square-online-events";
 import { parseMetadataRecurringSchedule } from "./html-metadata-recurring";
 import { isVerificationInterstitial } from "../access-challenge";
+import { extractSchemaOrgEvents } from "./schema-org-events";
+import { isSchemaOrgInventoryPage } from "./schema-org-inventory";
 import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
 import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
@@ -1253,9 +1255,16 @@ function inspectPage(
     });
   }
 
+  /*
+   * Event-detail pages may contain perfectly valid Event JSON-LD.
+   * That makes them event evidence, not independently scheduled
+   * source inventories.
+   */
   const hasSchemaOrgEventInventory =
-    /<script\b[^>]*type\s*=\s*["']application\/ld\+json(?:\s*;\s*charset=[^"']+)?["'][^>]*>[\s\S]*?"@type"\s*:\s*(?:"Event"|\[[^\]]*"Event"[^\]]*\])/i.test(
+    isSchemaOrgInventoryPage(
+      extractSchemaOrgEvents(html),
       html,
+      pageUrl,
     );
 
   if (
