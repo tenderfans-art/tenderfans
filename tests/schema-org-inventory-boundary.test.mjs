@@ -156,3 +156,23 @@ test("the detector uses the inventory gate", () => {
     /hasSchemaOrgEventInventory &&/,
   );
 });
+
+test("detail page with related Events is never an inventory", () => {
+  const pageUrl = "https://example.test/event/main";
+
+  assert.equal(
+    isSchemaOrgInventoryPage(
+      [
+        event(pageUrl, "Main Event", "2026-11-12"),
+        event(
+          "https://example.test/event/related",
+          "Related Event",
+          "2026-11-13",
+        ),
+      ],
+      collection,
+      pageUrl,
+    ),
+    false,
+  );
+});

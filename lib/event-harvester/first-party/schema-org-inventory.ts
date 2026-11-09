@@ -92,6 +92,16 @@ export function isSchemaOrgInventoryPage(
 ): boolean {
   if (events.length === 0) return false;
 
+  /*
+   * A detail page must never become a Source merely because
+   * it also embeds related or recommended Events.
+   */
+  if (events.some(event =>
+    eventIdentifiesPage(event, pageUrl)
+  )) {
+    return false;
+  }
+
   const identities = new Set(
     events.map(event =>
       distinctEventKey(event, pageUrl)
@@ -116,7 +126,5 @@ export function isSchemaOrgInventoryPage(
    * Even collection metadata must not promote a page whose
    * Event explicitly identifies the page as its own detail URL.
    */
-  return !events.some(event =>
-    eventIdentifiesPage(event, pageUrl)
-  );
+  return true;
 }
