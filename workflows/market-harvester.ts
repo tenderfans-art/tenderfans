@@ -1,3 +1,5 @@
+import { getWorkflowMetadata } from "workflow";
+
 import type {
   ClaimedWork,
   MarketBatchResult,
@@ -161,6 +163,47 @@ async function finalizeReservedBatch(
 }
 
 
+
+async function bindReservedBatchRun(
+  marketId: string,
+  reservationId: string,
+  runId: string,
+): Promise<void> {
+  "use step";
+
+  const { createClient } = await import("@supabase/supabase-js");
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const secret = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !secret) {
+    throw new Error("Missing Supabase service credentials");
+  }
+
+  const supabase = createClient(url, secret, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  const { data, error } = await supabase.rpc(
+    "bind_shared_harvester_workflow_run",
+    {
+      p_market_id: marketId,
+      p_reservation_id: reservationId,
+      p_run_id: runId,
+    },
+  );
+
+  if (error || data !== true) {
+    throw new Error(
+      "Workflow run binding failed: " +
+      (error?.message ?? "Reservation ownership unavailable"),
+    );
+  }
+}
+
 async function claimDetectorBatch(
   marketId: string,
 ): Promise<import(
@@ -293,6 +336,18 @@ export async function marketHarvesterWorkflow(
 ): Promise<MarketBatchResult> {
   "use workflow";
 
+  // Bind the authoritative Workflow identity before any shared
+  // source assignment can be claimed.
+  if (reservationId) {
+    const { workflowRunId } = getWorkflowMetadata();
+
+    await bindReservedBatchRun(
+      marketId,
+      reservationId,
+      workflowRunId,
+    );
+  }
+
   if (
     !reservationId &&
     (mode === "provider" || mode === "archive")
@@ -370,6 +425,8 @@ export async function marketHarvesterWorkflow(
       ? Math.min(10, configuredBatchSize)
       : 10;
   const sourceConcurrency = Math.min(8, maxSourcesPerRun);
+
+  let originalFailure: unknown = null;
 
   try {
     for (
@@ -449,10 +506,25 @@ export async function marketHarvesterWorkflow(
     }
 
     return result;
+  } catch (cause) {
+    originalFailure = cause;
+    throw cause;
   } finally {
-    // Runs after success, claim failure, or execution failure.
-    // The database RPC must still refuse release when a live
-    // assignment retains its lease.
-    await finalizeReservedBatch(reservationId);
+    // Never weaken the original live-lease finalization guard.
+    // If a step already failed, preserve THAT exception rather
+    // than replacing it with a secondary finalization error.
+    try {
+      await finalizeReservedBatch(reservationId);
+    } catch (finalizationError) {
+      if (originalFailure !== null) {
+        console.error(
+          "Shared reservation finalization deferred after " +
+          "the original execution failure:",
+          finalizationError,
+        );
+      } else {
+        throw finalizationError;
+      }
+    }
   }
 }

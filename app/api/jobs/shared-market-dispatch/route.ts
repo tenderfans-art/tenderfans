@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { start } from "workflow/api";
+import { getRun, start } from "workflow/api";
 import { marketHarvesterWorkflow } from "@/workflows/market-harvester";
 
 export const runtime = "nodejs";
@@ -174,6 +174,128 @@ export async function POST(request: Request) {
       { error: "Shared reservation reconciliation failed" },
       { status: 503 },
     );
+  }
+
+
+  /*
+   * Terminal Workflow recovery is part of the EXISTING
+   * shared dispatcher. Never infer failure from elapsed time,
+   * a quiet heartbeat, or a transport-permit expiry.
+   *
+   * Only the Workflow SDK's definitive terminal status
+   * authorizes fenced settlement of the bound reservation.
+   */
+  const { data: liveRuns, error: liveRunsError } =
+    await supabase
+      .from("event_processing_dispatch_reservations")
+      .select("id,workflow_run_id")
+      .in("status", ["reserved", "claimed"])
+      .not("workflow_run_id", "is", null)
+      .order("reserved_at", { ascending: true })
+      .limit(32);
+
+  if (liveRunsError) {
+    return Response.json(
+      { error: "Workflow reconciliation lookup failed" },
+      { status: 503 },
+    );
+  }
+
+  let terminalRunsSettled = 0;
+
+  for (const reservation of liveRuns ?? []) {
+    const runId = reservation.workflow_run_id;
+
+    if (typeof runId !== "string" || !runId) {
+      continue;
+    }
+
+    let runStatus: string;
+
+    try {
+      runStatus = await getRun(runId).status;
+    } catch (cause) {
+      // An unavailable status is NOT evidence of termination.
+      // Preserve ownership until status can be verified.
+      console.error(
+        "Could not verify shared Workflow status:",
+        runId,
+        cause,
+      );
+      continue;
+    }
+
+    if (
+      ![
+        "completed",
+        "failed",
+        "cancelled",
+        "canceled",
+      ].includes(runStatus)
+    ) {
+      continue;
+    }
+
+    const { data: settled, error: settlementError } =
+      await supabase.rpc(
+        "settle_terminal_shared_harvester_run",
+        {
+          p_reservation_id: reservation.id,
+          p_run_id: runId,
+          p_terminal_status: runStatus,
+        },
+      );
+
+    if (
+      settlementError ||
+      typeof settled !== "number"
+    ) {
+      console.error(
+        "Terminal Workflow settlement failed:",
+        runId,
+        settlementError,
+      );
+
+      return Response.json(
+        { error: "Terminal Workflow settlement failed" },
+        { status: 503 },
+      );
+    }
+
+    terminalRunsSettled += 1;
+
+    console.info(
+      "[shared-market-terminal-settlement]",
+      JSON.stringify({
+        runId,
+        reservationId: reservation.id,
+        status: runStatus,
+        unsettledAssignments: settled,
+      }),
+    );
+  }
+
+  if (terminalRunsSettled > 0) {
+    // Reuse the existing fenced source-lock recovery RPC.
+    // Once work ownership changes, old bound source executions
+    // become invalid and may be recovered safely.
+    const { error: postSettlementRecoveryError } =
+      await supabase.rpc(
+        "recover_expired_market_source_executions",
+        { p_limit: 100 },
+      );
+
+    if (postSettlementRecoveryError) {
+      console.error(
+        "Post-settlement source recovery failed",
+        postSettlementRecoveryError,
+      );
+
+      return Response.json(
+        { error: "Post-settlement source recovery failed" },
+        { status: 503 },
+      );
+    }
   }
 
   // One dispatcher invocation fills available reservations using
