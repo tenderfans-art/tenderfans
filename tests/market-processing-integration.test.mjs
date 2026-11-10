@@ -52,7 +52,8 @@ test("existing detector logic is reused", () => {
     detector,
     /first-party-event-detector\/route/,
   );
-  assert.match(detector, /GET\(request\)/);
+  assert.match(detector, /await detect\(request\)/);
+  assert.match(detector, /await harvest\(request\)/);
   assert.match(detector, /withLeaseRenewal/);
 });
 

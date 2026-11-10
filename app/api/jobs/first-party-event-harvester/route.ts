@@ -64,6 +64,48 @@ export async function GET(request: NextRequest) {
         "venue_id"
       );
 
+    const marketWorkId =
+      request.nextUrl.searchParams.get("market_work_id");
+
+    const marketLeaseToken =
+      request.nextUrl.searchParams.get("market_lease_token");
+
+    const hasMarketWork =
+      marketWorkId !== null || marketLeaseToken !== null;
+
+    if (hasMarketWork) {
+      if (
+        !venueId ||
+        sourceId ||
+        !marketWorkId ||
+        !marketLeaseToken
+      ) {
+        return NextResponse.json(
+          { error: "Invalid Spot Market execution identity" },
+          { status: 400 },
+        );
+      }
+
+      const { data: owned, error: ownershipError } =
+        await supabase
+          .from("event_processing_work")
+          .select("id")
+          .eq("id", marketWorkId)
+          .eq("venue_id", venueId)
+          .eq("work_type", "detect_spot")
+          .eq("status", "leased")
+          .eq("lease_token", marketLeaseToken)
+          .gt("leased_until", new Date().toISOString())
+          .maybeSingle();
+
+      if (ownershipError || !owned) {
+        return NextResponse.json(
+          { error: "Spot Market work lease is not owned" },
+          { status: 409 },
+        );
+      }
+    }
+
     let sourceQuery =
       supabase
         .from("event_harvest_sources")
@@ -106,6 +148,14 @@ export async function GET(request: NextRequest) {
         const result = await runRegisteredFirstPartySource(
           supabase,
           source,
+          hasMarketWork
+            ? {
+                marketWork: {
+                  workId: marketWorkId!,
+                  leaseToken: marketLeaseToken!,
+                },
+              }
+            : {},
         );
 
         results.push({
