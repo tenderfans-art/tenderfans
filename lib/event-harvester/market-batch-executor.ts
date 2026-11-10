@@ -52,16 +52,42 @@ export class MarketLeaseLostError extends Error {
   }
 }
 
+export class MarketWorkDeadlineExceededError extends Error {
+  constructor(workId: string) {
+    super(`Market work ${workId} exceeded its execution deadline`);
+    this.name = "MarketWorkDeadlineExceededError";
+  }
+}
+
 export async function withLeaseRenewal<T>(
   supabase: BatchDatabase,
   workId: string,
   leaseToken: string,
-  operation: () => Promise<T>,
+  operation: (signal: AbortSignal) => Promise<T>,
   intervalMs = 60_000,
+  deadlineMs?: number,
 ): Promise<T> {
   if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
     throw new Error("Invalid lease renewal interval");
   }
+
+  if (
+    deadlineMs !== undefined &&
+    (!Number.isFinite(deadlineMs) || deadlineMs <= 0)
+  ) {
+    throw new Error("Invalid work execution deadline");
+  }
+
+  const executionController = new AbortController();
+
+  const deadlineTimer = deadlineMs === undefined
+    ? null
+    : setTimeout(
+        () => executionController.abort(
+          new MarketWorkDeadlineExceededError(workId),
+        ),
+        deadlineMs,
+      );
 
   const controller = new AbortController();
   let renewalFailure: Error | null = null;
@@ -136,17 +162,29 @@ export async function withLeaseRenewal<T>(
   let operationFailed = false;
 
   try {
-    value = await operation();
+    value = await operation(executionController.signal);
+    executionController.signal.throwIfAborted();
   } catch (cause) {
     operationFailed = true;
     operationError = cause;
   } finally {
+    if (deadlineTimer) {
+      clearTimeout(deadlineTimer);
+    }
+
     controller.abort();
     await heartbeatPromise;
 
     if (inFlight) {
       await inFlight;
     }
+  }
+
+  if (
+    executionController.signal.reason instanceof
+      MarketWorkDeadlineExceededError
+  ) {
+    throw executionController.signal.reason;
   }
 
   if (operationFailed) {

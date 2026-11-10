@@ -5,6 +5,9 @@ import {
   type ClaimedWork,
   type MarketBatchResult,
 } from "./market-batch-executor";
+import {
+  runWithSpotExecutionSignal,
+} from "./transport-capacity-context";
 
 export type ClaimedDetectorWork = ClaimedWork & {
   claimed_venue_id: string | null;
@@ -90,7 +93,9 @@ export async function executeMarketDetectorWorkItem(
       supabase,
       item.work_id,
       item.claimed_lease_token,
-      async () => {
+      (spotSignal) => runWithSpotExecutionSignal(
+        spotSignal,
+        async () => {
         let detection: Record<string, unknown> | null = null;
         let detectorError: string | null = null;
 
@@ -149,6 +154,9 @@ export async function executeMarketDetectorWorkItem(
          * Use the original venue_id harvester route, not a copy
          * of its source selection or ingestion logic.
          */
+        // Do not start another stage after the Spot budget expires.
+        spotSignal.throwIfAborted();
+
         const { GET: harvest } = await import(
           "@/app/api/jobs/first-party-event-harvester/route"
         );
@@ -191,7 +199,10 @@ export async function executeMarketDetectorWorkItem(
           detectorError,
           harvesterError,
         };
-      },
+        },
+      ),
+      60_000,
+      10 * 60_000,
     );
 
     if (cycle.detectorError || cycle.harvesterError) {

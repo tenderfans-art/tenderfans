@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   getTransportCapacityContext,
+  getSpotExecutionSignal,
   type TransportCapacityKind,
 } from "./transport-capacity-context";
 
@@ -34,6 +35,13 @@ export class TransportPermitOwnershipLostError extends Error {
   constructor(kind: TransportCapacityKind) {
     super(`Transport permit ownership lost: ${kind}`);
     this.name = "TransportPermitOwnershipLostError";
+  }
+}
+
+export class BrowserOperationTimeoutError extends Error {
+  constructor() {
+    super("Browser operation exceeded its 3-minute deadline");
+    this.name = "BrowserOperationTimeoutError";
   }
 }
 
@@ -370,32 +378,86 @@ export async function withTransportPermit<T>(
   operation: (signal: AbortSignal) => Promise<T>,
   parentSignal?: AbortSignal,
 ): Promise<T> {
-  throwIfAborted(parentSignal);
+  const spotSignal = getSpotExecutionSignal();
+
+  const effectiveParent = spotSignal && parentSignal
+    ? AbortSignal.any([spotSignal, parentSignal])
+    : (spotSignal ?? parentSignal);
+
+  throwIfAborted(effectiveParent);
+
+  const runOperation = async (
+    signal: AbortSignal,
+  ): Promise<T> => {
+    if (kind !== "browser") {
+      return operation(signal);
+    }
+
+    const bounded = new AbortController();
+
+    const onAbort = () => {
+      bounded.abort(abortReason(signal));
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+
+    if (signal.aborted) {
+      onAbort();
+    }
+
+    const timer = setTimeout(
+      () => bounded.abort(new BrowserOperationTimeoutError()),
+      3 * 60_000,
+    );
+
+    try {
+      bounded.signal.throwIfAborted();
+
+      const value = await operation(bounded.signal);
+
+      bounded.signal.throwIfAborted();
+
+      return value;
+    } catch (error) {
+      if (
+        bounded.signal.reason instanceof
+          BrowserOperationTimeoutError
+      ) {
+        throw bounded.signal.reason;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+    }
+  };
 
   const context = getTransportCapacityContext();
 
   if (!context) {
-    return operation(parentSignal ?? new AbortController().signal);
+    return runOperation(
+      effectiveParent ?? new AbortController().signal,
+    );
   }
 
   const permit = await acquirePermit(
     context.supabase,
     kind,
     context.sourceId,
-    parentSignal,
+    effectiveParent,
   );
 
   const controller = new AbortController();
 
   const onParentAbort = () => {
-    controller.abort(abortReason(parentSignal!));
+    controller.abort(abortReason(effectiveParent!));
   };
 
-  parentSignal?.addEventListener("abort", onParentAbort, {
+  effectiveParent?.addEventListener("abort", onParentAbort, {
     once: true,
   });
 
-  if (parentSignal?.aborted) {
+  if (effectiveParent?.aborted) {
     onParentAbort();
   }
 
@@ -487,7 +549,7 @@ export async function withTransportPermit<T>(
 
   try {
     controller.signal.throwIfAborted();
-    result = await operation(controller.signal);
+    result = await runOperation(controller.signal);
     controller.signal.throwIfAborted();
   } catch (error) {
     operationFailure = error;
@@ -500,7 +562,7 @@ export async function withTransportPermit<T>(
       clearTimeout(expiryTimer);
     }
 
-    parentSignal?.removeEventListener("abort", onParentAbort);
+    effectiveParent?.removeEventListener("abort", onParentAbort);
 
     /*
      * Wait for an in-flight renewal before releasing.

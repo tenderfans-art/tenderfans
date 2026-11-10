@@ -24,6 +24,22 @@ type TransportCapacityContext = {
 const storage =
   new AsyncLocalStorage<TransportCapacityContext>();
 
+const spotExecutionSignals =
+  new AsyncLocalStorage<AbortSignal>();
+
+export function runWithSpotExecutionSignal<T>(
+  signal: AbortSignal,
+  operation: () => Promise<T>,
+): Promise<T> {
+  signal.throwIfAborted();
+  return spotExecutionSignals.run(signal, operation);
+}
+
+export function getSpotExecutionSignal():
+  AbortSignal | undefined {
+  return spotExecutionSignals.getStore();
+}
+
 export function runWithTransportCapacityContext<T>(
   supabase: SupabaseClient,
   sourceId: string,

@@ -354,6 +354,7 @@ export async function fetchBrowserJsonResponses(
       (
         error.name === "TransportCapacityUnavailableError" ||
         error.name === "TransportPermitOwnershipLostError" ||
+        error.name === "BrowserOperationTimeoutError" ||
         error.name === "AbortError"
       )
     ) {
@@ -404,6 +405,7 @@ export async function fetchBrowserJsonResponses(
       (
         error.name === "TransportCapacityUnavailableError" ||
         error.name === "TransportPermitOwnershipLostError" ||
+        error.name === "BrowserOperationTimeoutError" ||
         error.name === "AbortError"
       )
     ) {

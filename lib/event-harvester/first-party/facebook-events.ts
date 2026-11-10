@@ -969,6 +969,7 @@ async function fetchFacebookEventsUnderPermit(
     args: Chromium.args,
     executablePath: await Chromium.executablePath(),
     headless: true,
+    timeout: 30000,
   });
 
   // Abort and normal completion share one browser-close promise.

@@ -30,7 +30,11 @@ new Function("module", "exports", compiled)(
   module.exports,
 );
 
-const { withLeaseRenewal, MarketLeaseLostError } = module.exports;
+const {
+  withLeaseRenewal,
+  MarketLeaseLostError,
+  MarketWorkDeadlineExceededError,
+} = module.exports;
 
 function fakeDb(handler) {
   return {
@@ -181,4 +185,47 @@ test("original ingestion failure is preserved", async () => {
     ),
     (error) => error === original,
   );
+});
+
+test("Spot deadline requests cancellation and waits for cleanup", async () => {
+  let cleanupFinished = false;
+
+  await assert.rejects(
+    withLeaseRenewal(
+      fakeDb(() => ({ data: true, error: null })),
+      "work-1",
+      "token-1",
+      async (signal) => {
+        await new Promise((resolve) => {
+          signal.addEventListener("abort", () => {
+            setTimeout(() => {
+              cleanupFinished = true;
+              resolve();
+            }, 20);
+          }, { once: true });
+        });
+      },
+      5,
+      15,
+    ),
+    MarketWorkDeadlineExceededError,
+  );
+
+  assert.equal(cleanupFinished, true);
+});
+
+test("bounded successful work retains normal completion", async () => {
+  const value = await withLeaseRenewal(
+    fakeDb(() => ({ data: true, error: null })),
+    "work-1",
+    "token-1",
+    async (signal) => {
+      assert.equal(signal.aborted, false);
+      return "completed";
+    },
+    5,
+    1000,
+  );
+
+  assert.equal(value, "completed");
 });
