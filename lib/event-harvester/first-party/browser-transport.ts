@@ -1,6 +1,7 @@
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 import { chromium as playwright } from "playwright-core";
 import Chromium from "@sparticuz/chromium";
+import { getChromiumExecutablePath } from "./chromium-runtime";
 import { withTransportPermit } from "../transport-capacity-permits";
 
 const USER_AGENT = "TenderFans Event Harvester/1.0";
@@ -92,7 +93,7 @@ export async function fetchBrowserEvidence(
 
     const browser = await playwright.launch({
     args: Chromium.args,
-    executablePath: await Chromium.executablePath(),
+    executablePath: await getChromiumExecutablePath(),
     headless: true,
     timeout: 30000,
     ...(proxy ? { proxy } : {}),
@@ -237,7 +238,7 @@ async function fetchBrowserJsonResponsesOnce(
 
     const instance = await playwright.launch({
       args: Chromium.args,
-      executablePath: await Chromium.executablePath(),
+      executablePath: await getChromiumExecutablePath(),
       headless: true,
       timeout: 30000,
       ...(proxy ? { proxy } : {}),

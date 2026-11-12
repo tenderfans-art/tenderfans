@@ -1,5 +1,6 @@
 import { chromium as playwright, type Page } from "playwright-core";
 import Chromium from "@sparticuz/chromium";
+import { getChromiumExecutablePath } from "./chromium-runtime";
 import { withTransportPermit } from "../transport-capacity-permits";
 
 export type FacebookEvent = {
@@ -967,7 +968,7 @@ async function fetchFacebookEventsUnderPermit(
 
   const browser = await playwright.launch({
     args: Chromium.args,
-    executablePath: await Chromium.executablePath(),
+    executablePath: await getChromiumExecutablePath(),
     headless: true,
     timeout: 30000,
   });

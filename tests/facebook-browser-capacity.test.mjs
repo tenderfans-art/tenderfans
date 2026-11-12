@@ -57,6 +57,7 @@ async function scenario({ abort = false, grant = true } = {}) {
   };
 
   const context = {
+    getChromiumExecutablePath: async () => "/test/chromium",
     Chromium: {
       args: [],
       executablePath: async () => "/test/chromium",
