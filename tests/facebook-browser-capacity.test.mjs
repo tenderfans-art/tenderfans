@@ -38,6 +38,18 @@ async function scenario({ abort = false, grant = true } = {}) {
     async newPage() {
       calls.push("new-page");
       return {
+        async route(_pattern, handler) {
+          calls.push("resource-filter-installed");
+
+          for (const type of ["image", "font", "media", "script", "xhr"]) {
+            const route = {
+              request: () => ({ resourceType: () => type }),
+              abort: async () => calls.push(type + "-blocked"),
+              continue: async () => calls.push(type + "-allowed"),
+            };
+            await handler(route);
+          }
+        },
         async goto() {
           calls.push("navigate");
 
@@ -69,6 +81,8 @@ async function scenario({ abort = false, grant = true } = {}) {
       },
     },
     USER_AGENT: "Test",
+    isNonessentialBrowserResourceType: type =>
+      ["image", "font", "media"].includes(type),
     eventsUrl: url => `${url}/events`,
     withTransportPermit: async (kind, operation) => {
       assert.equal(kind, "browser");
@@ -110,6 +124,12 @@ test("navigation failure closes browser before permit release", async () => {
     "permit-requested",
     "browser-launched",
     "new-page",
+    "resource-filter-installed",
+    "image-blocked",
+    "font-blocked",
+    "media-blocked",
+    "script-allowed",
+    "xhr-allowed",
     "navigate",
     "browser-closed",
     "permit-released",
@@ -128,6 +148,11 @@ test("permit cancellation closes browser exactly once", async () => {
     calls.indexOf("browser-closed") <
     calls.indexOf("permit-released")
   );
+});
+
+test("Facebook retains scripts and data while blocking media", () => {
+  assert.match(source, /page\.route\("\*\*\/\*"/);
+  assert.match(source, /isNonessentialBrowserResourceType/);
 });
 
 test("capacity denial cannot launch an unpermitted browser", async () => {

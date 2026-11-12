@@ -4,6 +4,12 @@ import Chromium from "@sparticuz/chromium";
 import { getChromiumExecutablePath } from "./chromium-runtime";
 import { withTransportPermit } from "../transport-capacity-permits";
 
+export function isNonessentialBrowserResourceType(
+  resourceType: string,
+): boolean {
+  return ["image", "font", "media"].includes(resourceType);
+}
+
 const USER_AGENT = "TenderFans Event Harvester/1.0";
 
 const MAX_BROWSER_HTML_BYTES = 2_000_000;
@@ -263,7 +269,7 @@ async function fetchBrowserJsonResponsesOnce(
 
         if (
           !isAllowedBrowserUrl(request.url()) ||
-          ["image", "font", "media"].includes(request.resourceType())
+          isNonessentialBrowserResourceType(request.resourceType())
         ) {
           await route.abort();
         } else {

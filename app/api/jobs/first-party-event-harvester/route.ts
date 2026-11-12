@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSpotExecutionSignal } from "@/lib/event-harvester/transport-capacity-context";
 import { createClient } from "@supabase/supabase-js";
 import {
   runRegisteredFirstPartySource,
@@ -144,6 +145,7 @@ export async function GET(request: NextRequest) {
     const results = [];
 
     for (const source of sources ?? []) {
+      getSpotExecutionSignal()?.throwIfAborted();
       try {
         const result = await runRegisteredFirstPartySource(
           supabase,
@@ -165,6 +167,7 @@ export async function GET(request: NextRequest) {
           result,
         });
       } catch (error) {
+        getSpotExecutionSignal()?.throwIfAborted();
         // One broken feed must not stop remaining sources.
         const message = await recordFirstPartySourceFailure(
           supabase,

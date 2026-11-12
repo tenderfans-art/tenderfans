@@ -1,6 +1,7 @@
 import { chromium as playwright, type Page } from "playwright-core";
 import Chromium from "@sparticuz/chromium";
 import { getChromiumExecutablePath } from "./chromium-runtime";
+import { isNonessentialBrowserResourceType } from "./browser-transport";
 import { withTransportPermit } from "../transport-capacity-permits";
 
 export type FacebookEvent = {
@@ -996,6 +997,21 @@ async function fetchFacebookEventsUnderPermit(
     const page = await browser.newPage({
       viewport: { width: 1440, height: 1600 },
       userAgent: USER_AGENT,
+    });
+
+    /*
+     * Keep Facebook's scripts and data requests intact.
+     * Prevent nonessential media from exhausting Chromium
+     * networking resources during Events navigation.
+     */
+    await page.route("**/*", async (route) => {
+      if (isNonessentialBrowserResourceType(
+        route.request().resourceType(),
+      )) {
+        await route.abort();
+      } else {
+        await route.continue();
+      }
     });
 
     /*

@@ -10,6 +10,12 @@ const executor = read(
 const lease = read(
   "lib/event-harvester/market-batch-executor.ts",
 );
+const detector = read(
+  "lib/event-harvester/first-party/source-detector.ts",
+);
+const ingest = read(
+  "lib/event-harvester/first-party/ingest.ts",
+);
 const context = read(
   "lib/event-harvester/transport-capacity-context.ts",
 );
@@ -32,6 +38,13 @@ test("Spot execution has a ten-minute budget", () => {
   assert.match(executor, /spotSignal\.throwIfAborted\(\)/);
   assert.match(lease, /MarketWorkDeadlineExceededError/);
   assert.match(lease, /executionController\.signal/);
+});
+
+test("shared-source work has a cancellable execution budget", () => {
+  assert.match(lease, /runWithSpotExecutionSignal/);
+  assert.match(lease, /10 \* 60_000/);
+  assert.match(ingest, /getSpotExecutionSignal\(\)\?\.throwIfAborted\(\)/);
+  assert.match(detector, /getSpotExecutionSignal\(\)\?\.throwIfAborted\(\)/);
 });
 
 test("Spot cancellation propagates through transport", () => {

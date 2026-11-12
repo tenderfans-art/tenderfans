@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { runWithSpotExecutionSignal } from "./transport-capacity-context";
 import {
   loadRegisteredFirstPartySource,
   runRegisteredFirstPartySource,
@@ -257,23 +258,30 @@ export async function executeMarketHarvesterWorkItem(
         supabase,
         item.work_id,
         item.claimed_lease_token,
-        async () => {
-          const source = await loadRegisteredFirstPartySource(
-            supabase,
-            item.claimed_source_id!,
-          );
+        (executionSignal) => runWithSpotExecutionSignal(
+          executionSignal,
+          async () => {
+            const source = await loadRegisteredFirstPartySource(
+              supabase,
+              item.claimed_source_id!,
+            );
 
-          return runRegisteredFirstPartySource(
-            supabase,
-            source,
-            {
-              marketWork: {
-                workId: item.work_id,
-                leaseToken: item.claimed_lease_token,
+            executionSignal.throwIfAborted();
+
+            return runRegisteredFirstPartySource(
+              supabase,
+              source,
+              {
+                marketWork: {
+                  workId: item.work_id,
+                  leaseToken: item.claimed_lease_token,
+                },
               },
-            },
-          );
-        },
+            );
+          },
+        ),
+        60_000,
+        10 * 60_000,
       );
     } catch (cause) {
       if (isSourceBusy(cause) || cause instanceof MarketLeaseLostError) {

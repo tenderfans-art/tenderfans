@@ -11,6 +11,7 @@ import { hasParseableGoDaddyRecurringItems } from "./godaddy-menu-recurring";
 import { hasParseableWordPressCategoryEvents } from "./wordpress-category-events";
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { getSpotExecutionSignal } from "../transport-capacity-context";
 
 const preferredProxyContext = new AsyncLocalStorage<boolean>();
 
@@ -585,6 +586,7 @@ async function discoverSecondaryEventLinks(homepageUrl: string): Promise<
     visitedSitemaps.size < 8 &&
     discovered.size < 8
   ) {
+    getSpotExecutionSignal()?.throwIfAborted();
     const sitemapUrl = sitemapQueue.shift()!;
 
     if (visitedSitemaps.has(sitemapUrl) || !sameSite(sitemapUrl, homepageUrl)) {
@@ -1676,6 +1678,8 @@ export async function fetchHtml(
   recoveryDetail?: string;
   challengeEvidence?: string[];
 }> {
+  getSpotExecutionSignal()?.throwIfAborted();
+
   const recoveryProxy = getTransportRecoveryProxy();
   const preferProxy =
     preferredProxyContext.getStore() === true && Boolean(recoveryProxy);
@@ -1685,6 +1689,7 @@ export async function fetchHtml(
     proxy?: string,
     browserHeaders = false,
   ) {
+    getSpotExecutionSignal()?.throwIfAborted();
     const normalizedUrl = new URL(targetUrl);
 
     if (normalizedUrl.protocol === "http:") {
@@ -2268,6 +2273,7 @@ export async function detectFirstPartySources(
   venueIdentity?: RedirectVenueIdentity,
   approvedRedirectUrls: readonly string[] = [],
 ): Promise<SiteDetectionResult> {
+  getSpotExecutionSignal()?.throwIfAborted();
   const detections: SourceDetection[] = [];
 
   let homepage: Awaited<ReturnType<typeof fetchHtml>>;
@@ -2277,6 +2283,7 @@ export async function detectFirstPartySources(
   try {
     homepage = await fetchHtml(websiteUrl);
   } catch (error) {
+    getSpotExecutionSignal()?.throwIfAborted();
     homepageFetchError = error;
     homepage = {
       ok: false,
@@ -2566,6 +2573,7 @@ export async function detectFirstPartySources(
    * sitemap/site metadata.
    */
   const secondaryLinks = await discoverSecondaryEventLinks(homepage.url);
+  getSpotExecutionSignal()?.throwIfAborted();
 
   const candidateLinkMap = new Map<string, { url: string; text: string }>();
 
@@ -2611,6 +2619,7 @@ export async function detectFirstPartySources(
   recordTanStackEligibility(homepage.html, homepage.url);
 
   for (const link of candidateLinks) {
+    getSpotExecutionSignal()?.throwIfAborted();
     const discovered = discoveredEventPages.find(
       (page) => page.url === link.url,
     );
@@ -2816,6 +2825,7 @@ export async function detectFirstPartySources(
     );
 
     for (const candidate of orderedBrowserCandidates) {
+      getSpotExecutionSignal()?.throwIfAborted();
       try {
         const evidence = await fetchBrowserEvidence(
           candidate.finalUrl ?? candidate.url,
@@ -2990,6 +3000,7 @@ export async function detectFirstPartySources(
   ];
 
   for (const candidateUrl of tanstackCandidates) {
+    getSpotExecutionSignal()?.throwIfAborted();
     try {
       const descriptor =
         await discoverTanStackCalendar(candidateUrl);

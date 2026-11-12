@@ -1,4 +1,7 @@
-import { runWithTransportCapacityContext } from "@/lib/event-harvester/transport-capacity-context";
+import {
+  runWithTransportCapacityContext,
+  getSpotExecutionSignal,
+} from "@/lib/event-harvester/transport-capacity-context";
 import { venueIdentityMatch } from "@/lib/event-harvester/venue-identity";
 import { runWithTransportRecovery } from "@/lib/event-harvester/transport-recovery-context";
 import { NextResponse } from "next/server";
@@ -444,11 +447,13 @@ export async function GET(request: Request) {
   }> = [];
 
   for (const venue of venues ?? []) {
+    getSpotExecutionSignal()?.throwIfAborted();
     if (!venue.website_url) {
       continue;
     }
 
     const processVenue = async () => {
+    getSpotExecutionSignal()?.throwIfAborted();
     processedSpots += 1;
 
     try {
@@ -617,6 +622,8 @@ export async function GET(request: Request) {
         ),
       );
 
+      getSpotExecutionSignal()?.throwIfAborted();
+
       const directBrowserOutcomes = [
         ...(detection.browserOutcomes ?? []),
       ];
@@ -634,6 +641,7 @@ export async function GET(request: Request) {
 
       if (detection.status !== "external_redirect") {
         for (const candidate of detection.detections) {
+          getSpotExecutionSignal()?.throwIfAborted();
           if (
             !candidate.adapterAvailable ||
             candidate.sourceType === "calendar_image" ||
@@ -1257,6 +1265,7 @@ export async function GET(request: Request) {
       }
 
       for (const candidate of detection.detections) {
+        getSpotExecutionSignal()?.throwIfAborted();
         if (candidate.sourceType === "browser_required") {
           /*
            * Browser-required findings are actionable discovery work.
@@ -2354,6 +2363,7 @@ export async function GET(request: Request) {
         }
       }
     } catch (error) {
+      getSpotExecutionSignal()?.throwIfAborted();
       failed += 1;
       failures.push({
         venueId: venue.id,

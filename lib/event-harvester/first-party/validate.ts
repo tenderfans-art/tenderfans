@@ -1,6 +1,7 @@
 import {
   SpotHopperSurfaceError,
 } from "./spothopper-events";
+import { getSpotExecutionSignal } from "../transport-capacity-context";
 
 import {
   previewFirstPartySource,
@@ -72,6 +73,7 @@ export async function validateFirstPartySource(
       error: null,
     };
   } catch (error) {
+    getSpotExecutionSignal()?.throwIfAborted();
     if (
       error instanceof SpotHopperSurfaceError &&
       error.reason === "unsupported_surface"

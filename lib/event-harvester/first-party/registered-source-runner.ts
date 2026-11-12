@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ingestFirstPartySource } from "./ingest";
+import { getSpotExecutionSignal } from "../transport-capacity-context";
 import { runWithTransportRecovery } from
   "../transport-recovery-context";
 
@@ -65,6 +66,7 @@ export async function runRegisteredFirstPartySource(
   options: { marketWork?: MarketWork } = {},
 ): Promise<Awaited<ReturnType<typeof ingestFirstPartySource>>> {
   const checkedAt = new Date().toISOString();
+  getSpotExecutionSignal()?.throwIfAborted();
 
   const { error: checkedError } = await supabase
     .from("event_harvest_sources")
@@ -179,6 +181,7 @@ export async function runRegisteredFirstPartySource(
     }
   }
 
+  getSpotExecutionSignal()?.throwIfAborted();
   const succeededAt = new Date().toISOString();
 
   const { error: successError } = await supabase

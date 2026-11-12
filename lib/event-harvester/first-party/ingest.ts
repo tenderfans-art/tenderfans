@@ -11,6 +11,7 @@ import { resolveFirstPartyAttribution } from "./attribution";
 import { classifyEventEligibility } from "./event-eligibility";
 import {
   runWithTransportCapacityContext,
+  getSpotExecutionSignal,
 } from "../transport-capacity-context";
 
 export type FirstPartyIngestResult = {
@@ -517,6 +518,8 @@ export async function ingestFirstPartySource(
     () => previewFirstPartySource(source),
   );
 
+  getSpotExecutionSignal()?.throwIfAborted();
+
   /*
    * TanStack calendar inventories may include television schedules.
    * Preserve the complete inventory for source diagnostics, but do
@@ -608,6 +611,7 @@ export async function ingestFirstPartySource(
   };
 
   for (const event of preview) {
+    getSpotExecutionSignal()?.throwIfAborted();
     const ingested = await ingestEvent(supabase, event, executionToken!);
 
     result.processed += 1;
@@ -671,6 +675,7 @@ export async function ingestFirstPartySource(
     options.limit === undefined;
 
   if (completeSourceRun) {
+    getSpotExecutionSignal()?.throwIfAborted();
     const { error: reconcileError } = await fencedFirstPartyWrite(
       supabase,
       source.id,
