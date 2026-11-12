@@ -13,6 +13,99 @@ export type ClaimedDetectorWork = ClaimedWork & {
   claimed_venue_id: string | null;
 };
 
+/*
+ * A completed harvest can contain individual source failures.
+ * Their existing source-health and Admin paths remain authoritative.
+ *
+ * Incomplete execution, lock contention, or failed error persistence
+ * must not be acknowledged as completed Market work.
+ */
+export function isCompleteSpotHarvesterReport(
+  responseOk: boolean,
+  body: Record<string, unknown>,
+): boolean {
+  if (
+    !responseOk ||
+    body.provider !== "first_party" ||
+    !Array.isArray(body.results)
+  ) {
+    return false;
+  }
+
+  const validCount = (value: unknown): value is number =>
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0;
+
+  const checked = body.sourcesChecked;
+  const succeeded = body.succeeded;
+  const failed = body.failed;
+
+  if (
+    !validCount(checked) ||
+    !validCount(succeeded) ||
+    !validCount(failed) ||
+    checked !== succeeded + failed ||
+    body.results.length !== checked
+  ) {
+    return false;
+  }
+
+  let actualSucceeded = 0;
+  let actualFailed = 0;
+
+  for (const value of body.results) {
+    if (!value || typeof value !== "object") {
+      return false;
+    }
+
+    const entry = value as Record<string, unknown>;
+
+    if (typeof entry.sourceId !== "string") {
+      return false;
+    }
+
+    if (entry.ok === true) {
+      actualSucceeded++;
+      continue;
+    }
+
+    if (
+      entry.ok !== false ||
+      typeof entry.error !== "string" ||
+      !entry.error.trim()
+    ) {
+      return false;
+    }
+
+    // An unacquired source lock is an unprocessed source.
+    if (
+      /^First-party source .+ is already being ingested\.$/.test(
+        entry.error
+      )
+    ) {
+      return false;
+    }
+
+    // Do not acknowledge a failure that could not be recorded.
+    if (
+      entry.error.includes(
+        "(Could not record source failure:"
+      )
+    ) {
+      return false;
+    }
+
+    actualFailed++;
+  }
+
+  return (
+    actualSucceeded === succeeded &&
+    actualFailed === failed &&
+    body.ok === (failed === 0)
+  );
+}
+
 export async function claimMarketDetectorBatch(
   supabase: SupabaseClient,
   marketId: string,
@@ -131,7 +224,9 @@ export async function executeMarketDetectorWorkItem(
               !response.ok ||
               body.spots !== 1 ||
               body.bucketInvariantHolds !== true ||
-              body.failed !== 0
+              typeof body.failed !== "number" ||
+              !Number.isSafeInteger(body.failed) ||
+              body.failed < 0
             ) {
               detectorError =
                 "Detector returned unsuccessful result: " +
@@ -186,10 +281,11 @@ export async function executeMarketDetectorWorkItem(
         >;
 
         const harvesterError =
-          !response.ok ||
-          harvesting.ok !== true ||
-          typeof harvesting.sourcesChecked !== "number"
-            ? "Harvester returned unsuccessful result: " +
+          !isCompleteSpotHarvesterReport(
+            response.ok,
+            harvesting,
+          )
+            ? "Harvester execution incomplete: " +
               JSON.stringify(harvesting).slice(0, 1200)
             : null;
 
@@ -227,6 +323,7 @@ export async function executeMarketDetectorWorkItem(
           ratified: cycle.detection?.ratified ?? 0,
           validated: cycle.detection?.validated ?? 0,
           registered: cycle.detection?.registered ?? 0,
+          detectorFailed: cycle.detection?.failed ?? 0,
           buckets: cycle.detection?.buckets ?? {},
           sourcesChecked: cycle.harvesting.sourcesChecked,
           sourcesSucceeded: cycle.harvesting.succeeded,

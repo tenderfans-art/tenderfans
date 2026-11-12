@@ -79,7 +79,7 @@ test("existing harvester retains source selection and runner", () => {
   assert.doesNotMatch(harvester, /ingestFirstPartySource\(/);
 });
 
-test("Market harvester requires exact owned Spot lease", () => {
+test("Original harvester verifies Market Spot ownership", () => {
   assert.match(harvester, /"detect_spot"/);
   assert.match(harvester, /"leased"/);
   assert.match(harvester, /"lease_token"/);
