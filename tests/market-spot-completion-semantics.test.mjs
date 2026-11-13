@@ -150,16 +150,34 @@ test("unrecorded source error remains incomplete", () => {
   );
 });
 
-test("detector adapter errors do not invalidate the cycle", () => {
-  assert.doesNotMatch(
+test("detector execution failures block harvesting", () => {
+  assert.match(
     executor,
-    /body\.failed !== 0/,
+    /isCompleteSpotDetectorReport/,
   );
 
   assert.match(
     executor,
-    /body\.bucketInvariantHolds !== true/,
+    /body\.bucketInvariantHolds === true/,
   );
+
+  assert.match(
+    executor,
+    /body\.failed === 0/,
+  );
+
+  assert.match(
+    executor,
+    /body\.failures\.length === 0/,
+  );
+
+  const detector = executor.indexOf("await detect(request)");
+  const gate = executor.indexOf("if (detectorError) {");
+  const harvester = executor.indexOf("await harvest(request)");
+
+  assert.ok(detector >= 0);
+  assert.ok(gate > detector);
+  assert.ok(harvester > gate);
 });
 
 test("original detector and harvester still run in order", () => {

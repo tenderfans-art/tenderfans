@@ -14,6 +14,27 @@ export type ClaimedDetectorWork = ClaimedWork & {
 };
 
 /*
+ * A completed detector scan may legitimately find no event sources.
+ * Execution errors and failed adapter operations are different:
+ * they must not authorize the next harvesting stage.
+ */
+export function isCompleteSpotDetectorReport(
+  responseOk: boolean,
+  body: Record<string, unknown>,
+): boolean {
+  return (
+    responseOk &&
+    body.spots === 1 &&
+    body.bucketInvariantHolds === true &&
+    typeof body.failed === "number" &&
+    Number.isSafeInteger(body.failed) &&
+    body.failed === 0 &&
+    Array.isArray(body.failures) &&
+    body.failures.length === 0
+  );
+}
+
+/*
  * A completed harvest can contain individual source failures.
  * Their existing source-health and Admin paths remain authoritative.
  *
@@ -221,12 +242,7 @@ export async function executeMarketDetectorWorkItem(
             detection = body;
 
             if (
-              !response.ok ||
-              body.spots !== 1 ||
-              body.bucketInvariantHolds !== true ||
-              typeof body.failed !== "number" ||
-              !Number.isSafeInteger(body.failed) ||
-              body.failed < 0
+              !isCompleteSpotDetectorReport(response.ok, body)
             ) {
               detectorError =
                 "Detector returned unsuccessful result: " +
@@ -242,12 +258,21 @@ export async function executeMarketDetectorWorkItem(
         }
 
         /*
-         * ALWAYS continue to harvesting, including when detection
-         * failed. This preserves the original independent CRON
-         * behavior for already-approved sources.
+         * A failed detector cannot authorize harvesting.
+         * Preserve the failed Spot work for the existing retry
+         * lifecycle; do not run approved sources on this attempt.
          *
-         * Use the original venue_id harvester route, not a copy
-         * of its source selection or ingestion logic.
+         * A Spot with no website never invokes the detector.
+         * Its already-approved sources retain their existing
+         * harvesting path.
+         */
+        if (detectorError) {
+          throw new Error(detectorError);
+        }
+
+        /*
+         * Reuse the original venue_id harvester route and all
+         * existing source eligibility and publication safeguards.
          */
         // Do not start another stage after the Spot budget expires.
         spotSignal.throwIfAborted();

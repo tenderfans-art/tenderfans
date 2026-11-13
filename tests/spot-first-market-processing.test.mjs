@@ -50,14 +50,21 @@ test("one Spot cycle uses BOTH original routes", () => {
   );
 });
 
-test("detection failure never skips existing approved sources", () => {
-  assert.match(executor, /let detectorError/);
-  assert.match(executor, /catch \(error\)/);
-  assert.match(executor, /await harvest\(request\)/);
-  assert.ok(
-    executor.indexOf("if (cycle.detectorError") >
-    executor.indexOf("await harvest(request)"),
-  );
+test("failed detector prevents harvesting and preserves retries", () => {
+  assert.match(executor, /isCompleteSpotDetectorReport/);
+  assert.match(executor, /if \(detectorError\) \{/);
+  assert.match(executor, /throw new Error\(detectorError\)/);
+
+  const detect = executor.indexOf("await detect(request)");
+  const gate = executor.indexOf("if (detectorError) {");
+  const harvest = executor.indexOf("await harvest(request)");
+
+  assert.ok(detect >= 0);
+  assert.ok(gate > detect);
+  assert.ok(harvest > gate);
+
+  assert.match(executor, /fail_event_processing_work/);
+  assert.match(executor, /if \(spot\.website_url\?\.trim\(\)\)/);
 });
 
 test("Spot ownership is held through harvesting", () => {
