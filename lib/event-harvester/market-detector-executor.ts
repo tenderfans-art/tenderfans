@@ -35,6 +35,31 @@ export function isCompleteSpotDetectorReport(
 }
 
 /*
+ * The detector already puts a Spot with any approved first-party
+ * source in the Validated bucket. All other completed buckets
+ * need no Spot-owned harvesting until a source is approved.
+ *
+ * Null means detection was intentionally skipped because this
+ * Spot has no website; its approved sources still need harvesting.
+ */
+export function shouldHarvestAfterSpotDetection(
+  detection: Record<string, unknown> | null,
+): boolean {
+  if (detection === null) {
+    return true;
+  }
+
+  const buckets = detection.buckets;
+
+  return (
+    buckets !== null &&
+    typeof buckets === "object" &&
+    !Array.isArray(buckets) &&
+    (buckets as Record<string, unknown>).validated === 1
+  );
+}
+
+/*
  * A completed harvest can contain individual source failures.
  * Their existing source-health and Admin paths remain authoritative.
  *
@@ -271,6 +296,31 @@ export async function executeMarketDetectorWorkItem(
         }
 
         /*
+         * No Sources and review-only buckets have no validated
+         * Spot-owned sources to harvest. The detector has already
+         * persisted their Admin findings. Complete this Spot
+         * successfully without invoking the harvester.
+         *
+         * Existing approved sources are always harvested, even
+         * when they currently contain zero events.
+         */
+        if (!shouldHarvestAfterSpotDetection(detection)) {
+          spotSignal.throwIfAborted();
+
+          return {
+            detection,
+            harvesting: {
+              sourcesChecked: 0,
+              succeeded: 0,
+              failed: 0,
+              skipped: true,
+            },
+            detectorError: null,
+            harvesterError: null,
+          };
+        }
+
+        /*
          * Reuse the original venue_id harvester route and all
          * existing source eligibility and publication safeguards.
          */
@@ -350,6 +400,7 @@ export async function executeMarketDetectorWorkItem(
           registered: cycle.detection?.registered ?? 0,
           detectorFailed: cycle.detection?.failed ?? 0,
           buckets: cycle.detection?.buckets ?? {},
+          harvestSkipped: cycle.harvesting.skipped === true,
           sourcesChecked: cycle.harvesting.sourcesChecked,
           sourcesSucceeded: cycle.harvesting.succeeded,
           sourcesFailed: cycle.harvesting.failed,
