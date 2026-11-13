@@ -101,7 +101,7 @@ export async function withLeaseRenewal<T>(
         {
           p_work_id: workId,
           p_lease_token: leaseToken,
-          p_lease_minutes: 180,
+          p_lease_minutes: 30,
         },
       );
 
@@ -208,7 +208,7 @@ export async function claimMarketHarvesterBatch(
     {
       p_market_id: marketId,
       p_work_type: "harvest_source",
-      p_lease_minutes: 180,
+      p_lease_minutes: 30,
     },
   );
 
@@ -281,7 +281,7 @@ export async function executeMarketHarvesterWorkItem(
           },
         ),
         60_000,
-        10 * 60_000,
+        30 * 60_000,
       );
     } catch (cause) {
       if (isSourceBusy(cause) || cause instanceof MarketLeaseLostError) {

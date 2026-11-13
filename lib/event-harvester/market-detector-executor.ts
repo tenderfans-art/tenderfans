@@ -115,7 +115,7 @@ export async function claimMarketDetectorBatch(
     {
       p_market_id: marketId,
       p_work_type: "detect_spot",
-      p_lease_minutes: 180,
+      p_lease_minutes: 30,
     },
   );
 
@@ -298,7 +298,7 @@ export async function executeMarketDetectorWorkItem(
         },
       ),
       60_000,
-      10 * 60_000,
+      30 * 60_000,
     );
 
     if (cycle.detectorError || cycle.harvesterError) {

@@ -80,6 +80,8 @@ export async function executeMarketSupplementalWorkItem(
         item.work_id,
         item.claimed_lease_token,
         () => POST(request),
+        60_000,
+        30 * 60_000,
       );
 
       const body = await response.json() as Record<string, unknown>;
@@ -163,6 +165,8 @@ export async function executeMarketSupplementalWorkItem(
         item.work_id,
         item.claimed_lease_token,
         () => GET(request),
+        60_000,
+        30 * 60_000,
       );
 
       const body = await response.json() as Record<string, unknown>;

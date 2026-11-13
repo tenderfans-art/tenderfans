@@ -32,8 +32,8 @@ const harvester = read(
   "app/api/jobs/first-party-event-harvester/route.ts",
 );
 
-test("Spot execution has a ten-minute budget", () => {
-  assert.match(executor, /10 \* 60_000/);
+test("Spot execution has a thirty-minute budget", () => {
+  assert.match(executor, /30 \* 60_000/);
   assert.match(executor, /runWithSpotExecutionSignal/);
   assert.match(executor, /spotSignal\.throwIfAborted\(\)/);
   assert.match(lease, /MarketWorkDeadlineExceededError/);
@@ -42,7 +42,7 @@ test("Spot execution has a ten-minute budget", () => {
 
 test("shared-source work has a cancellable execution budget", () => {
   assert.match(lease, /runWithSpotExecutionSignal/);
-  assert.match(lease, /10 \* 60_000/);
+  assert.match(lease, /30 \* 60_000/);
   assert.match(ingest, /getSpotExecutionSignal\(\)\?\.throwIfAborted\(\)/);
   assert.match(detector, /getSpotExecutionSignal\(\)\?\.throwIfAborted\(\)/);
 });

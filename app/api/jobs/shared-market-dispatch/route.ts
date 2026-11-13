@@ -146,8 +146,21 @@ export async function POST(request: Request) {
     );
   }
 
-  // Recovery is bounded and only affects expired market-bound
-  // executions. Standalone source executions are never recovered.
+  // Recovery is bounded and handles expired market-bound
+  // and standalone executions through separate fenced RPCs.
+  const { error: standaloneRecoveryError } = await supabase.rpc(
+    "recover_expired_standalone_source_executions",
+    { p_limit: 100 },
+  );
+
+  if (standaloneRecoveryError) {
+    console.error("Standalone source recovery failed", standaloneRecoveryError);
+    return Response.json(
+      { error: "Standalone source recovery failed" },
+      { status: 503 },
+    );
+  }
+
   const { error: recoveryError } = await supabase.rpc(
     "recover_expired_market_source_executions",
     { p_limit: 100 },
@@ -161,20 +174,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error: reconciliationError } = await supabase.rpc(
-    "reconcile_shared_harvester_reservations",
-  );
-
-  if (reconciliationError) {
-    console.error(
-      "Shared reservation reconciliation failed",
-      reconciliationError,
-    );
-    return Response.json(
-      { error: "Shared reservation reconciliation failed" },
-      { status: 503 },
-    );
-  }
 
 
   /*
@@ -188,7 +187,7 @@ export async function POST(request: Request) {
   const { data: liveRuns, error: liveRunsError } =
     await supabase
       .from("event_processing_dispatch_reservations")
-      .select("id,workflow_run_id")
+      .select("id,workflow_run_id,reserved_at")
       .in("status", ["reserved", "claimed"])
       .not("workflow_run_id", "is", null)
       .order("reserved_at", { ascending: true })
@@ -214,6 +213,13 @@ export async function POST(request: Request) {
 
     try {
       runStatus = await getRun(runId).status;
+      const deadline = Date.parse(reservation.reserved_at) + 30 * 60_000;
+      if (Number.isFinite(deadline) && Date.now() >= deadline &&
+          ["running", "pending"].includes(runStatus)) {
+        await getRun(runId).cancel();
+        console.warn("[shared-market-deadline]", runId);
+        runStatus = await getRun(runId).status;
+      }
     } catch (cause) {
       // An unavailable status is NOT evidence of termination.
       // Preserve ownership until status can be verified.
@@ -297,6 +303,22 @@ export async function POST(request: Request) {
       );
     }
   }
+
+  const { error: reconciliationError } = await supabase.rpc(
+    "reconcile_shared_harvester_reservations",
+  );
+
+  if (reconciliationError) {
+    console.error(
+      "Shared reservation reconciliation failed",
+      reconciliationError,
+    );
+    return Response.json(
+      { error: "Shared reservation reconciliation failed" },
+      { status: 503 },
+    );
+  }
+
 
   // One dispatcher invocation fills available reservations using
   // the existing atomic admission RPC. No Worker admits more work.
