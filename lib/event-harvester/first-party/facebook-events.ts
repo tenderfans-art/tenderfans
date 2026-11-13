@@ -619,11 +619,12 @@ function extractFacebookOrganizerEvidence(
    * Facebook can flatten independent UI fields into one string.
    * Preserve their labels and stop at recognizable metadata
    * boundaries. Never split business names on commas or "and".
+   * Duration and ticket-price metadata are not organizer names.
    */
   const normalized = text.replace(/\s+/g, " ").trim();
 
   const boundary =
-    String.raw`(?=\s+(?:Hosts?\b|Event by\b|Suggested events\b|Free\b|(?:Public|Private)\s*[·•]|\d{1,6}\s+[A-Za-z][\w.'-]*\s+(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Ct|Court)\b)|$)`;
+    String.raw`(?=\s+(?:Hosts?\b|Event by\b|Suggested events\b|Duration:\s*\d+|Tickets\s*[·•]\s*(?:\$[\d,.]+|Free\b|Sold out\b)|Free\b|(?:Public|Private)\s*[·•]|\d{1,6}\s+[A-Za-z][\w.'-]*\s+(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Ct|Court)\b)|$)`;
 
   const eventByMatch = normalized.match(
     new RegExp(String.raw`\bEvent by\s+(.+?)` + boundary, "i"),
