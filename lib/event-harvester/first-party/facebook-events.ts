@@ -1,7 +1,12 @@
 import { chromium as playwright, type Page } from "playwright-core";
 import Chromium from "@sparticuz/chromium";
 import { getChromiumExecutablePath } from "./chromium-runtime";
-import { isNonessentialBrowserResourceType } from "./browser-transport";
+import {
+  browserProxyOptions,
+  isNonessentialBrowserResourceType,
+} from "./browser-transport";
+import { getTransportRecoveryProxy } from "../transport-recovery-context";
+import { getSpotExecutionSignal } from "../transport-capacity-context";
 import { withTransportPermit } from "../transport-capacity-permits";
 
 export type FacebookEvent = {
@@ -955,8 +960,114 @@ export async function fetchFacebookEvents(
   sourceUrl: string,
   options: { validatePageIdentity?: boolean } = {},
 ): Promise<FacebookEvent[]> {
-  return withTransportPermit("browser", (permitSignal) =>
-    fetchFacebookEventsUnderPermit(sourceUrl, options, permitSignal),
+  const executeBrowser = (
+    proxy?: ReturnType<typeof browserProxyOptions>,
+    parentSignal?: AbortSignal,
+  ) => withTransportPermit(
+    "browser",
+    (permitSignal) => fetchFacebookEventsUnderPermit(
+      sourceUrl,
+      options,
+      permitSignal,
+      proxy,
+    ),
+    parentSignal,
+  );
+
+  try {
+    // Original direct browser path always runs first.
+    return await executeBrowser();
+  } catch (directError) {
+    const proxyUrl = getTransportRecoveryProxy();
+
+    if (
+      !proxyUrl ||
+      !isRecoverableFacebookAccessFailure(directError)
+    ) {
+      throw directError;
+    }
+
+    getSpotExecutionSignal()?.throwIfAborted();
+
+    try {
+      const proxy = browserProxyOptions(proxyUrl);
+
+      console.info(
+        "[facebook-browser-recovery] attempting proxy",
+      );
+
+      /*
+       * Match the existing browser transport's permit order:
+       * recovery first, browser second.
+       *
+       * The nested browser operation receives the recovery signal.
+       * Both permits remain held through browser cleanup.
+       */
+      const events = await withTransportPermit(
+        "recovery",
+        (recoverySignal) =>
+          executeBrowser(proxy, recoverySignal),
+      );
+
+      console.info(
+        "[facebook-browser-recovery] proxy succeeded",
+      );
+
+      return events;
+    } catch (recoveryError) {
+      getSpotExecutionSignal()?.throwIfAborted();
+
+      /*
+       * Capacity loss, cancellation, timeouts, and Chromium
+       * resource exhaustion must remain execution failures.
+       * Never disguise them as missing Facebook inventory.
+       */
+      if (
+        recoveryError instanceof Error &&
+        (
+          [
+            "TransportCapacityUnavailableError",
+            "TransportPermitOwnershipLostError",
+            "BrowserOperationTimeoutError",
+            "MarketWorkDeadlineExceededError",
+            "MarketLeaseLostError",
+            "AbortError",
+          ].includes(recoveryError.name) ||
+          /net::ERR_INSUFFICIENT_RESOURCES/.test(
+            recoveryError.message,
+          )
+        )
+      ) {
+        throw recoveryError;
+      }
+
+      console.warn(
+        "[facebook-browser-recovery] proxy failed; " +
+        "preserving original access classification",
+      );
+
+      throw directError;
+    }
+  }
+}
+
+/*
+ * An inaccessible public Events page is recoverable.
+ * A genuine absent Events surface or a login-only Page is not.
+ *
+ * Keep the existing detector and Source Review classification.
+ */
+function isRecoverableFacebookAccessFailure(
+  error: unknown,
+): boolean {
+  if (!(error instanceof Error)) return false;
+
+  return (
+    error.message ===
+      "Facebook Events page is unavailable or access restricted" ||
+    /^Facebook events page returned HTTP (?:403|429|503)$/.test(
+      error.message,
+    )
   );
 }
 
@@ -964,6 +1075,7 @@ async function fetchFacebookEventsUnderPermit(
   sourceUrl: string,
   options: { validatePageIdentity?: boolean },
   permitSignal: AbortSignal,
+  proxy?: ReturnType<typeof browserProxyOptions>,
 ): Promise<FacebookEvent[]> {
   permitSignal.throwIfAborted();
 
@@ -972,6 +1084,7 @@ async function fetchFacebookEventsUnderPermit(
     executablePath: await getChromiumExecutablePath(),
     headless: true,
     timeout: 30000,
+    ...(proxy ? { proxy } : {}),
   });
 
   // Abort and normal completion share one browser-close promise.

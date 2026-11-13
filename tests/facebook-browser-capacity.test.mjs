@@ -81,6 +81,7 @@ async function scenario({ abort = false, grant = true } = {}) {
       },
     },
     USER_AGENT: "Test",
+    getTransportRecoveryProxy: () => undefined,
     isNonessentialBrowserResourceType: type =>
       ["image", "font", "media"].includes(type),
     eventsUrl: url => `${url}/events`,
@@ -113,7 +114,7 @@ async function scenario({ abort = false, grant = true } = {}) {
 test("Facebook browser launch occurs inside shared capacity permit", () => {
   assert.match(
     source,
-    /return withTransportPermit\("browser",/
+    /withTransportPermit\(\s*"browser",/
   );
 });
 

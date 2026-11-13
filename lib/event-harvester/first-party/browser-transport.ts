@@ -4,6 +4,24 @@ import Chromium from "@sparticuz/chromium";
 import { getChromiumExecutablePath } from "./chromium-runtime";
 import { withTransportPermit } from "../transport-capacity-permits";
 
+/*
+ * Shared Playwright proxy configuration for browser transports.
+ * Credentials are passed directly to Playwright, never logged.
+ */
+export function browserProxyOptions(proxyUrl: string) {
+  const parsed = new URL(proxyUrl);
+
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("Unsupported browser proxy protocol");
+  }
+
+  return {
+    server: `${parsed.protocol}//${parsed.host}`,
+    username: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+  };
+}
+
 export function isNonessentialBrowserResourceType(
   resourceType: string,
 ): boolean {
@@ -75,19 +93,7 @@ export async function fetchBrowserEvidence(
   }
 
   const proxy = proxyUrl
-    ? (() => {
-        const parsed = new URL(proxyUrl);
-
-        if (!["http:", "https:"].includes(parsed.protocol)) {
-          throw new Error("Unsupported browser proxy protocol");
-        }
-
-        return {
-          server: `${parsed.protocol}//${parsed.host}`,
-          username: decodeURIComponent(parsed.username),
-          password: decodeURIComponent(parsed.password),
-        };
-      })()
+    ? browserProxyOptions(proxyUrl)
     : undefined;
 
   const executeBrowser = (recoverySignal?: AbortSignal) =>
@@ -227,19 +233,7 @@ async function fetchBrowserJsonResponsesOnce(
     combinedSignal.throwIfAborted();
 
     const proxy = proxyUrl
-      ? (() => {
-          const parsed = new URL(proxyUrl);
-
-          if (!["http:", "https:"].includes(parsed.protocol)) {
-            throw new Error("Unsupported browser proxy protocol");
-          }
-
-          return {
-            server: `${parsed.protocol}//${parsed.host}`,
-            username: decodeURIComponent(parsed.username),
-            password: decodeURIComponent(parsed.password),
-          };
-        })()
+      ? browserProxyOptions(proxyUrl)
       : undefined;
 
     const instance = await playwright.launch({
