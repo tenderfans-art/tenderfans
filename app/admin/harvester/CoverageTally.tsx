@@ -12,10 +12,17 @@ type Tally = {
   active_errors: number;
 };
 
-export default function CoverageTally() {
+export default function CoverageTally({
+  marketKey,
+}: {
+  marketKey?: string;
+}) {
   const [tally, setTally] = useState<Tally | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const marketSuffix = marketKey
+    ? `?market=${encodeURIComponent(marketKey)}`
+    : "";
 
   async function runTally() {
     setLoading(true);
@@ -29,7 +36,9 @@ export default function CoverageTally() {
         throw new Error("Administrator sign-in required.");
       }
 
-      const response = await fetch("/api/admin/harvester-coverage", {
+      const response = await fetch(
+        "/api/admin/harvester-coverage" + marketSuffix,
+        {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -77,7 +86,7 @@ export default function CoverageTally() {
           <span>
             Missing:{" "}
             <Link
-              href="/admin/harvester/unaccounted"
+              href={"/admin/harvester/unaccounted" + marketSuffix}
               style={{
                 fontWeight: 800,
                 textDecoration: "underline",
@@ -90,7 +99,7 @@ export default function CoverageTally() {
           <span>
             Errors:{" "}
             <Link
-              href="/admin/harvester/adapter-errors"
+              href={"/admin/harvester/adapter-errors" + marketSuffix}
               style={{
                 fontWeight: 800,
                 textDecoration: "underline",

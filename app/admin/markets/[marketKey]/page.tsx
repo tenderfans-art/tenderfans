@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import CoverageTally from "@/app/admin/harvester/CoverageTally";
+import MarketScanStatus from "./MarketScanStatus";
 
 type Market = {
   id: string;
@@ -156,17 +158,38 @@ export default function MarketDashboard() {
                 flexWrap: "wrap",
                 gap: 16,
               }}>
-                <h1 style={{ margin: 0 }}>{market.display_name}</h1>
-                <button
-                  type="button"
-                  className="btn primary"
-                  disabled={busy}
-                  onClick={() =>
-                    operate("set-enabled", !market.is_enabled)
-                  }
-                >
-                  {market.is_enabled ? "Disable" : "Enable"}
-                </button>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}>
+                  <h1 style={{ margin: 0 }}>
+                    {market.display_name}
+                  </h1>
+                  <MarketScanStatus marketKey={market.market_key} />
+                </div>
+
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  flexWrap: "wrap",
+                  gap: 14,
+                  marginLeft: "auto",
+                }}>
+                  <CoverageTally marketKey={market.market_key} />
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={busy}
+                    onClick={() =>
+                      operate("set-enabled", !market.is_enabled)
+                    }
+                  >
+                    {market.is_enabled ? "Disable" : "Enable"}
+                  </button>
+                </div>
               </div>
               <p style={{ marginTop: 18 }}>
                 <strong>

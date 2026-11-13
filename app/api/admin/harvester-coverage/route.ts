@@ -65,6 +65,59 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const marketKey =
+      request.nextUrl.searchParams.get("market");
+
+    if (marketKey !== null) {
+      if (
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(marketKey)
+      ) {
+        return NextResponse.json(
+          { error: "Invalid Market." },
+          { status: 400 },
+        );
+      }
+
+      const { data: market, error: marketError } =
+        await admin
+          .from("event_processing_markets")
+          .select("id")
+          .eq("market_key", marketKey)
+          .maybeSingle();
+
+      if (marketError) throw marketError;
+
+      if (!market) {
+        return NextResponse.json(
+          { error: "Market not found." },
+          { status: 404 },
+        );
+      }
+
+      const { data: scoped, error: scopedError } =
+        await admin.rpc(
+          "admin_event_harvest_coverage_tally_for_market",
+          { p_market_id: market.id },
+        );
+
+      if (scopedError) throw scopedError;
+
+      const tally = Array.isArray(scoped)
+        ? scoped[0]
+        : scoped;
+
+      if (!tally) {
+        throw new Error("Market tally returned no data.");
+      }
+
+      return NextResponse.json(
+        tally,
+        {
+          headers: { "Cache-Control": "no-store" },
+        },
+      );
+    }
+
     const { data, error } = await admin.rpc(
       "admin_event_harvest_coverage_tally",
     );
