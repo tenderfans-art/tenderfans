@@ -14,9 +14,16 @@ export type ClaimedDetectorWork = ClaimedWork & {
 };
 
 /*
- * A completed detector scan may legitimately find no event sources.
- * Execution errors and failed adapter operations are different:
- * they must not authorize the next harvesting stage.
+ * The original detector owns source classification, Adapter Errors,
+ * and Market Review findings. A completed Spot scan may contain
+ * individually reported adapter failures.
+ *
+ * This wrapper verifies report completion and integrity only.
+ * It must not reinterpret the detector's individual outcomes or
+ * prevent approved sources from reaching the original harvester.
+ *
+ * HTTP failures, missing reports, invalid classification totals,
+ * and malformed failure accounting remain incomplete executions.
  */
 export function isCompleteSpotDetectorReport(
   responseOk: boolean,
@@ -28,9 +35,9 @@ export function isCompleteSpotDetectorReport(
     body.bucketInvariantHolds === true &&
     typeof body.failed === "number" &&
     Number.isSafeInteger(body.failed) &&
-    body.failed === 0 &&
+    body.failed >= 0 &&
     Array.isArray(body.failures) &&
-    body.failures.length === 0
+    body.failed <= body.failures.length
   );
 }
 

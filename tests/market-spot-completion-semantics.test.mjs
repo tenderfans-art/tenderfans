@@ -150,7 +150,7 @@ test("unrecorded source error remains incomplete", () => {
   );
 });
 
-test("detector execution failures block harvesting", () => {
+test("incomplete detector reports block harvesting", () => {
   assert.match(
     executor,
     /isCompleteSpotDetectorReport/,
@@ -163,12 +163,12 @@ test("detector execution failures block harvesting", () => {
 
   assert.match(
     executor,
-    /body\.failed === 0/,
+    /body\.failed >= 0/,
   );
 
   assert.match(
     executor,
-    /body\.failures\.length === 0/,
+    /body\.failed <= body\.failures\.length/,
   );
 
   const detector = executor.indexOf("await detect(request)");

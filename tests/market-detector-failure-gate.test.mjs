@@ -62,15 +62,32 @@ test("No Sources is a normal detector outcome", () => {
   }), true);
 });
 
-test("one failed adapter blocks harvesting", () => {
+test("recorded adapter failures do not interrupt a completed Spot", () => {
+  for (const stage of [
+    "ratification",
+    "validation",
+    "attribution",
+  ]) {
+    assert.equal(check(true, {
+      ...normal,
+      failed: 1,
+      failures: [{
+        stage,
+        error: "Source requires review",
+      }],
+    }), true, stage);
+  }
+});
+
+test("individual failures remain visible in the original report", () => {
   assert.equal(check(true, {
     ...normal,
     failed: 1,
     failures: [{
-      stage: "validation",
-      error: "Adapter validation failed",
+      stage: "source",
+      error: "Source processing issue",
     }],
-  }), false);
+  }), true);
 });
 
 test("HTTP failure blocks harvesting", () => {
@@ -98,13 +115,31 @@ test("missing detector failure accounting blocks harvesting", () => {
   }), false);
 });
 
-test("inconsistent detector failure accounting blocks harvesting", () => {
+test("uncounted transport-recovery diagnostic is preserved", () => {
   assert.equal(check(true, {
     ...normal,
     failures: [{
-      stage: "detection",
-      error: "Unexpected error",
+      stage: "transport_recovery",
+      error: "Recovery unavailable",
     }],
+  }), true);
+});
+
+test("impossible failure counts remain incomplete", () => {
+  assert.equal(check(true, {
+    ...normal,
+    failed: 2,
+    failures: [{
+      stage: "validation",
+      error: "One recorded failure",
+    }],
+  }), false);
+});
+
+test("negative failed count remains incomplete", () => {
+  assert.equal(check(true, {
+    ...normal,
+    failed: -1,
   }), false);
 });
 

@@ -50,7 +50,7 @@ test("one Spot cycle uses BOTH original routes", () => {
   );
 });
 
-test("failed detector prevents harvesting and preserves retries", () => {
+test("incomplete detector response preserves retries", () => {
   assert.match(executor, /isCompleteSpotDetectorReport/);
   assert.match(executor, /if \(detectorError\) \{/);
   assert.match(executor, /throw new Error\(detectorError\)/);
