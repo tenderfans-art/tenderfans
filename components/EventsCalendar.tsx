@@ -133,6 +133,31 @@ function weekLabel(week: CalendarWeek) {
   return `${startMonth} ${week.start.getDate()}–${endMonth} ${week.end.getDate()}`;
 }
 
+export async function loadAllCalendarEventPages<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{
+    data: T[] | null;
+    error: unknown;
+  }>,
+  signal: AbortSignal,
+): Promise<T[]> {
+  const pageSize = 500;
+  const events: T[] = [];
+
+  while (true) {
+    signal.throwIfAborted();
+    const { data, error } = await fetchPage(
+      events.length,
+      events.length + pageSize - 1,
+    );
+    signal.throwIfAborted();
+    if (error) throw error;
+
+    const page = data ?? [];
+    events.push(...page);
+    if (page.length < pageSize) return events;
+  }
+}
+
 export default function EventsCalendar({
   venueId,
   upcomingOnly = false,
@@ -149,6 +174,7 @@ export default function EventsCalendar({
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedFlyer, setSelectedFlyer] = useState<CalendarEvent | null>(null);
   const [eventSearch, setEventSearch] = useState("");
@@ -286,10 +312,14 @@ export default function EventsCalendar({
   }, [month]);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function loadEvents() {
       if (!calendarWeeks.length) return;
 
       setLoading(true);
+      setLoadError(false);
+      setEvents([]);
 
       const rangeStart = new Date(calendarWeeks[0].start);
       rangeStart.setDate(rangeStart.getDate() - 1);
@@ -297,70 +327,79 @@ export default function EventsCalendar({
       const rangeEnd = new Date(calendarWeeks[calendarWeeks.length - 1].end);
       rangeEnd.setDate(rangeEnd.getDate() + 1);
 
-      let query = supabase
-        .from("events")
-        .select(`
-          id,
-          venue_id,
-          title,
-          description,
-          starts_at,
-          ends_at,
-          is_all_day,
-          flyer_url,
-          venues (
-            name,
-            slug,
-            city,
-            state_region,
-            postal_code,
-            latitude,
-            longitude
-          )
-        `)
-        .eq("status", "published")
-        .order("starts_at", { ascending: true });
+      try {
+        const data = await loadAllCalendarEventPages(
+          (from, to) => {
+            let query = supabase
+              .from("events")
+              .select(`
+                id,
+                venue_id,
+                title,
+                description,
+                starts_at,
+                ends_at,
+                is_all_day,
+                flyer_url,
+                venues (
+                  name,
+                  slug,
+                  city,
+                  state_region,
+                  postal_code,
+                  latitude,
+                  longitude
+                )
+              `)
+              .eq("status", "published")
+              .order("starts_at", { ascending: true })
+              .order("id", { ascending: true });
 
-      if (venueId) {
-        query = query.eq("venue_id", venueId);
-      } else {
-        query = query
-          .gte("starts_at", rangeStart.toISOString())
-          .lte("starts_at", rangeEnd.toISOString());
+            if (venueId) {
+              query = query.eq("venue_id", venueId);
+            } else {
+              query = query
+                .gte("starts_at", rangeStart.toISOString())
+                .lte("starts_at", rangeEnd.toISOString());
+            }
+
+            return query.range(from, to).abortSignal(controller.signal);
+          },
+          controller.signal,
+        );
+
+        const normalized: CalendarEvent[] = (data ?? []).map((event: any) => ({
+          id: event.id,
+          venue_id: event.venue_id,
+          title: event.title,
+          description: event.description,
+          starts_at: event.starts_at,
+          ends_at: event.ends_at,
+          is_all_day: event.is_all_day ?? false,
+          flyer_url: event.flyer_url ?? null,
+          venue_name: event.venues?.name ?? "TenderFans Spot",
+          venue_slug: event.venues?.slug ?? null,
+          venue_city: event.venues?.city ?? "",
+          venue_state_region: event.venues?.state_region ?? "",
+          venue_postal_code: event.venues?.postal_code ?? "",
+          venue_latitude: event.venues?.latitude ?? null,
+          venue_longitude: event.venues?.longitude ?? null,
+        }));
+
+        if (!controller.signal.aborted) setEvents(normalized);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Unable to load events:", error);
+          setEvents([]);
+          setLoadError(true);
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Unable to load events:", error);
-        setEvents([]);
-        setLoading(false);
-        return;
-      }
-
-      const normalized: CalendarEvent[] = (data ?? []).map((event: any) => ({
-        id: event.id,
-        venue_id: event.venue_id,
-        title: event.title,
-        description: event.description,
-        starts_at: event.starts_at,
-        ends_at: event.ends_at,
-        is_all_day: event.is_all_day ?? false,
-        flyer_url: event.flyer_url ?? null,
-        venue_name: event.venues?.name ?? "TenderFans Spot",
-        venue_slug: event.venues?.slug ?? null,
-        venue_city: event.venues?.city ?? "",
-        venue_state_region: event.venues?.state_region ?? "",
-        venue_postal_code: event.venues?.postal_code ?? "",
-        venue_latitude: event.venues?.latitude ?? null,
-        venue_longitude: event.venues?.longitude ?? null,
-      }));
-
-      setEvents(normalized);
-      setLoading(false);
     }
 
-    loadEvents();
+    void loadEvents();
+    return () => controller.abort();
   }, [calendarWeeks, venueId]);
 
   const selectedWeek = useMemo<CalendarWeek | null>(() => {
@@ -727,12 +766,14 @@ export default function EventsCalendar({
                 <span>{weekLabel(week)}</span>
                 <span
                   className="events-week-count"
-                  aria-label={`${events.filter((event) => {
-                    const eventDate = eventCalendarDate(event);
-                    return eventDate >= week.start && eventDate <= week.end;
-                  }).length} events`}
+                  aria-label={loading ? "Loading event count" : loadError
+                    ? "Event count unavailable"
+                    : `${events.filter((event) => {
+                      const eventDate = eventCalendarDate(event);
+                      return eventDate >= week.start && eventDate <= week.end;
+                    }).length} events`}
                 >
-                  {events.filter((event) => {
+                  {loading ? "…" : loadError ? "—" : events.filter((event) => {
                     const eventDate = eventCalendarDate(event);
                     return eventDate >= week.start && eventDate <= week.end;
                   }).length}
@@ -832,7 +873,14 @@ export default function EventsCalendar({
           </div>
         )}
 
-        {!loading &&
+        {!loading && loadError && (
+          <div className="events-empty" role="alert">
+            <strong>Unable to load events.</strong>
+            <span>Please refresh to try again.</span>
+          </div>
+        )}
+
+        {!loading && !loadError &&
           !venueId &&
           !eventSearch.trim() &&
           (locationStatus === "idle" || locationStatus === "loading") && (
@@ -846,7 +894,7 @@ export default function EventsCalendar({
             </div>
           )}
 
-        {!loading &&
+        {!loading && !loadError &&
           !(
             !venueId &&
             !eventSearch.trim() &&
