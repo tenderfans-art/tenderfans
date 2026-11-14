@@ -1,22 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/jobs/first-party-event-detector",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/jobs/first-party-event-detector?mode=archive-recheck",
-      "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/jobs/event-harvester",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/jobs/first-party-event-harvester",
-      "schedule": "30 10 * * *"
-    },
-    {
       "path": "/api/jobs/shared-market-dispatch",
       "schedule": "*/5 * * * *"
     }

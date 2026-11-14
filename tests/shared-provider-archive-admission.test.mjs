@@ -91,8 +91,8 @@ test("manual Market endpoint cannot bypass shared admission", () => {
   assert.match(dispatcher, /release_shared_harvester_reservation/);
 });
 
-test("legacy crons and disabled-by-default Market policy remain", () => {
-  assert.equal(cron.crons.filter(c => c.path !== "/api/jobs/shared-market-dispatch").length, 4);
+test("legacy handlers remain with shared-only cron scheduling", () => {
+  assert.deepEqual(cron.crons, [{ path: "/api/jobs/shared-market-dispatch", schedule: "*/5 * * * *" }]);
   assert.match(sql, /^begin;/m);
   assert.match(sql, /^commit;/m);
   assert.doesNotMatch(sql, /set\s+is_enabled\s*=/i);

@@ -58,9 +58,9 @@ test('original shared admission/recovery and workflow retained',()=>{
   assert.match(dispatch,/"start_due_market_cycles"/);
   assert.match(dispatch,/"reconcile_running_market_cycles"/);
 });
-test('Admin Enable uses scheduled Market and Vercel crons unchanged',()=>{
+test('Admin Enable uses scheduled Market with shared dispatcher cron',()=>{
   assert.match(admin,/"set_market_processing_enabled"/);
   assert.match(sql,/max_concurrent_batches|No changes to worker/i);
-  assert.equal(cron.crons.length,5);
+  assert.deepEqual(cron.crons,[{path:"/api/jobs/shared-market-dispatch",schedule:"*/5 * * * *"}]);
   assert.ok(cron.crons.some(x=>x.path==='/api/jobs/shared-market-dispatch'));
 });

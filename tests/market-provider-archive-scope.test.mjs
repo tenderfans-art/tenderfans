@@ -88,21 +88,13 @@ test("global archive route remains supported unchanged", () => {
   assert.match(previousArchive, /finish_event_harvest_archive_recheck/);
 });
 
-test("migration neither activates Markets nor alters legacy crons", () => {
+test("original provider/archive handlers remain after cron retirement", () => {
   assert.match(migration, /^begin;/m);
   assert.match(migration, /^commit;/m);
   assert.match(migration, /auth\.role\(\) <> 'service_role'/);
   assert.match(migration, /to service_role/);
   assert.doesNotMatch(migration, /update public\.event_processing_markets/i);
-  assert.equal(cron.crons.filter(c => c.path !== "/api/jobs/shared-market-dispatch").length, 4);
-  assert.ok(
-    cron.crons.some((item) =>
-      item.path === "/api/jobs/event-harvester"
-    ),
-  );
-  assert.ok(
-    cron.crons.some((item) =>
-      item.path.includes("mode=archive-recheck")
-    ),
-  );
+  assert.deepEqual(cron.crons, [{ path: "/api/jobs/shared-market-dispatch", schedule: "*/5 * * * *" }]);
+  assert.match(ticket, /export async function GET/);
+  assert.match(detector, /export async function GET/);
 });

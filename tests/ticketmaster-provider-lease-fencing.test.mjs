@@ -75,5 +75,5 @@ test("migration is complete without changing scheduling", () => {
   assert.match(sql, /^begin;/m);
   assert.match(sql, /^commit;/m);
   assert.doesNotMatch(sql, /set\s+is_enabled\s*=/i);
-  assert.equal(JSON.parse(read("vercel.json")).crons.filter(c => c.path !== "/api/jobs/shared-market-dispatch").length, 4);
+  assert.equal(JSON.parse(read("vercel.json")).crons.filter(c => c.path !== "/api/jobs/shared-market-dispatch").length, 0);
 });
