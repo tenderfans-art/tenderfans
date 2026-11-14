@@ -99,7 +99,7 @@ test("detector route is only an alias, never an independent scheduler", () => {
 
 test("original detector engine and durable execution remain", () => {
   assert.match(workflow, /claim_shared_harvester_assignment/);
-  assert.match(workflow, /work\.map\(\(item\) =>\s*executeDetector/);
+  assert.match(workflow, /await executeDetector\(/);
   assert.match(workflow, /work\.slice\(offset, offset \+ 2\)\.map\(executeDetector\)/);
   assert.match(workflow, /finalizeReservedBatch\(reservationId\)/);
 

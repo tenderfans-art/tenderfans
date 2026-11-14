@@ -61,6 +61,56 @@ async function claimReservedSource(
     },
   });
 
+
+  // Check immutable assignments first: replay must return the
+  // original claim without being blocked by an admission cutoff.
+  const { data: priorAssignment, error: priorError } =
+    await supabase
+      .from("shared_harvester_source_assignments")
+      .select("work_id")
+      .eq("reservation_id", reservationId)
+      .eq("slot_number", slotNumber)
+      .maybeSingle();
+
+  if (priorError) {
+    throw new Error(
+      "Assignment replay check failed: " + priorError.message,
+    );
+  }
+
+  if (!priorAssignment) {
+    const { data: reservation, error: reservationError } =
+      await supabase
+        .from("event_processing_dispatch_reservations")
+        .select("status,reserved_at")
+        .eq("id", reservationId)
+        .single();
+
+    if (reservationError || !reservation) {
+      throw new Error("Reservation deadline unavailable");
+    }
+
+    if (!["reserved", "claimed"].includes(reservation.status)) {
+      return null;
+    }
+
+    // The dispatcher enforces a 30-minute ceiling measured from
+    // reserved_at. expires_at is renewable and is NOT that ceiling.
+    const admissionCutoff =
+      Date.parse(reservation.reserved_at) +
+      20 * 60_000;
+
+    if (!Number.isFinite(admissionCutoff)) {
+      throw new Error("Invalid reservation start time");
+    }
+
+    // Leave ten minutes before the dispatcher's cancellation
+    // deadline for newly claimed executions.
+    if (Date.now() >= admissionCutoff) {
+      return null;
+    }
+  }
+
   const { data, error } = await supabase.rpc(
     "claim_shared_harvester_assignment",
     {
@@ -412,97 +462,102 @@ export async function marketHarvesterWorkflow(
     return result;
   }
 
-  // Shared dispatch: claim only when an execution slot is ready.
-  // Each durable assignment slot has an immutable claim snapshot.
+
+  // Continuous, independently refilling execution lanes.
+  // Each lane owns deterministic, immutable assignment numbers.
+  // No lane waits for another lane before claiming more work.
   const result = makeResult(0);
-  // Market-configured batch size is captured at dispatch.
-  // Eight simultaneous steps per Workflow can fill a
-  // 16-source Market through two admitted Workflows.
-  // Actual source admission remains database-controlled.
+
   const maxSourcesPerRun =
     Number.isSafeInteger(configuredBatchSize) &&
     configuredBatchSize > 0
       ? Math.min(10, configuredBatchSize)
       : 10;
+
   const sourceConcurrency = Math.min(8, maxSourcesPerRun);
+
+  // Bound the event log and avoid endlessly retaining one
+  // Workflow reservation. Provider work remains single-shot.
+  const maxAssignmentsPerRun =
+    mode === "provider"
+      ? 1
+      : Math.min(64, maxSourcesPerRun * 8);
 
   let originalFailure: unknown = null;
 
   try {
-    for (
-      let offset = 0;
-      offset < maxSourcesPerRun;
-      offset += sourceConcurrency
-    ) {
-      await renewReservedBatch(reservationId);
+    const outcomes = await Promise.allSettled(
+      Array.from(
+        { length: sourceConcurrency },
+        async (_, laneIndex): Promise<MarketBatchResult> => {
+          const laneResult = makeResult(0);
 
-      const claims = await Promise.allSettled(
-        Array.from(
-          {
-            length: Math.min(
-              sourceConcurrency,
-              maxSourcesPerRun - offset,
-            ),
-          },
-          (_, index) =>
-            claimReservedSource(reservationId, offset + index),
-        ),
-      );
+          // Unique per-lane slot sequences:
+          // lane 0: 0,8,16...
+          // lane 1: 1,9,17...
+          // Each successful execution immediately frees its lane.
+          for (
+            let slotNumber = laneIndex;
+            slotNumber < maxAssignmentsPerRun;
+            slotNumber += sourceConcurrency
+          ) {
+            await renewReservedBatch(reservationId);
 
-      const work: ClaimedWork[] = [];
-      let claimError: unknown;
+            const item = await claimReservedSource(
+              reservationId,
+              slotNumber,
+            );
 
-      for (const claim of claims) {
-        if (claim.status === "rejected") {
-          claimError ??= claim.reason;
-        } else if (claim.value) {
-          work.push(claim.value);
-        }
+            if (!item) {
+              break;
+            }
+
+            laneResult.claimed += 1;
+
+            // Existing executors retain ALL original detection,
+            // harvesting, review and retry behavior.
+            const execution =
+              mode === "detect"
+                ? await executeDetector(
+                    item as import(
+                      "@/lib/event-harvester/market-detector-executor"
+                    ).ClaimedDetectorWork,
+                  )
+                : mode === "harvest"
+                  ? await executeSource(item)
+                  : await executeSupplemental(
+                      item,
+                      marketId,
+                      mode,
+                    );
+
+            laneResult.completed += execution.completed;
+            laneResult.failed += execution.failed;
+            laneResult.deferred += execution.deferred;
+          }
+
+          return laneResult;
+        },
+      ),
+    );
+
+    let executionError: unknown;
+
+    for (const outcome of outcomes) {
+      if (outcome.status === "rejected") {
+        executionError ??= outcome.reason;
+      } else {
+        result.claimed += outcome.value.claimed;
+        result.completed += outcome.value.completed;
+        result.failed += outcome.value.failed;
+        result.deferred += outcome.value.deferred;
       }
+    }
 
-      // Never abandon a successful claim just because another
-      // claim in the same group failed.
-      result.claimed += work.length;
-
-      const outcomes = await Promise.allSettled(
-        mode === "detect"
-          ? work.map((item) =>
-              executeDetector(
-                item as import(
-                  "@/lib/event-harvester/market-detector-executor"
-                ).ClaimedDetectorWork,
-              ),
-            )
-          : mode === "harvest"
-            ? work.map(executeSource)
-            : work.map((item) =>
-                executeSupplemental(item, marketId, mode)
-              ),
-      );
-
-      let executionError: unknown;
-
-      for (const outcome of outcomes) {
-        if (outcome.status === "rejected") {
-          executionError ??= outcome.reason;
-        } else {
-          result.completed += outcome.value.completed;
-          result.failed += outcome.value.failed;
-          result.deferred += outcome.value.deferred;
-        }
-      }
-
-      if (claimError !== undefined) {
-        throw claimError;
-      }
-
-      if (executionError !== undefined) {
-        throw executionError;
-      }
-
-      if (work.length === 0) {
-        break;
-      }
+    // Wait for EVERY lane before propagating unexpected errors.
+    // No successful claim is abandoned by another lane failing.
+    if (executionError !== undefined) {
+      throw executionError;
     }
 
     return result;
@@ -510,9 +565,7 @@ export async function marketHarvesterWorkflow(
     originalFailure = cause;
     throw cause;
   } finally {
-    // Never weaken the original live-lease finalization guard.
-    // If a step already failed, preserve THAT exception rather
-    // than replacing it with a secondary finalization error.
+    // Preserve the existing fenced reservation finalization.
     try {
       await finalizeReservedBatch(reservationId);
     } catch (finalizationError) {

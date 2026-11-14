@@ -60,7 +60,7 @@ test("the Market batch limit is captured in Workflow arguments", () => {
 
 test("original execution and reservation finalization remain", () => {
   assert.match(workflow, /claim_shared_harvester_assignment/);
-  assert.match(workflow, /work\.map\(executeSource\)/);
+  assert.match(workflow, /await executeSource\(item\)/);
   assert.match(workflow, /Promise\.allSettled/);
   assert.match(workflow, /await finalizeReservedBatch\(reservationId\)/);
 });
