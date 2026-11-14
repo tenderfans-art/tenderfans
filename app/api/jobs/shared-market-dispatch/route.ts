@@ -146,6 +146,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // Atomic once-per-scheduled-occurrence Market cohort snapshot.
+  // Legacy queue RPCs above exclude scheduled Markets in SQL.
+  const { data: cyclesStarted, error: cycleStartError } =
+    await supabase.rpc("start_due_market_cycles", {
+      p_market_id: requestedMarketId, p_limit: 16,
+    });
+  if (cycleStartError) {
+    console.error("Scheduled Market start failed", cycleStartError);
+    return Response.json({ error: "Scheduled Market start failed" },
+      { status: 503 });
+  }
+
   // Recovery is bounded and handles expired market-bound
   // and standalone executions through separate fenced RPCs.
   const { error: standaloneRecoveryError } = await supabase.rpc(
@@ -320,6 +332,18 @@ export async function POST(request: Request) {
   }
 
 
+  // Observe and finish cycles only after the original
+  // terminal Workflow settlement and reservation reconciliation.
+  const { data: cyclesFinished, error: cycleFinishError } =
+    await supabase.rpc("reconcile_running_market_cycles", {
+      p_market_id: requestedMarketId, p_limit: 32,
+    });
+  if (cycleFinishError) {
+    console.error("Market cycle finalization failed", cycleFinishError);
+    return Response.json({ error: "Market cycle finalization failed" },
+      { status: 503 });
+  }
+
   // One dispatcher invocation fills available reservations using
   // the existing atomic admission RPC. No Worker admits more work.
   const runs: Array<{
@@ -471,6 +495,8 @@ export async function POST(request: Request) {
             reason: "No eligible Market or available shared capacity",
           }),
       runs,
+      cyclesStarted: cyclesStarted ?? 0,
+      cyclesFinished: cyclesFinished ?? 0,
     },
     { status: runs.length ? 202 : 200 },
   );

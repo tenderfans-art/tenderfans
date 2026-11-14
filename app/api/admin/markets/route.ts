@@ -278,15 +278,16 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error } = await db
-      .from("event_processing_markets")
-      .update({ is_enabled: body.enabled })
-      .eq("id", market.id);
-
-    if (error) {
+    const { data: changed, error } = await db.rpc(
+      "set_market_processing_enabled", {
+        p_market_id: market.id,
+        p_enabled: body.enabled,
+      },
+    );
+    if (error || changed !== true) {
       return NextResponse.json(
-        { error: "Unable to change market status." },
-        { status: 500 }
+        { error: error?.message ?? "Unable to change market status." },
+        { status: 500 },
       );
     }
 
