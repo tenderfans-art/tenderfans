@@ -1,4 +1,5 @@
 import { getWorkflowMetadata } from "workflow";
+import { marketWorkflowTiming } from "@/lib/event-harvester/market-workflow-policy";
 
 import type {
   ClaimedWork,
@@ -94,18 +95,13 @@ async function claimReservedSource(
       return null;
     }
 
-    // The dispatcher enforces a 30-minute ceiling measured from
-    // reserved_at. expires_at is renewable and is NOT that ceiling.
-    const admissionCutoff =
-      Date.parse(reservation.reserved_at) +
-      20 * 60_000;
+    // Stop admitting new work after 20 minutes. The reservation
+    // allows each admitted item its full existing 30-minute budget,
+    // followed by a bounded five-minute settlement margin.
+    const admissionCutoff = marketWorkflowTiming(
+      reservation.reserved_at,
+    ).admissionClosesAt;
 
-    if (!Number.isFinite(admissionCutoff)) {
-      throw new Error("Invalid reservation start time");
-    }
-
-    // Leave ten minutes before the dispatcher's cancellation
-    // deadline for newly claimed executions.
     if (Date.now() >= admissionCutoff) {
       return null;
     }

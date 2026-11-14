@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { getRun, start } from "workflow/api";
 import { marketHarvesterWorkflow } from "@/workflows/market-harvester";
+import { marketWorkflowTiming } from "@/lib/event-harvester/market-workflow-policy";
 
 export const runtime = "nodejs";
 
@@ -225,7 +226,10 @@ export async function POST(request: Request) {
 
     try {
       runStatus = await getRun(runId).status;
-      const deadline = Date.parse(reservation.reserved_at) + 30 * 60_000;
+      // Admission window + existing per-item budget + settlement.
+      const deadline = marketWorkflowTiming(
+        reservation.reserved_at,
+      ).cancellationAt;
       if (Number.isFinite(deadline) && Date.now() >= deadline &&
           ["running", "pending"].includes(runStatus)) {
         await getRun(runId).cancel();

@@ -17,7 +17,7 @@ test("work leases have a database-enforced 30-minute ceiling", () => {
   assert.match(sql, /before insert or update\s+on public\.event_processing_work/i);
 });
 
-test("Workflow reservations have a 30-minute ceiling", () => {
+test("original reservation deadline guard was introduced in 122", () => {
   assert.match(sql, /new\.expires_at := least\(/);
   assert.match(sql, /new\.reserved_at \+ interval '30 minutes'/);
 });
@@ -51,7 +51,8 @@ test("obsolete queue cleanup preserves event inventory", () => {
 });
 
 test("overdue Workflows are cancelled before settlement", () => {
-  assert.match(dispatch, /30 \* 60_000/);
+  assert.match(dispatch, /marketWorkflowTiming/);
+  assert.match(dispatch, /\.cancellationAt/);
   assert.match(dispatch, /await getRun\(runId\)\.cancel\(\)/);
   assert.ok(
     dispatch.indexOf("await getRun(runId).cancel()") <

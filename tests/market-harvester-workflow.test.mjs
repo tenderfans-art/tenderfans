@@ -24,7 +24,7 @@ test("eight lanes independently refill numbered assignment slots", () => {
   assert.ok(!source.includes("offset += sourceConcurrency"));
   assert.ok(source.includes(".select(\"status,reserved_at\")"));
   assert.ok(source.includes("priorAssignment"));
-  assert.ok(source.includes("20 * 60_000"));
+  assert.ok(source.includes(".admissionClosesAt"));
 });
 
 test("each claimed source executes through its own step", () => {
