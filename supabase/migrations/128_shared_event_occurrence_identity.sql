@@ -14,7 +14,9 @@ begin
     ('public.bootstrap_first_party_harvest_candidate(uuid)', 'dbf328c8b19fec908959dc876bbfa162'),
     ('public.reconcile_first_party_source_absences(uuid,timestamp with time zone)', '15a5105a8cac46af113599c3f453e1ad')
   ) as baseline(signature, body_hash) loop
-    if (select md5(prosrc) from pg_catalog.pg_proc where oid = expected.signature::regprocedure)
+    -- Production may store the same SQL with Windows line endings.
+    -- Normalize only CRLF; every other byte still has to match the baseline.
+    if (select md5(replace(prosrc, E'\r\n', E'\n')) from pg_catalog.pg_proc where oid = expected.signature::regprocedure)
        is distinct from expected.body_hash then
       raise exception '128: % differs from the verified baseline', expected.signature;
     end if;
@@ -208,7 +210,7 @@ begin
     'public.graduate_harvest_candidate(uuid,uuid)'::regprocedure,
     'public.bootstrap_first_party_harvest_candidate(uuid)'::regprocedure
   ] loop
-    definition := pg_get_functiondef(signature);
+    definition := replace(pg_get_functiondef(signature), E'\r\n', E'\n');
     original := definition;
     definition := regexp_replace(definition, E'begin\n',
       E'begin\n  perform public.lock_event_harvest_occurrence(p_candidate_id);\n', 'i');
@@ -286,7 +288,7 @@ $$;
 do $$
 declare definition text;
 begin
-  definition := pg_get_functiondef('public.reconcile_first_party_source_absences(uuid,timestamptz)'::regprocedure);
+  definition := replace(pg_get_functiondef('public.reconcile_first_party_source_absences(uuid,timestamptz)'::regprocedure), E'\r\n', E'\n');
   if position('for update of c, e' in definition) = 0 then
     raise exception '128: Unexpected absence reconciliation definition'; end if;
   definition := regexp_replace(definition, E'declare\n', E'declare\n  occurrence_venue uuid;\n', 'i');

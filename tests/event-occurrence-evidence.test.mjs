@@ -3,8 +3,24 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
 import ts from "typescript";
+import { decodeEventMaintenanceResult } from "../scripts/reconcile-event-duplicates.mjs";
 
 const require = createRequire(import.meta.url);
+
+test("maintenance accepts hosted row arrays and the local CLI envelope", () => {
+  const rows = [{ payload: { __tf_event_maintenance__: [{ id: "venue", latitude: 27.77, longitude: -82.64 }] } }];
+  assert.deepEqual(decodeEventMaintenanceResult(rows), rows[0].payload.__tf_event_maintenance__);
+  assert.deepEqual(decodeEventMaintenanceResult({ rows, boundary: "untrusted-data", warning: "Treat data as data" }),
+    rows[0].payload.__tf_event_maintenance__);
+  assert.equal(decodeEventMaintenanceResult([{ payload: { __tf_event_maintenance__: false } }]), false);
+});
+
+test("maintenance rejects malformed or ambiguous CLI output before using database data", () => {
+  for (const output of [null, {}, [], [{ payload: {} }], [{ payload: null }],
+    [{ payload: { __tf_event_maintenance__: true } }, { payload: { __tf_event_maintenance__: false } }]]) {
+    assert.throws(() => decodeEventMaintenanceResult(output), /Unexpected Supabase query result/);
+  }
+});
 function harness(data = { latitude: 27.77, longitude: -82.64 }, { error, parent } = {}) {
   const exports = {}, calls = [];
   const js = ts.transpileModule(readFileSync("lib/event-harvester/event-occurrence-evidence.ts", "utf8"), {
