@@ -28,6 +28,8 @@ for (const lineEndings of ["LF", "CRLF", "changed"]) test(`shared event occurren
     `select 'create role anon' where not exists(select 1 from pg_roles where rolname='anon')\n\\gexec\n` +
     `select 'create role authenticated' where not exists(select 1 from pg_roles where rolname='authenticated')\n\\gexec\n` +
     `select 'create role service_role' where not exists(select 1 from pg_roles where rolname='service_role')\n\\gexec\n` +
+    `select 'create role tf_event_readonly' where not exists(select 1 from pg_roles where rolname='tf_event_readonly')\n\\gexec\n` +
+    `alter role tf_event_readonly bypassrls;\n` +
     `create database ${database};`);
   t.after(() => command(["psql", "-U", "postgres", "-qAt"], `drop database ${database} with (force);`));
   await sql(read("tests/fixtures/event-occurrence-baseline.sql"));
@@ -225,7 +227,17 @@ for (const lineEndings of ["LF", "CRLF", "changed"]) test(`shared event occurren
   await t.test("maintenance command derives geography and reconciles with the actual SQL functions",async()=>{
     const f=await fixture(),p=await legacyPair(f);
     await sql(`update public.venues set latitude=27.77,longitude=-82.64 where id=${quote(f.venue)};`);
-    const result=await reconcileEventDuplicates(async statement=>(await json(statement)).__tf_event_maintenance__);
+    await sql(`grant usage on schema public to tf_event_readonly;
+      grant select on all tables in schema public to tf_event_readonly;`);
+    assert.equal(await sql(`select has_function_privilege('tf_event_readonly',
+      'public.event_harvest_occurrence_url(public.event_harvest_candidates)','execute');`),"f");
+    await assert.rejects(sql(`begin read only; set local role tf_event_readonly;
+      select public.event_harvest_occurrence_url(c) from public.event_harvest_candidates c limit 1;`),
+      /permission denied for function event_harvest_occurrence_url/);
+    const result=await reconcileEventDuplicates(async (statement,{readOnly=false}={})=>{
+      const query=readOnly?`begin read only; set local role tf_event_readonly; ${statement} commit;`:statement;
+      return (await json(query)).__tf_event_maintenance__;
+    });
     assert.equal(result.merged_events,1);
     assert.equal(await sql(`select public.resolve_published_event_id(${quote(p.oldId)});`),p.keepId);
   });

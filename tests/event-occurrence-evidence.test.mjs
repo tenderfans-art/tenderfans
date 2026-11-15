@@ -3,9 +3,24 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
 import ts from "typescript";
-import { decodeEventMaintenanceResult } from "../scripts/reconcile-event-duplicates.mjs";
+import { decodeEventMaintenanceResult, assertEventMaintenanceQuerySuccess } from "../scripts/reconcile-event-duplicates.mjs";
 
 const require = createRequire(import.meta.url);
+
+test("maintenance failures retain the SQL error even when stderr only identifies the project", () => {
+  assert.throws(() => assertEventMaintenanceQuerySuccess({ status: 1,
+    stdout: JSON.stringify({ error: { message: "permission denied for function" } }),
+    stderr: "Target: linked project · production\n",
+  }), error => /permission denied for function/.test(error.message) &&
+    /Target: linked project/.test(error.message) && /exit 1/.test(error.message));
+});
+
+test("maintenance timeouts retain their underlying error", () => {
+  assert.throws(() => assertEventMaintenanceQuerySuccess({ status: null,
+    error: Error("spawnSync npx ETIMEDOUT"), stdout: "", stderr: "Target: linked project",
+  }), /ETIMEDOUT/);
+  assert.doesNotThrow(() => assertEventMaintenanceQuerySuccess({ status: 0, stdout: "[]", stderr: "Target: linked project" }));
+});
 
 test("maintenance accepts hosted row arrays and the local CLI envelope", () => {
   const rows = [{ payload: { __tf_event_maintenance__: [{ id: "venue", latitude: 27.77, longitude: -82.64 }] } }];

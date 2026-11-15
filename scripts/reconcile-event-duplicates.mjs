@@ -15,11 +15,20 @@ export function decodeEventMaintenanceResult(output) {
   return rows[0].payload[marker];
 }
 
+export function assertEventMaintenanceQuerySuccess(result) {
+  if (result.error || result.status !== 0) {
+    throw Error([
+      `Supabase query failed (exit ${result.status ?? "unavailable"}).`,
+      result.error?.message, result.stdout?.trim(), result.stderr?.trim(),
+    ].filter(Boolean).join("\n"));
+  }
+}
+
 function queryLinkedProject(statement, { readOnly = false } = {}) {
   const args = ["--yes", "--loglevel=error", "supabase@3", "db", "query", "--remote",
     "--output-format", "json", readOnly ? "--read-only" : "--yes", statement];
   const result = spawnSync("npx", args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 180000 });
-  if (result.error || result.status !== 0) throw Error(result.stderr || result.error?.message || "Database query failed");
+  assertEventMaintenanceQuerySuccess(result);
   return decodeEventMaintenanceResult(JSON.parse(result.stdout));
 }
 
@@ -37,9 +46,15 @@ export async function reconcileEventDuplicates(query = queryLinkedProject) {
         where a.venue_id = v.id and a.canonical_event_id <> b.canonical_event_id
           and a.status = 'published' and b.status = 'published'
           and ea.status = 'published' and eb.status = 'published'
+          -- Discovery is deliberately broad and uses table fields only.
+          -- The service-only write function verifies publisher identity.
           and (a.event_fingerprint = b.event_fingerprint or (
-            a.normalized_title = b.normalized_title
-            and public.event_harvest_occurrence_url(a) = public.event_harvest_occurrence_url(b)
+            a.normalized_title = b.normalized_title and (
+              a.is_all_day <> b.is_all_day or a.starts_at = b.starts_at or (
+                a.is_all_day and b.is_all_day and
+                (a.starts_at at time zone 'UTC')::date = (b.starts_at at time zone 'UTC')::date
+              )
+            )
           ))
       ) order by v.id
     ) spot
