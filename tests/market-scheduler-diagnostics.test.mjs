@@ -9,15 +9,17 @@ const read = p => readFileSync(p, "utf8");
 const compile = s => ts.transpileModule(s, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-function harness({ brokenLogger = false, brokenResources = false, blockedResources = false } = {}) {
+function harness({ brokenLogger = false, brokenResources = false, blockedResources = false,
+  lowStorage = false, blockedStorage = false } = {}) {
   const events = [], timers = new Set();
+  let storageProbes = 0;
   let clock = 1000;
   class Clock extends Date { static now() { return clock; } }
   const fs = {
     statfs: async () => {
       if (blockedResources) await new Promise(() => {});
       if (brokenResources) throw Error("unavailable");
-      return { bavail: 512, bsize: 1048576 };
+      return { bavail: lowStorage ? 4 : 512, bsize: 1048576 };
     },
     readFile: async () => {
       if (brokenResources) throw Error("unavailable");
@@ -27,13 +29,21 @@ function harness({ brokenLogger = false, brokenResources = false, blockedResourc
   const exports = {};
   new Function("require", "exports", "console", "setInterval", "clearInterval", "Date", "process",
     compile(read("lib/event-harvester/market-scheduler-diagnostics.ts")))(
-    name => name === "node:fs/promises" ? fs : require(name), exports,
+    name => name === "node:fs/promises" ? fs :
+      name === "./market-runtime-storage-diagnostics" ? {
+        getMarketRuntimeStorageDiagnostics: async () => {
+          storageProbes++;
+          if (blockedStorage) await new Promise(() => {});
+          return { tmpProfilesMiB: 300 };
+        },
+      } : require(name), exports,
     { info(tag, json) { if (brokenLogger) throw Error("logger unavailable"); events.push(JSON.parse(json)); } },
     callback => { const timer = { callback, unref() {} }; timers.add(timer); return timer; },
     timer => timers.delete(timer), Clock,
     { pid: 7, env: {}, memoryUsage: () => ({ rss: 67108864 }) },
   );
-  return { ...exports, events, timers, advance(ms) { clock += ms; } };
+  return { ...exports, events, timers, storageProbes: () => storageProbes,
+    advance(ms) { clock += ms; } };
 }
 const identity = { workId: "work-a", stepId: "step-a", attempt: 1, leaseToken: "must-not-log" };
 const flush = () => new Promise(setImmediate);
@@ -89,6 +99,41 @@ test("concurrent executions retain independent phase context", async () => {
   assert.ok(h.events.some(e => e.workId === "work-b" && e.phase === "harvester" && e.sdkAttempt === 2));
   release(); await Promise.all([first, second]);
   assert.equal(h.timers.size, 0);
+});
+
+test("storage breakdown is bounded to once per process per minute under pressure", async () => {
+  const h = harness({ lowStorage: true });
+  let release;
+  const wait = new Promise(resolve => { release = resolve; });
+  const first = h.withMarketSchedulerDiagnostics(identity, async () => wait);
+  const second = h.withMarketSchedulerDiagnostics({ ...identity, workId: "work-b" }, async () => wait);
+  await flush();
+  assert.equal(h.storageProbes(), 1);
+  assert.equal(h.events.filter(e => e.event === "storage-pressure").length, 1);
+  h.advance(30_000);
+  for (const timer of h.timers) timer.callback();
+  await flush();
+  assert.equal(h.storageProbes(), 1);
+  h.advance(30_000);
+  for (const timer of h.timers) timer.callback();
+  await flush();
+  assert.equal(h.storageProbes(), 2);
+  release();
+  await Promise.all([first, second]);
+});
+
+test("storage inspection cannot block original processing or its cleanup", async () => {
+  const h = harness({ lowStorage: true, blockedStorage: true });
+  const value = await h.withMarketSchedulerDiagnostics(identity, async () => { await flush(); return 42; });
+  assert.equal(value, 42);
+  assert.equal(h.storageProbes(), 1);
+  assert.equal(h.timers.size, 0);
+});
+
+test("normal free space does not inspect profiles or process descriptors", async () => {
+  const h = harness();
+  await h.withMarketSchedulerDiagnostics(identity, async () => { await flush(); return 42; });
+  assert.equal(h.storageProbes(), 0);
 });
 
 const batch = read("lib/event-harvester/market-batch-executor.ts");

@@ -68,8 +68,8 @@ test("permit release follows operation cleanup", () => {
     permits.indexOf("await releasePermit("),
   );
   assert.match(permits, /await renewalTask/);
-  assert.match(browser, /await browser\.close\(\)/);
-  assert.match(browser, /await instance\.close\(\)/);
+  assert.equal((browser.match(/closePromise \?\?= (?:browser|instance)\.close\(\)/g) ?? []).length, 2);
+  assert.equal((browser.match(/await closeBrowser\(\)/g) ?? []).length, 2);
   assert.match(facebook, /await closeBrowser\(\)/);
 });
 
@@ -102,3 +102,4 @@ test("no source or publication logic is reimplemented", () => {
   assert.doesNotMatch(executor, /graduate_harvest_candidate/);
   assert.doesNotMatch(permits, /upsert_event_harvest_candidate/);
 });
+
