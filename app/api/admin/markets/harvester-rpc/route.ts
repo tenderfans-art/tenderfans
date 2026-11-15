@@ -199,6 +199,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const marketId = market.id;
+
   // Page through memberships; never silently truncate a Market.
   const allowed = new Set<string>();
 
@@ -221,16 +223,41 @@ export async function POST(request: NextRequest) {
     if ((data ?? []).length < 1000) break;
   }
 
-  async function sourceBelongs(sourceId: string) {
-    const { data, error } = await db
-      .from("event_harvest_sources")
-      .select("venue_id")
-      .eq("id", sourceId)
-      .maybeSingle();
+  async function sourcesInMarket(sourceIds: string[]) {
+    const permitted = new Set<string>();
 
-    if (error) throw error;
+    for (let offset = 0; offset < sourceIds.length; offset += 100) {
+      const { data: sources, error: sourceError } = await db
+        .from("event_harvest_sources")
+        .select("id, venue_id")
+        .in("id", sourceIds.slice(offset, offset + 100));
 
-    return !!data?.venue_id && allowed.has(data.venue_id);
+      if (sourceError) throw sourceError;
+
+      const ownerless: string[] = [];
+      for (const source of sources ?? []) {
+        if (source.venue_id && allowed.has(source.venue_id)) {
+          permitted.add(source.id);
+        } else if (source.venue_id === null) {
+          ownerless.push(source.id);
+        }
+      }
+
+      if (ownerless.length === 0) continue;
+
+      // Ownerless publishers have an explicit scheduling Market.
+      // Source ownership and existing review decisions stay intact.
+      const { data: mappings, error: mappingError } = await db
+        .from("event_processing_shared_source_markets")
+        .select("source_id")
+        .eq("market_id", marketId)
+        .in("source_id", ownerless);
+
+      if (mappingError) throw mappingError;
+      for (const mapping of mappings ?? []) permitted.add(mapping.source_id);
+    }
+
+    return permitted;
   }
 
   // Mutations are denied unless the source record and any
@@ -278,7 +305,7 @@ export async function POST(request: NextRequest) {
         permitted =
           typeof owner === "string" &&
           (rule.field === "source_id"
-            ? await sourceBelongs(owner)
+            ? (await sourcesInMarket([owner])).has(owner)
             : allowed.has(owner));
       }
 
@@ -352,26 +379,15 @@ export async function POST(request: NextRequest) {
       .filter((id): id is string => typeof id === "string")
   )];
 
-  const sourceOwners = new Map<string, string>();
+  let permittedSources: Set<string>;
 
-  for (let offset = 0; offset < sourceIds.length; offset += 100) {
-    const { data: sources, error: sourceError } = await db
-      .from("event_harvest_sources")
-      .select("id, venue_id")
-      .in("id", sourceIds.slice(offset, offset + 100));
-
-    if (sourceError) {
-      return NextResponse.json(
-        { error: "Could not resolve source ownership." },
-        { status: 503 }
-      );
-    }
-
-    for (const source of sources ?? []) {
-      if (source.venue_id) {
-        sourceOwners.set(source.id, source.venue_id);
-      }
-    }
+  try {
+    permittedSources = await sourcesInMarket(sourceIds);
+  } catch {
+    return NextResponse.json(
+      { error: "Could not resolve source ownership." },
+      { status: 503 }
+    );
   }
 
   const approvedPlaces = new Set<string>();
@@ -412,8 +428,7 @@ export async function POST(request: NextRequest) {
     // A publishing source, not a physical event location,
     // determines which Market owns an event review.
     if (typeof row.source_id === "string") {
-      const venueId = sourceOwners.get(row.source_id);
-      return !!venueId && allowed.has(venueId);
+      return permittedSources.has(row.source_id);
     }
 
     if (typeof row.venue_id === "string") {
@@ -429,3 +444,4 @@ export async function POST(request: NextRequest) {
     { headers: { "Cache-Control": "no-store" } }
   );
 }
+

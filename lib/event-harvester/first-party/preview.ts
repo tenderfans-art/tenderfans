@@ -4,6 +4,7 @@ import { recoveryFetch } from "@/lib/event-harvester/recovery-fetch";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { eventFingerprint, normalizeTitle } from "../identity";
+import { reuseMarketFacebookInventory } from "../market-facebook-inventory";
 
 import { parseIcsEvents } from "./ics";
 import { fetchGoogleCalendarEvents } from "./google-calendar-events";
@@ -381,9 +382,15 @@ export async function previewFirstPartySource(
   } else if (source.source_type === "tanstack_seroval_events") {
     events = await fetchTanStackSerovalEvents(source.source_url);
   } else if (source.source_type === "facebook_events") {
-    events = await fetchFacebookEvents(source.source_url, {
-      validatePageIdentity: options.validateFacebookPageIdentity === true,
-    });
+    const facebookUrl = source.source_url;
+    const validatePageIdentity = options.validateFacebookPageIdentity === true;
+    // Reuse only raw inventory. Each source retains the identity mapping
+    // below and its original attribution, discovery, and review lifecycle.
+    events = await reuseMarketFacebookInventory(
+      facebookUrl,
+      validatePageIdentity,
+      () => fetchFacebookEvents(facebookUrl, { validatePageIdentity }),
+    );
   } else if (source.source_type === "eventer_events") {
     const timeZone = typeof source.config?.timezone === "string"
       ? source.config.timezone : "America/New_York";
@@ -443,3 +450,4 @@ export async function previewFirstPartySource(
     rawPayload: event.rawPayload,
   }));
 }
+
