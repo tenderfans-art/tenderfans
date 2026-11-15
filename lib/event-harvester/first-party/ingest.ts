@@ -7,6 +7,7 @@ import {
 } from "./preview";
 
 import { eventFingerprint } from "../identity";
+import { createOccurrenceEvidenceLookup } from "../event-occurrence-evidence";
 import { resolveFirstPartyAttribution } from "./attribution";
 import { classifyEventEligibility } from "./event-eligibility";
 import {
@@ -58,6 +59,7 @@ async function ingestEvent(
   supabase: SupabaseClient,
   event: FirstPartyEventPreview,
   executionToken: string,
+  occurrenceEvidence: ReturnType<typeof createOccurrenceEvidenceLookup>,
 ): Promise<{
   candidateId: string | null;
   canonicalEventId: string | null;
@@ -150,6 +152,7 @@ async function ingestEvent(
 
   const harvestPayload = {
     ...event.rawPayload,
+    tenderfansOccurrence: await occurrenceEvidence(attribution.venueId),
     isAllDay: event.allDay,
     publisherVenueName: attribution.rawVenueName,
     publisherVenueAddress: attribution.rawAddress,
@@ -396,6 +399,12 @@ async function ingestEvent(
     canonicalEventId = rpcValue<string>(graduatedData);
     action = "graduated";
 
+    // A concurrent source can reveal ambiguity after the earlier review
+    // check. Graduation rechecks under a lock and returns null for review.
+    if (graduatedData === null) {
+      return { candidateId, canonicalEventId: null, action: "needs_review" };
+    }
+
     if (!canonicalEventId) {
       throw new Error(
         `Candidate graduation returned no event ID for "${event.title}".`,
@@ -610,9 +619,10 @@ export async function ingestFirstPartySource(
     events: [],
   };
 
+  const occurrenceEvidence = createOccurrenceEvidenceLookup(supabase);
   for (const event of preview) {
     getSpotExecutionSignal()?.throwIfAborted();
-    const ingested = await ingestEvent(supabase, event, executionToken!);
+    const ingested = await ingestEvent(supabase, event, executionToken!, occurrenceEvidence);
 
     result.processed += 1;
 
@@ -723,3 +733,4 @@ export async function ingestFirstPartySource(
     }
   }
 }
+
