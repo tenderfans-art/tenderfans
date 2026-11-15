@@ -228,6 +228,12 @@ export default function EventsCalendar({
     async function loadRequestedEvent() {
       if (!requestedEventId) return;
 
+      const { data: resolvedId } = await supabase.rpc("resolve_published_event_id", {
+        p_event_id: requestedEventId,
+      });
+      // The fallback also supports deployment before the additive migration.
+      const eventId = typeof resolvedId === "string" ? resolvedId : requestedEventId;
+
       const { data, error } = await supabase
         .from("events")
         .select(`
@@ -249,7 +255,7 @@ export default function EventsCalendar({
             longitude
           )
         `)
-        .eq("id", requestedEventId)
+        .eq("id", eventId)
         .eq("status", "published")
         .maybeSingle();
 
@@ -1143,3 +1149,4 @@ export default function EventsCalendar({
     </section>
   );
 }
+
