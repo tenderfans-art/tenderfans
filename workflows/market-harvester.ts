@@ -314,10 +314,16 @@ async function executeDetector(
   const { withMarketSchedulerDiagnostics } = await import(
     "@/lib/event-harvester/market-scheduler-diagnostics"
   );
+  const { runWithMarketFacebookInventory } = await import(
+    "@/lib/event-harvester/market-facebook-inventory"
+  );
   const { stepId, attempt } = getStepMetadata();
   return withMarketSchedulerDiagnostics(
     { workId: item.work_id, stepId, attempt },
-    () => executeMarketDetectorWorkItem(db, item),
+    () => runWithMarketFacebookInventory(
+      db, item.work_id, item.claimed_lease_token,
+      () => executeMarketDetectorWorkItem(db, item),
+    ),
   );
 }
 
@@ -345,7 +351,13 @@ async function executeSource(
     },
   });
 
-  return executeMarketHarvesterWorkItem(supabase, item);
+  const { runWithMarketFacebookInventory } = await import(
+    "@/lib/event-harvester/market-facebook-inventory"
+  );
+  return runWithMarketFacebookInventory(
+    supabase, item.work_id, item.claimed_lease_token,
+    () => executeMarketHarvesterWorkItem(supabase, item),
+  );
 }
 
 async function executeSupplemental(
@@ -374,11 +386,17 @@ async function executeSupplemental(
     },
   });
 
-  return executeMarketSupplementalWorkItem(
-    db,
-    marketId,
-    mode,
-    item as ClaimedWork & { claimed_venue_id: string | null },
+  const { runWithMarketFacebookInventory } = await import(
+    "@/lib/event-harvester/market-facebook-inventory"
+  );
+  return runWithMarketFacebookInventory(
+    db, item.work_id, item.claimed_lease_token,
+    () => executeMarketSupplementalWorkItem(
+      db,
+      marketId,
+      mode,
+      item as ClaimedWork & { claimed_venue_id: string | null },
+    ),
   );
 }
 
@@ -585,3 +603,4 @@ export async function marketHarvesterWorkflow(
     }
   }
 }
+
