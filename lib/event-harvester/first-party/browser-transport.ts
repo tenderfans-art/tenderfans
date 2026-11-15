@@ -111,8 +111,17 @@ export async function fetchBrowserEvidence(
     ...(proxy ? { proxy } : {}),
   });
 
+  // Every caller must await the first close, which owns Playwright's
+  // process and temporary-profile cleanup. A second close can finish
+  // on disconnection while that original cleanup is still pending.
+  let closePromise: Promise<void> | null = null;
+  const closeBrowser = (): Promise<void> => {
+    closePromise ??= browser.close();
+    return closePromise;
+  };
+
   const abortBrowser = () => {
-    void browser.close().catch(() => {});
+    void closeBrowser().catch(() => {});
   };
 
   combinedSignal.addEventListener("abort", abortBrowser, {
@@ -190,7 +199,7 @@ export async function fetchBrowserEvidence(
     };
   } finally {
     combinedSignal.removeEventListener("abort", abortBrowser);
-    await browser.close();
+    await closeBrowser();
   }
   }, recoverySignal);
 
@@ -244,8 +253,14 @@ async function fetchBrowserJsonResponsesOnce(
       ...(proxy ? { proxy } : {}),
     });
 
+    let closePromise: Promise<void> | null = null;
+    const closeBrowser = (): Promise<void> => {
+      closePromise ??= instance.close();
+      return closePromise;
+    };
+
     const abort = () => {
-      void instance.close().catch(() => {});
+      void closeBrowser().catch(() => {});
     };
 
     combinedSignal.addEventListener("abort", abort, { once: true });
@@ -311,7 +326,7 @@ async function fetchBrowserJsonResponsesOnce(
       };
     } finally {
       combinedSignal.removeEventListener("abort", abort);
-      await instance.close();
+      await closeBrowser();
     }
   }, recoverySignal);
 
@@ -417,3 +432,4 @@ export async function fetchBrowserJsonResponses(
     throw error;
   }
 }
+

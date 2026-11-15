@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { readFile, statfs } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { getMarketRuntimeStorageDiagnostics } from "./market-runtime-storage-diagnostics";
 
 type Identity = { workId: string; stepId: string; attempt: number };
 type State = {
@@ -15,6 +16,8 @@ type State = {
 const storage = new AsyncLocalStorage<State>();
 const instanceId = randomUUID();
 let activeExecutions = 0;
+let storageInspectionPending = false;
+let lastStorageInspectionAt = Number.NEGATIVE_INFINITY;
 const mib = (bytes: number) => Math.round(bytes / 1048576);
 
 function emit(state: State, event: string, extra = {}) {
@@ -54,6 +57,17 @@ export function markMarketSchedulerRenewal(event: "start" | "end") {
   if (event === "end") state.renewalStartedAt = null;
 }
 
+function inspectLowStorage(state: State, freeMiB: number | undefined) {
+  if (!state.active || freeMiB === undefined || freeMiB >= 64 ||
+      storageInspectionPending || Date.now() - lastStorageInspectionAt < 60_000) return;
+  storageInspectionPending = true;
+  lastStorageInspectionAt = Date.now();
+  // This bounded, read-only inspection never delays execution or cleanup.
+  void getMarketRuntimeStorageDiagnostics().then(extra => {
+    if (state.active) emit(state, "storage-pressure", extra);
+  }).catch(() => {}).finally(() => { storageInspectionPending = false; });
+}
+
 async function resources(state: State) {
   const values = await Promise.allSettled([
     statfs(tmpdir()),
@@ -70,7 +84,10 @@ async function resources(state: State) {
     const bytes = Number(value.value);
     if (Number.isFinite(bytes) && bytes > 0) extra[key] = mib(bytes);
   }
-  if (state.active) emit(state, "resources", extra);
+  if (state.active) {
+    emit(state, "resources", extra);
+    inspectLowStorage(state, extra.tmpFreeMiB);
+  }
 }
 
 export async function withMarketSchedulerDiagnostics<T>(
