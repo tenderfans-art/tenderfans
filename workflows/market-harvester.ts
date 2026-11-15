@@ -1,5 +1,6 @@
-import { getWorkflowMetadata } from "workflow";
+import { getWorkflowMetadata, sleep } from "workflow";
 import { marketWorkflowTiming } from "@/lib/event-harvester/market-workflow-policy";
+import type { RefillInstruction } from "@/lib/event-harvester/market-workflow-refill";
 
 import type {
   ClaimedWork,
@@ -167,6 +168,21 @@ async function renewReservedBatch(
       "Reservation ownership expired or was closed",
     );
   }
+}
+
+async function claimRefillingSource(reservationId: string, slotNumber: number): Promise<RefillInstruction> {
+  "use step";
+  const { createClient } = await import("@supabase/supabase-js");
+  const { parseRefillInstruction } = await import("@/lib/event-harvester/market-workflow-refill");
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) throw new Error("Missing Supabase credentials");
+  const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await db.rpc("claim_refilling_market_assignment", {
+    p_reservation_id: reservationId, p_slot_number: slotNumber,
+  });
+  if (error) throw new Error("Market refill claim failed: " + error.message);
+  return parseRefillInstruction(data);
 }
 
 async function finalizeReservedBatch(
@@ -403,7 +419,7 @@ async function executeSupplemental(
 export async function marketHarvesterWorkflow(
   marketId: string,
   reservationId?: string,
-  mode: "harvest" | "detect" | "provider" | "archive" = "harvest",
+  mode: "harvest" | "detect" | "provider" | "archive" | "market" = "harvest",
   configuredBatchSize = 10,
 ): Promise<MarketBatchResult> {
   "use workflow";
@@ -422,7 +438,7 @@ export async function marketHarvesterWorkflow(
 
   if (
     !reservationId &&
-    (mode === "provider" || mode === "archive")
+    (mode === "provider" || mode === "archive" || mode === "market")
   ) {
     throw new Error("Supplemental work requires shared reservation");
   }
@@ -485,6 +501,89 @@ export async function marketHarvesterWorkflow(
   }
 
 
+  if (mode === "market") {
+    // New scheduled runs keep the same eight durable lanes, without a lane
+    // quota or a fixed drain window. The database owns cycle scope, fairness,
+    // capacity, retry due times, immutable claims and bounded failure recovery.
+    const result = makeResult(0);
+    const sourceConcurrency = Math.min(8, configuredBatchSize);
+    if (!Number.isSafeInteger(sourceConcurrency) || sourceConcurrency < 1) {
+      throw new Error("Invalid Market refill concurrency");
+    }
+    // Idle lanes share one durable timer. Local completion wakes them early,
+    // so available capacity is reconsidered without polling every lane eagerly.
+    let idleWait: Promise<void> | null = null;
+    let wakeIdle: (() => void) | null = null;
+    const waitForActivity = (delayMs: number): Promise<void> => {
+      if (!idleWait) {
+        const activity = new Promise<void>(resolve => { wakeIdle = resolve; });
+        const waiting = Promise.race([sleep(delayMs), activity]);
+        idleWait = waiting;
+        void waiting.then(() => {
+          if (idleWait === waiting) { idleWait = null; wakeIdle = null; }
+        });
+      }
+      return idleWait;
+    };
+    let originalFailure: unknown = null;
+    try {
+      const outcomes = await Promise.allSettled(Array.from({ length: sourceConcurrency },
+        async (_, laneIndex): Promise<MarketBatchResult> => {
+          const laneResult = makeResult(0);
+          for (let sequence = 0; ; sequence++) {
+            const instruction = await claimRefillingSource(
+              reservationId, laneIndex + sequence * sourceConcurrency,
+            );
+            if (instruction.kind === "stop") break;
+            if (instruction.kind === "wait") {
+              await waitForActivity(instruction.delay_ms);
+              continue;
+            }
+            const item = instruction.item;
+            laneResult.claimed++;
+            // Dispatch to the ORIGINAL executors; each Spot still owns both
+            // detection and harvesting under its original single work lease.
+            try {
+              const execution = item.claimed_work_type === "detect_spot"
+                ? await executeDetector(item)
+                : item.claimed_work_type === "harvest_source"
+                  ? await executeSource(item)
+                  : await executeSupplemental(item, marketId,
+                      item.claimed_work_type === "archive_recheck" ? "archive" : "provider");
+              laneResult.completed += execution.completed;
+              laneResult.failed += execution.failed;
+              laneResult.deferred += execution.deferred;
+            } finally {
+              wakeIdle?.();
+            }
+          }
+          return laneResult;
+        }));
+      let executionError: unknown;
+      for (const outcome of outcomes) {
+        if (outcome.status === "rejected") executionError ??= outcome.reason;
+        else {
+          result.claimed += outcome.value.claimed;
+          result.completed += outcome.value.completed;
+          result.failed += outcome.value.failed;
+          result.deferred += outcome.value.deferred;
+        }
+      }
+      if (executionError !== undefined) throw executionError;
+      return result;
+    } catch (cause) {
+      originalFailure = cause;
+      throw cause;
+    } finally {
+      try { await finalizeReservedBatch(reservationId); }
+      catch (cause) {
+        if (originalFailure === null) throw cause;
+        console.error("Market refill finalization deferred after execution failure:", cause);
+      }
+    }
+  }
+
+  // Legacy/deployment-pinned runs retain their original protocol and deadlines.
   // Continuous, independently refilling execution lanes.
   // Each lane owns deterministic, immutable assignment numbers.
   // No lane waits for another lane before claiming more work.
