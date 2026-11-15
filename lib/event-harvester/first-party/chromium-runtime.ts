@@ -2,6 +2,7 @@ import Chromium from "@sparticuz/chromium";
 import { rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ensureChromiumLauncher } from "./chromium-launcher";
 
 import {
   singleFlight,
@@ -114,7 +115,13 @@ const initialize = singleFlight(async (): Promise<string> => {
   }, LOCK);
 });
 
+// Keep launcher retries separate from native extraction and its cleanup.
+const initializeLauncher = singleFlight(async (): Promise<string> => {
+  return ensureChromiumLauncher(await initialize());
+});
+
 export function getChromiumExecutablePath():
   Promise<string> {
-  return initialize();
+  return initializeLauncher();
 }
+
