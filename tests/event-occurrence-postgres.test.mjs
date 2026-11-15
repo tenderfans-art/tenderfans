@@ -23,7 +23,7 @@ const json = async text => JSON.parse((await sql(text)).split("\n").at(-1));
 const quote = value => value == null ? "null" : "'" + String(value).replaceAll("'", "''") + "'";
 const read = file => readFileSync(file, "utf8");
 
-test("shared event occurrence lifecycle on PostgreSQL", { skip: !container, timeout: 120000 }, async t => {
+for (const lineEndings of ["LF", "CRLF", "changed"]) test(`shared event occurrence lifecycle on PostgreSQL (${lineEndings})`, { skip: !container, timeout: 120000 }, async t => {
   await command(["psql", "-U", "postgres", "-qAt", "-v", "ON_ERROR_STOP=1"],
     `select 'create role anon' where not exists(select 1 from pg_roles where rolname='anon')\n\\gexec\n` +
     `select 'create role authenticated' where not exists(select 1 from pg_roles where rolname='authenticated')\n\\gexec\n` +
@@ -36,7 +36,25 @@ test("shared event occurrence lifecycle on PostgreSQL", { skip: !container, time
     "058_event_all_day_semantics", "059_venue_scoped_first_party_sources",
     "060_first_party_event_attribution", "089_verified_event_identity_linking",
     "091_cross_source_occurrence_guard", "094_first_party_source_execution_lock"]) await sql(read(`supabase/migrations/${name}.sql`));
+  if (lineEndings === "CRLF") {
+    await sql(`do $crlf$ begin execute replace(pg_get_functiondef(
+      'public.flag_event_harvest_occurrence_review(uuid)'::regprocedure), E'\\n', E'\\r\\n'); end; $crlf$;`);
+    assert.equal(await sql(`select md5(prosrc) from pg_proc
+      where oid='public.flag_event_harvest_occurrence_review(uuid)'::regprocedure;`),
+      "b1dd0f67441db0091a941b93838e04c1", "replicates the production baseline exactly");
+  }
+  if (lineEndings === "changed") {
+    await sql(`do $changed$ begin execute replace(pg_get_functiondef(
+      'public.flag_event_harvest_occurrence_review(uuid)'::regprocedure),
+      'possible_cross_source_duplicate', 'different_review_policy'); end; $changed$;`);
+    await assert.rejects(sql(read("supabase/migrations/128_shared_event_occurrence_identity.sql")), /differs from the verified baseline/);
+    assert.equal(await sql(`select exists(select 1 from information_schema.columns
+      where table_schema='public' and table_name='events' and column_name='merged_into_event_id');`),"f");
+    return;
+  }
   await sql(read("supabase/migrations/128_shared_event_occurrence_identity.sql"));
+  assert.equal(await sql(`select position('perform public.lock_event_harvest_occurrence(p_candidate_id);'
+    in prosrc) > 0 from pg_proc where oid='public.flag_event_harvest_occurrence_review(uuid)'::regprocedure;`),"t");
 
   async function fixture() {
     const venue = randomUUID(), a = randomUUID(), b = randomUUID(), c = randomUUID();

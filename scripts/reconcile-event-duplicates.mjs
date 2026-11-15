@@ -6,15 +6,21 @@ const marker = "__tf_event_maintenance__";
 const wrapped = expression => `select jsonb_build_object('${marker}', ${expression}) as payload;`;
 const literal = value => "'" + value.replaceAll("'", "''") + "'";
 
+export function decodeEventMaintenanceResult(output) {
+  // Hosted CLI releases can return rows directly; local queries can wrap
+  // those same rows with a boundary and an untrusted-data warning.
+  const rows = Array.isArray(output) ? output : output?.rows;
+  if (!Array.isArray(rows) || rows.length !== 1 ||
+      !Object.hasOwn(rows[0]?.payload ?? {}, marker)) throw Error("Unexpected Supabase query result");
+  return rows[0].payload[marker];
+}
+
 function queryLinkedProject(statement, { readOnly = false } = {}) {
   const args = ["--yes", "--loglevel=error", "supabase@3", "db", "query", "--remote",
     "--output-format", "json", readOnly ? "--read-only" : "--yes", statement];
   const result = spawnSync("npx", args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 180000 });
   if (result.error || result.status !== 0) throw Error(result.stderr || result.error?.message || "Database query failed");
-  const output = JSON.parse(result.stdout);
-  if (!Array.isArray(output.rows) || output.rows.length !== 1 ||
-      !Object.hasOwn(output.rows[0].payload ?? {}, marker)) throw Error("Unexpected Supabase query result");
-  return output.rows[0].payload[marker];
+  return decodeEventMaintenanceResult(JSON.parse(result.stdout));
 }
 
 export async function reconcileEventDuplicates(query = queryLinkedProject) {
