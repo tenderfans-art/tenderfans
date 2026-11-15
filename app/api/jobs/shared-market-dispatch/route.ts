@@ -3,6 +3,7 @@ import { getRun, start } from "workflow/api";
 import { marketHarvesterWorkflow } from "@/workflows/market-harvester";
 import { marketWorkflowTiming } from "@/lib/event-harvester/market-workflow-policy";
 import { loadSharedWorkflowReconciliationRuns } from "@/lib/event-harvester/market-workflow-recovery";
+import { prepareSharedMarketRefill, refillingMarketCancellationAt } from "@/lib/event-harvester/market-workflow-refill";
 
 export const runtime = "nodejs";
 
@@ -222,10 +223,10 @@ export async function POST(request: Request) {
     try {
       runStatus = await getRun(runId).status;
       // Admission window + existing per-item budget + settlement.
-      const deadline = marketWorkflowTiming(
-        reservation.reserved_at,
-      ).cancellationAt;
-      if (Number.isFinite(deadline) && Date.now() >= deadline &&
+      const deadline = reservation.work_type === "market_scan" && ["running", "pending"].includes(runStatus)
+        ? await refillingMarketCancellationAt(supabase, reservation.id, runId)
+        : marketWorkflowTiming(reservation.reserved_at).cancellationAt;
+      if (deadline !== null && Number.isFinite(deadline) && Date.now() >= deadline &&
           ["running", "pending"].includes(runStatus)) {
         await getRun(runId).cancel();
         console.warn("[shared-market-deadline]", runId);
@@ -351,7 +352,7 @@ export async function POST(request: Request) {
     marketId: string;
     marketKey: string;
     batchSize: number;
-    mode: "harvest" | "detect" | "provider" | "archive";
+    mode: "harvest" | "detect" | "provider" | "archive" | "market";
   }> = [];
 
   for (
@@ -417,7 +418,8 @@ export async function POST(request: Request) {
         throw new Error("Market processing configuration unavailable");
       }
 
-      const mode =
+      const refill = await prepareSharedMarketRefill(supabase, reservation.reservation_id);
+      const mode = refill ? "market" :
         reservedWork.work_type === "detect_spot"
           ? "detect"
           : reservedWork.work_type === "archive_recheck"
@@ -427,7 +429,9 @@ export async function POST(request: Request) {
               : "harvest";
 
       const batchSize =
-        mode === "provider"
+        mode === "market"
+          ? Math.max(market.detector_batch_size, market.harvester_batch_size)
+          : mode === "provider"
           ? 1
           : mode === "archive"
             ? market.detector_batch_size
