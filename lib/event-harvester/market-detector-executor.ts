@@ -1,4 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  markMarketSchedulerPhase,
+  markMarketSchedulerRenewal,
+} from "./market-scheduler-diagnostics";
 
 import {
   withLeaseRenewal,
@@ -214,6 +218,7 @@ export async function executeMarketDetectorWorkItem(
 
     const spotId = item.claimed_venue_id;
 
+    markMarketSchedulerPhase("load-spot");
     const { data: spot, error: spotError } =
       await supabase
         .from("venues")
@@ -251,6 +256,7 @@ export async function executeMarketDetectorWorkItem(
          */
         if (spot.website_url?.trim()) {
           try {
+            markMarketSchedulerPhase("detector-import");
             const { GET: detect } = await import(
               "@/app/api/jobs/first-party-event-detector/route"
             );
@@ -266,7 +272,9 @@ export async function executeMarketDetectorWorkItem(
               },
             );
 
+            markMarketSchedulerPhase("detector");
             const response = await detect(request);
+            markMarketSchedulerPhase("detector-response");
             const body = await response.json() as Record<
               string, unknown
             >;
@@ -334,6 +342,7 @@ export async function executeMarketDetectorWorkItem(
         // Do not start another stage after the Spot budget expires.
         spotSignal.throwIfAborted();
 
+        markMarketSchedulerPhase("harvester-import");
         const { GET: harvest } = await import(
           "@/app/api/jobs/first-party-event-harvester/route"
         );
@@ -356,7 +365,9 @@ export async function executeMarketDetectorWorkItem(
           },
         );
 
+        markMarketSchedulerPhase("harvester");
         const response = await harvest(request);
+        markMarketSchedulerPhase("harvester-response");
 
         const harvesting = await response.json() as Record<
           string, unknown
@@ -381,6 +392,10 @@ export async function executeMarketDetectorWorkItem(
       ),
       60_000,
       30 * 60_000,
+      {
+        renewal: markMarketSchedulerRenewal,
+        shutdown: () => markMarketSchedulerPhase("lease-heartbeat-shutdown"),
+      },
     );
 
     if (cycle.detectorError || cycle.harvesterError) {
@@ -396,6 +411,7 @@ export async function executeMarketDetectorWorkItem(
      * Only now is the selected Spot cycle completed.
      * This is after the harvester has released every source lock.
      */
+    markMarketSchedulerPhase("record-completion");
     const { data: completed, error } =
       await supabase.rpc("complete_event_processing_work", {
         p_work_id: item.work_id,
@@ -428,6 +444,7 @@ export async function executeMarketDetectorWorkItem(
       ? cause.message
       : String(cause);
 
+    markMarketSchedulerPhase("record-retry");
     const { data: recorded, error } =
       await supabase.rpc("fail_event_processing_work", {
         p_work_id: item.work_id,

@@ -310,7 +310,15 @@ async function executeDetector(
     },
   });
 
-  return executeMarketDetectorWorkItem(db, item);
+  const { getStepMetadata } = await import("workflow");
+  const { withMarketSchedulerDiagnostics } = await import(
+    "@/lib/event-harvester/market-scheduler-diagnostics"
+  );
+  const { stepId, attempt } = getStepMetadata();
+  return withMarketSchedulerDiagnostics(
+    { workId: item.work_id, stepId, attempt },
+    () => executeMarketDetectorWorkItem(db, item),
+  );
 }
 
 async function executeSource(

@@ -67,6 +67,10 @@ export async function withLeaseRenewal<T>(
   operation: (signal: AbortSignal) => Promise<T>,
   intervalMs = 60_000,
   deadlineMs?: number,
+  diagnostics?: {
+    renewal: (event: "start" | "end") => void;
+    shutdown: () => void;
+  },
 ): Promise<T> {
   if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
     throw new Error("Invalid lease renewal interval");
@@ -96,6 +100,7 @@ export async function withLeaseRenewal<T>(
 
   const renew = async (): Promise<void> => {
     try {
+      try { diagnostics?.renewal("start"); } catch {}
       const { data, error } = await supabase.rpc(
         "renew_event_processing_lease",
         {
@@ -118,6 +123,8 @@ export async function withLeaseRenewal<T>(
           cause instanceof Error ? cause.message : String(cause)
         }`,
       );
+    } finally {
+      try { diagnostics?.renewal("end"); } catch {}
     }
   };
 
@@ -174,6 +181,7 @@ export async function withLeaseRenewal<T>(
     }
 
     controller.abort();
+    try { diagnostics?.shutdown(); } catch {}
     await heartbeatPromise;
 
     if (inFlight) {
