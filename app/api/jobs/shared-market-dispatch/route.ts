@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getRun, start } from "workflow/api";
 import { marketHarvesterWorkflow } from "@/workflows/market-harvester";
 import { marketWorkflowTiming } from "@/lib/event-harvester/market-workflow-policy";
+import { loadSharedWorkflowReconciliationRuns } from "@/lib/event-harvester/market-workflow-recovery";
 
 export const runtime = "nodejs";
 
@@ -198,13 +199,7 @@ export async function POST(request: Request) {
    * authorizes fenced settlement of the bound reservation.
    */
   const { data: liveRuns, error: liveRunsError } =
-    await supabase
-      .from("event_processing_dispatch_reservations")
-      .select("id,workflow_run_id,reserved_at")
-      .in("status", ["reserved", "claimed"])
-      .not("workflow_run_id", "is", null)
-      .order("reserved_at", { ascending: true })
-      .limit(32);
+    await loadSharedWorkflowReconciliationRuns(supabase);
 
   if (liveRunsError) {
     return Response.json(
@@ -511,3 +506,4 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   return POST(request);
 }
+

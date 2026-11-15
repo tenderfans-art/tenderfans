@@ -25,12 +25,13 @@ const read = file => readFileSync(file, "utf8");
 
 for (const lineEndings of ["LF", "CRLF", "changed"]) test(`shared event occurrence lifecycle on PostgreSQL (${lineEndings})`, { skip: !container, timeout: 120000 }, async t => {
   await command(["psql", "-U", "postgres", "-qAt", "-v", "ON_ERROR_STOP=1"],
+    `select pg_advisory_lock(hashtext('tenderfans-test-roles'));\n` +
     `select 'create role anon' where not exists(select 1 from pg_roles where rolname='anon')\n\\gexec\n` +
     `select 'create role authenticated' where not exists(select 1 from pg_roles where rolname='authenticated')\n\\gexec\n` +
     `select 'create role service_role' where not exists(select 1 from pg_roles where rolname='service_role')\n\\gexec\n` +
     `select 'create role tf_event_readonly' where not exists(select 1 from pg_roles where rolname='tf_event_readonly')\n\\gexec\n` +
     `alter role tf_event_readonly bypassrls;\n` +
-    `create database ${database};`);
+    `select pg_advisory_unlock(hashtext('tenderfans-test-roles')); create database ${database};`);
   t.after(() => command(["psql", "-U", "postgres", "-qAt"], `drop database ${database} with (force);`));
   await sql(read("tests/fixtures/event-occurrence-baseline.sql"));
   for (const name of ["040_event_harvester_foundation", "041_ticketmaster_harvester", "050_first_party_event_sources",
