@@ -181,7 +181,8 @@ function extractionPrompt(
   currentDate: string,
 ): string {
   return [
-    "You are reading an image discovered on a public venue website.",
+    "You are reading an image or PDF calendar document discovered on a public venue website.",
+    "The image qualification and extraction rules below apply equally to PDF pages.",
     "",
     "Determine whether the image is actually a public event calendar or event schedule.",
     "An event-themed photograph, promotional image, venue photo, or isolated event graphic is NOT by itself an event calendar or schedule.",
@@ -305,6 +306,11 @@ export async function extractCalendarImage(
       asset.bytes,
     ).toString("base64");
 
+  // PDF calendars retain the same qualification schema and date/time checks.
+  const visualInput = asset.contentType === "application/pdf"
+    ? { type: "input_file", filename: "calendar.pdf", file_data: `data:application/pdf;base64,${base64}`, detail: "high" }
+    : { type: "input_image", image_url: `data:${asset.contentType};base64,${base64}`, detail: "original" };
+
   const response = await fetch(
     "https://api.openai.com/v1/responses",
     {
@@ -328,12 +334,7 @@ export async function extractCalendarImage(
                     currentDate,
                   ),
               },
-              {
-                type: "input_image",
-                image_url:
-                  `data:${asset.contentType};base64,${base64}`,
-                detail: "original",
-              },
+              visualInput,
             ],
           },
         ],
@@ -439,3 +440,4 @@ export async function extractCalendarImage(
 
   return result as CalendarImageExtraction;
 }
+

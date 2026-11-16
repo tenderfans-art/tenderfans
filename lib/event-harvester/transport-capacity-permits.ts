@@ -24,6 +24,23 @@ type PermitRow = {
   permit_expires_at: string;
 };
 
+function rpcFailureMessage(error: unknown): string {
+  if (error && typeof error === "object" && "message" in error) {
+    return String(error.message);
+  }
+  return String(error);
+}
+
+function retryablePermitRpc(error: unknown, timedOut: boolean): boolean {
+  const detail = error && typeof error === "object"
+    ? error as { code?: string; name?: string }
+    : {};
+  return timedOut || detail.name === "AbortError" ||
+    ["57014", "55P03", "40P01", "40001", "PGRST003"].includes(detail.code ?? "") ||
+    /^(?:TypeError: )?(?:Failed to fetch|fetch failed)$|AbortError|canceling statement due to statement timeout/i
+      .test(rpcFailureMessage(error));
+}
+
 export class TransportCapacityUnavailableError extends Error {
   constructor(kind: TransportCapacityKind) {
     super(`Transport capacity unavailable: ${kind}`);
@@ -146,7 +163,7 @@ async function acquirePermit(
     );
 
     let data: unknown;
-    let error: { message: string } | null;
+    let error: unknown;
 
     try {
       acquisitionDispatched = true;
@@ -162,6 +179,9 @@ async function acquirePermit(
     ).abortSignal(rpcController.signal);
       data = response.data;
       error = response.error;
+    } catch (cause) {
+      data = null;
+      error = cause;
     } finally {
       clearTimeout(rpcTimer);
     }
@@ -180,17 +200,15 @@ async function acquirePermit(
        * The database outcome may be unknown after an HTTP
        * failure. Retry with the SAME acquisition key.
        *
-       * Explicit PostgreSQL errors must not be retried
-       * indefinitely; they indicate a rejected request.
+       * Transient lock/statement failures roll back the RPC. Retry
+       * those within the same admission budget and identity too.
+       * Permission, validation and other permanent failures propagate.
        */
-      const retryable =
-        rpcController.signal.aborted ||
-        error.message === "TypeError: Failed to fetch" ||
-        error.message === "Failed to fetch";
+      const retryable = retryablePermitRpc(error, rpcController.signal.aborted);
 
       if (!retryable) {
         throw new Error(
-          `Transport permit acquisition failed: ${error.message}`,
+          `Transport permit acquisition failed: ${rpcFailureMessage(error)}`,
         );
       }
 
@@ -332,36 +350,48 @@ async function releasePermit(
   supabase: SupabaseClient,
   permit: Permit,
 ): Promise<boolean> {
-  const rpcController = new AbortController();
-  const rpcTimer = setTimeout(
-    () => rpcController.abort(),
-    RPC_TIMEOUT_MS,
-  );
+  // Cleanup has its own bounded signals, independent of an aborted operation.
+  // Retries retain the exact permit ID/token; never release another owner.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const rpcController = new AbortController();
+    const rpcTimer = setTimeout(() => rpcController.abort(), RPC_TIMEOUT_MS);
+    let failure: unknown;
+    try {
+      const { data, error } = await supabase.rpc(
+        "release_event_processing_transport_permit",
+        { p_permit_id: permit.id, p_permit_token: permit.token },
+      ).abortSignal(rpcController.signal);
+      if (error) {
+        failure = error;
+      } else if (data === true) {
+        return true;
+      } else {
+        // The first release may have committed before its HTTP response was
+        // lost. The existing RPC returns false on replay; verify the durable,
+        // token-matched release rather than reporting a false ownership loss.
+        const { data: released, error: verificationError } = await supabase
+          .from("event_processing_transport_permits")
+          .select("id")
+          .eq("id", permit.id)
+          .eq("owner_token", permit.token)
+          .not("released_at", "is", null)
+          .abortSignal(rpcController.signal)
+          .maybeSingle();
+        if (verificationError) failure = verificationError;
+        else return released?.id === permit.id;
+      }
+    } catch (error) {
+      failure = error;
+    } finally {
+      clearTimeout(rpcTimer);
+    }
 
-  let data: unknown;
-  let error: { message: string } | null;
-
-  try {
-    const response = await supabase.rpc(
-    "release_event_processing_transport_permit",
-    {
-      p_permit_id: permit.id,
-      p_permit_token: permit.token,
-    },
-  ).abortSignal(rpcController.signal);
-    data = response.data;
-    error = response.error;
-  } finally {
-    clearTimeout(rpcTimer);
+    if (attempt === 3 || !retryablePermitRpc(failure, rpcController.signal.aborted)) {
+      throw new Error(`Transport permit release failed: ${rpcFailureMessage(failure)}`);
+    }
+    await sleep(250 * attempt);
   }
-
-  if (error) {
-    throw new Error(
-      `Transport permit release failed: ${error.message}`,
-    );
-  }
-
-  return data === true;
+  return false;
 }
 
 /*

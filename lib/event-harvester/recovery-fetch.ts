@@ -2,6 +2,7 @@ import { isVerificationInterstitial } from "./access-challenge";
 import { getTransportRecoveryProxy } from "./transport-recovery-context";
 import { signedHarvesterFetch } from "./signed-fetch";
 import { capacityHttpFetch } from "./transport-capacity-http";
+import { withCompatibleHttpHeaders } from "./compatible-http-fetch";
 
 const RECOVERY_STATUSES = new Set([403, 429, 503]);
 
@@ -30,11 +31,14 @@ export async function recoveryFetch(
 ): Promise<Response> {
   const url = String(input);
   const proxy = getTransportRecoveryProxy();
+  const directRequest = () => withCompatibleHttpHeaders(
+    headers => capacityHttpFetch(url, { ...init, headers }), init,
+  );
 
   // Outside the recovery queue, preserve native transport while
   // rejecting recognized verification HTML as adapter content.
   if (!proxy) {
-    const response = await capacityHttpFetch(url, init);
+    const response = await directRequest();
 
     if (await isVerificationChallenge(response)) {
       throw new Error(
@@ -53,7 +57,7 @@ export async function recoveryFetch(
   }
 
   try {
-    const response = await capacityHttpFetch(url, init);
+    const response = await directRequest();
 
     const needsRecovery =
       RECOVERY_STATUSES.has(response.status) ||
@@ -112,3 +116,4 @@ export async function recoveryFetch(
     return recovered;
   }
 }
+

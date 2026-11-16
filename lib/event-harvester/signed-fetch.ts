@@ -16,6 +16,7 @@ const SIGNATURE_AGENT = '"https://tenderfans.com"';
 const MAX_REDIRECTS = 5;
 const PROXY_TIMEOUT_MS = 15_000;
 const MAX_PROXY_RESPONSE_BYTES = 2 * 1024 * 1024;
+const MAX_REQUEST_RESPONSE_BYTES = 16 * 1024 * 1024;
 
 function validateProxyDestination(url: URL): void {
   if (url.protocol !== "https:") {
@@ -47,10 +48,11 @@ function validateProxyDestination(url: URL): void {
 
 async function readLimitedBody(
   response: Awaited<ReturnType<typeof undiciFetch>>,
+  maxBytes = MAX_PROXY_RESPONSE_BYTES,
 ): Promise<Uint8Array> {
   const length = Number(response.headers.get("content-length"));
 
-  if (Number.isFinite(length) && length > MAX_PROXY_RESPONSE_BYTES) {
+  if (Number.isFinite(length) && length > maxBytes) {
     await response.body?.cancel();
     throw new Error("Proxy response exceeds size limit.");
   }
@@ -75,7 +77,7 @@ async function readLimitedBody(
 
       total += value.byteLength;
 
-      if (total > MAX_PROXY_RESPONSE_BYTES) {
+      if (total > maxBytes) {
         throw new Error("Proxy response exceeds size limit.");
       }
 
@@ -129,7 +131,13 @@ export async function signedHarvesterFetch(
   url: string,
   init: RequestInit = {},
   proxyUrl?: string,
+  options: { maxResponseBytes?: number } = {},
 ): Promise<Response> {
+  const maxResponseBytes = options.maxResponseBytes ?? MAX_PROXY_RESPONSE_BYTES;
+  if (!Number.isSafeInteger(maxResponseBytes) || maxResponseBytes < 1 ||
+      maxResponseBytes > MAX_REQUEST_RESPONSE_BYTES) {
+    throw new Error("Invalid harvester response size limit.");
+  }
   if (init.method && init.method.toUpperCase() !== "GET") {
     throw new Error("Signed harvester fetch supports GET only.");
   }
@@ -216,7 +224,7 @@ export async function signedHarvesterFetch(
                 signal: combinedSignal,
               });
 
-              const body = await readLimitedBody(proxied);
+              const body = await readLimitedBody(proxied, maxResponseBytes);
 
               return new Response(
                 Uint8Array.from(body).buffer,
@@ -298,3 +306,4 @@ export async function signedHarvesterFetch(
     }
   }
 }
+
