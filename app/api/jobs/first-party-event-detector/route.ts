@@ -627,6 +627,7 @@ export async function GET(request: Request) {
       const directBrowserOutcomes = [
         ...(detection.browserOutcomes ?? []),
       ];
+      const documentUrls = new Set(detection.documentUrls ?? []);
 
       let recoveryBrowserOutcomes: typeof directBrowserOutcomes = [];
 
@@ -772,6 +773,7 @@ export async function GET(request: Request) {
           recoveryBrowserOutcomes = [
             ...(recovered.browserOutcomes ?? []),
           ];
+          for (const url of recovered.documentUrls ?? []) documentUrls.add(url);
 
           /*
            * A newly observed unapproved redirect must still enter
@@ -908,6 +910,12 @@ export async function GET(request: Request) {
        * Reuse the existing venue-match review queue and its durable
        * pending/approved/rejected lifecycle.
        */
+      // A verified PDF follows the visual-calendar parser. Retire its obsolete
+      // HTML-navigation error; qualification/extraction keep their own gates.
+      for (const url of documentUrls) {
+        await resolveAdapterError("browser_required", url);
+      }
+
       if (
         detection.status === "external_redirect" &&
         detection.fetchedUrl

@@ -33,6 +33,19 @@ const USER_AGENT = "TenderFans Event Harvester/1.0";
 const MAX_BROWSER_HTML_BYTES = 2_000_000;
 const MAX_OBSERVED_URLS = 500;
 
+async function withHttp1Fallback<T>(operation: (disableHttp2: boolean) => Promise<T>): Promise<T> {
+  try {
+    return await operation(false);
+  } catch (error) {
+    // A fresh browser is required to change Chromium's negotiated protocol.
+    // The first attempt has completed its existing permit/close lifecycle.
+    if (!(error instanceof Error) || !/net::ERR_HTTP2_PROTOCOL_ERROR/.test(error.message)) {
+      throw error;
+    }
+    return operation(true);
+  }
+}
+
 function isAllowedBrowserUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -84,9 +97,10 @@ function keepObservedUrl(value: string): boolean {
   }
 }
 
-export async function fetchBrowserEvidence(
+async function fetchBrowserEvidenceOnce(
   url: string,
   proxyUrl?: string,
+  disableHttp2 = false,
 ): Promise<BrowserPageEvidence> {
   if (!isAllowedBrowserUrl(url) || new URL(url).protocol !== "https:") {
     throw new Error("Browser navigation requires a public HTTPS URL");
@@ -104,7 +118,7 @@ export async function fetchBrowserEvidence(
     combinedSignal.throwIfAborted();
 
     const browser = await playwright.launch({
-    args: Chromium.args,
+    args: disableHttp2 ? [...Chromium.args, "--disable-http2"] : Chromium.args,
     executablePath: await getChromiumExecutablePath(),
     headless: true,
     timeout: 30000,
@@ -214,6 +228,13 @@ export async function fetchBrowserEvidence(
   });
 }
 
+export async function fetchBrowserEvidence(
+  url: string,
+  proxyUrl = getTransportRecoveryProxy(),
+): Promise<BrowserPageEvidence> {
+  return withHttp1Fallback(disableHttp2 => fetchBrowserEvidenceOnce(url, proxyUrl, disableHttp2));
+}
+
 
 /*
  * Shared Tier 1 browser transport for client-rendered JSON endpoints.
@@ -224,6 +245,7 @@ async function fetchBrowserJsonResponsesOnce(
   url: string,
   matchesEndpoint: (url: string) => boolean,
   proxyUrl?: string,
+  disableHttp2 = false,
 ): Promise<{
   status: number | null;
   observedEndpoint: boolean;
@@ -246,7 +268,7 @@ async function fetchBrowserJsonResponsesOnce(
       : undefined;
 
     const instance = await playwright.launch({
-      args: Chromium.args,
+      args: disableHttp2 ? [...Chromium.args, "--disable-http2"] : Chromium.args,
       executablePath: await getChromiumExecutablePath(),
       headless: true,
       timeout: 30000,
@@ -305,6 +327,9 @@ async function fetchBrowserJsonResponsesOnce(
           payloads.push(value);
         })();
 
+        // Attach a rejection handler immediately; the body can fail before
+        // navigation/observation finishes. Promise.all below still propagates it.
+        void task.catch(() => {});
         pending.push(task);
       });
 
@@ -313,7 +338,22 @@ async function fetchBrowserJsonResponsesOnce(
         timeout: 60000,
       });
 
-      await page.waitForTimeout(5000);
+      // The listener above captures early responses. Start the additional
+      // observation budget after navigation, so a slow document cannot consume
+      // the widget's entire allowance before its scripts initialize.
+      await Promise.all(pending);
+      if (!successfulResponse) {
+        try {
+          await page.waitForResponse(
+            response => matchesEndpoint(response.url()) && response.ok(),
+            { timeout: 20_000 },
+          );
+        } catch (error) {
+          combinedSignal.throwIfAborted();
+          // Preserve the caller's existing missing/failed-endpoint outcome.
+          if (!(error instanceof Error) || error.name !== "TimeoutError") throw error;
+        }
+      }
       await Promise.all(pending);
 
       combinedSignal.throwIfAborted();
@@ -358,10 +398,9 @@ export async function fetchBrowserJsonResponses(
     | undefined;
 
   try {
-    direct = await fetchBrowserJsonResponsesOnce(
-      url,
-      matchesEndpoint,
-    );
+    direct = await withHttp1Fallback(disableHttp2 => fetchBrowserJsonResponsesOnce(
+      url, matchesEndpoint, undefined, disableHttp2,
+    ));
   } catch (error) {
     // Capacity ownership and admission failures must never be
     // disguised as ordinary browser transport failures.
@@ -398,11 +437,9 @@ export async function fetchBrowserJsonResponses(
   }
 
   try {
-    const recovered = await fetchBrowserJsonResponsesOnce(
-      url,
-      matchesEndpoint,
-      recoveryProxy,
-    );
+    const recovered = await withHttp1Fallback(disableHttp2 => fetchBrowserJsonResponsesOnce(
+      url, matchesEndpoint, recoveryProxy, disableHttp2,
+    ));
 
     if (
       recovered.status !== null &&
@@ -432,4 +469,3 @@ export async function fetchBrowserJsonResponses(
     throw error;
   }
 }
-

@@ -22,7 +22,7 @@ export function runWithPreferredFirstPartyProxy<T>(
 }
 import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
 import { fetchBrowserEvidence } from "./browser-transport";
-import { discoverCalendarImageAssets } from "./calendar-image-assets";
+import { discoverCalendarImageAssets, isCalendarPdfContentType } from "./calendar-image-assets";
 import { extractHtmlEventsWithDiagnostics } from "./html-events";
 import { discoverTanStackCalendar } from "./tanstack-seroval-events";
 import { discoverPublicPostgrestEvents } from "./supabase-postgrest-discovery";
@@ -98,6 +98,7 @@ export type DiscoveredEventPage = {
   httpStatus: number | null;
   finalUrl: string | null;
   htmlBytes: number | null;
+  contentType?: string | null;
 };
 
 export type RedirectDestinationIdentity = {
@@ -116,6 +117,7 @@ export type BrowserExecutionOutcome = {
 };
 
 export type SiteDetectionResult = {
+  documentUrls?: string[];
   browserOutcomes?: BrowserExecutionOutcome[];
   challengeEvidence?: string[];
   redirectIdentities?: RedirectDestinationIdentity[];
@@ -1676,6 +1678,7 @@ export async function fetchHtml(
   url: string;
   html: string;
   recoveryDetail?: string;
+  contentType?: string | null;
   challengeEvidence?: string[];
 }> {
   getSpotExecutionSignal()?.throwIfAborted();
@@ -1715,7 +1718,9 @@ export async function fetchHtml(
       proxy,
     );
 
-    const html = await response.text();
+    const contentType = response.headers.get("content-type");
+    const body = await response.text();
+    const html = isCalendarPdfContentType(contentType) ? "" : body;
     const finalUrl = response.url || normalizedUrl.toString();
     const challengeEvidence = identifyAccessChallenge(
       finalUrl, html, response.status,
@@ -1736,6 +1741,7 @@ export async function fetchHtml(
       url: finalUrl,
       html,
       challengeEvidence,
+      contentType,
     };
   }
 
@@ -2463,6 +2469,13 @@ export async function detectFirstPartySources(
   }
 
   inspectPage(homepage.html, homepage.url, detections);
+  if (isCalendarPdfContentType(homepage.contentType)) {
+    pushDetection(detections, {
+      sourceType: "calendar_image", url: homepage.url, confidence: "medium",
+      adapterAvailable: true, supported: true,
+      evidence: ["PDF calendar document; visual calendar qualification required"],
+    });
+  }
 
   if (inspectToastDigitalStorefront(homepage.html)) {
     pushDetection(detections, {
@@ -2676,6 +2689,7 @@ export async function detectFirstPartySources(
           discovered.httpStatus = page.status;
           discovered.finalUrl = page.url;
           discovered.htmlBytes = page.html.length;
+          discovered.contentType = page.contentType;
         }
 
         if (page.ok) {
@@ -2701,6 +2715,7 @@ export async function detectFirstPartySources(
         discovered.httpStatus = page.status;
         discovered.finalUrl = page.url;
         discovered.htmlBytes = page.html.length;
+        discovered.contentType = page.contentType;
       }
 
       const pageChallenge = identifyAccessChallenge(
@@ -2713,6 +2728,15 @@ export async function detectFirstPartySources(
       }
 
       if (!page.ok) {
+        continue;
+      }
+
+      if (isCalendarPdfContentType(page.contentType)) {
+        pushDetection(detections, {
+          sourceType: "calendar_image", url: page.url, confidence: "medium",
+          adapterAvailable: true, supported: true,
+          evidence: ["PDF calendar document; visual calendar qualification required"],
+        });
         continue;
       }
 
@@ -2782,7 +2806,8 @@ export async function detectFirstPartySources(
         page.fetched &&
         page.httpStatus !== null &&
         page.httpStatus >= 200 &&
-        page.httpStatus < 400,
+        page.httpStatus < 400 &&
+        !isCalendarPdfContentType(page.contentType),
     );
 
     const popmenuUrls = new Set(
@@ -3077,6 +3102,12 @@ export async function detectFirstPartySources(
     websiteUrl,
     browserOutcomes,
     fetchedUrl: homepage.url,
+    documentUrls: [
+      ...(isCalendarPdfContentType(homepage.contentType) ? [homepage.url] : []),
+      ...discoveredEventPages.filter(page => page.fetched && page.httpStatus !== null &&
+        page.httpStatus >= 200 && page.httpStatus < 300 && isCalendarPdfContentType(page.contentType))
+        .map(page => page.finalUrl ?? page.url),
+    ],
     status: challengeOnly
       ? "challenge_encountered"
       : detections.length > 0

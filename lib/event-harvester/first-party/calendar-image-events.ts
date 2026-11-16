@@ -2,6 +2,8 @@ import {
   acquireCalendarImageAsset,
   discoverCalendarImageAssets,
   fetchCalendarImageResource,
+  isCalendarPdfContentType,
+  type CalendarImageAsset,
 } from "./calendar-image-assets";
 
 import {
@@ -685,7 +687,7 @@ export async function fetchCalendarImageEvents(
   const response =
     await fetchCalendarImageResource(
       pageUrl,
-      "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+      "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8",
     );
 
   if (!response.ok) {
@@ -698,11 +700,20 @@ export async function fetchCalendarImageEvents(
     response.url ||
     pageUrl;
 
-  const html =
-    await response.text();
+  const documentAsset: CalendarImageAsset | null = isCalendarPdfContentType(
+    response.headers.get("content-type"),
+  ) ? {
+    detectedUrl: pageUrl,
+    resolvedUrl: finalPageUrl,
+    contentType: "application/pdf",
+    bytes: new Uint8Array(await response.arrayBuffer()),
+    usedOriginalCandidate: false,
+  } : null;
+
+  const html = documentAsset ? "" : await response.text();
 
   const imageUrls =
-    discoverCalendarImageAssets(
+    documentAsset ? [finalPageUrl] : discoverCalendarImageAssets(
       html,
       finalPageUrl,
     );
@@ -734,7 +745,7 @@ export async function fetchCalendarImageEvents(
     const imageUrl of imageUrls
   ) {
     const asset =
-      await acquireCalendarImageAsset(
+      documentAsset ?? await acquireCalendarImageAsset(
         imageUrl,
       );
 
@@ -867,3 +878,4 @@ export async function fetchCalendarImageEvents(
 
   return events;
 }
+

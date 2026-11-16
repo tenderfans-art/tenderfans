@@ -1,5 +1,6 @@
 import { getTransportRecoveryProxy } from "@/lib/event-harvester/transport-recovery-context";
 import { signedHarvesterFetch } from "@/lib/event-harvester/signed-fetch";
+import { withCompatibleHttpHeaders } from "../compatible-http-fetch";
 
 function decodeHtml(value: string): string {
   return value
@@ -49,6 +50,9 @@ export function discoverCalendarImageAssets(
     ...html.matchAll(
       /(?:src|data-src|data-srclazy)=["']([^"']*(?:(?:wp-content\/uploads|\/uploads\/)|img1\.wsimg\.com\/isteam\/)[^"']*(?:calendar|entertainment|live(?:%20|[-_ ])?music|events?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?[0-9]{2,4}|(?:^|[-_\/])(?:0?[1-9]|1[0-2])[-_](?:20[0-9]{2}))[^"']*\.(?:jpe?g|png|webp)(?:(?:\/:\/)[^"']*|\?[^"']*)?)["']/gi,
     ),
+    ...html.matchAll(
+      /href=["']([^"']*\/(?:pdf|wp-content\/uploads|uploads)\/[^"']*(?:calendar|entertainment|live(?:%20|[-_ ])?music|events?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[-_ ]?[0-9]{2,4})[^"']*\.pdf(?:\?[^"']*)?)["']/gi,
+    ),
   ];
 
   const urls = new Set<string>();
@@ -74,6 +78,10 @@ export type CalendarImageAsset = {
   bytes: Uint8Array;
   usedOriginalCandidate: boolean;
 };
+
+export function isCalendarPdfContentType(value: string | null | undefined): boolean {
+  return /^application\/pdf(?:;|$)/i.test(value ?? "");
+}
 
 function deriveOriginalAssetCandidate(
   detectedUrl: string,
@@ -128,12 +136,12 @@ function deriveOriginalAssetCandidate(
   }
 }
 
-function isImageContentType(
+function isCalendarAssetContentType(
   value: string | null,
 ): value is string {
   return Boolean(
     value &&
-      /^image\/(?:jpeg|png|webp)(?:;|$)/i.test(value),
+      /^(?:image\/(?:jpeg|png|webp)|application\/pdf)(?:;|$)/i.test(value),
   );
 }
 
@@ -144,15 +152,17 @@ export async function fetchCalendarImageResource(
   url: string,
   accept: string,
 ): Promise<Response> {
+  // Older HTML often embeds an HTTP upload on an HTTPS page. The signed
+  // transport requires HTTPS; normalize before every direct/recovery request.
+  const target = new URL(url);
+  if (target.protocol === "http:") target.protocol = "https:";
   const proxy =
     (getTransportRecoveryProxy() !== undefined)
       ? getTransportRecoveryProxy()
       : undefined;
 
   async function request(proxyUrl?: string): Promise<Response> {
-    return signedHarvesterFetch(
-      url,
-      {
+    const init: RequestInit = {
         headers: {
           Accept: accept,
           "User-Agent": proxyUrl
@@ -163,9 +173,14 @@ export async function fetchCalendarImageResource(
             : {}),
         },
         cache: "no-store",
-      },
+    };
+    return withCompatibleHttpHeaders(headers => signedHarvesterFetch(
+      target.toString(), { ...init, headers },
       proxyUrl,
-    );
+      /image\/|application\/pdf/i.test(accept)
+        ? { maxResponseBytes: 16 * 1024 * 1024 }
+        : {},
+    ), init);
   }
 
   let response: Response;
@@ -208,7 +223,7 @@ async function fetchImageAsset(
   try {
     const response = await fetchCalendarImageResource(
       url,
-      "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
+      "image/avif,image/webp,image/png,image/jpeg,application/pdf,*/*;q=0.8",
     );
 
     const contentType =
@@ -216,7 +231,7 @@ async function fetchImageAsset(
 
     if (
       !response.ok ||
-      !isImageContentType(contentType)
+      !isCalendarAssetContentType(contentType)
     ) {
       return null;
     }
@@ -231,7 +246,7 @@ async function fetchImageAsset(
     return {
       url: response.url || url,
       contentType:
-        contentType.split(";")[0].trim(),
+        contentType.split(";")[0].trim().toLowerCase(),
       bytes: new Uint8Array(buffer),
     };
   } catch {

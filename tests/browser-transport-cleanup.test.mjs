@@ -44,6 +44,7 @@ function scenario({ kind, useProxy = false, abort = false, abortRecovery = false
       return { status: () => 200 };
     },
     async waitForTimeout() {},
+    async waitForResponse() {},
     url: () => url,
     content: async () => "<html>Verified event page</html>",
     frames: () => [],
