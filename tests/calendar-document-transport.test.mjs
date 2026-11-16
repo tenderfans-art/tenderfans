@@ -127,3 +127,30 @@ test('PDF discovery retains the source for calendar qualification and avoids HTM
   assert.equal(document.htmlBytes, 0);
   assert.equal(result.browserOutcomes.length, 0);
 });
+
+test('a qualified PDF publishes ordinary timed event fields while keeping document provenance out of image thumbnails', async () => {
+  const localDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const load = typescriptLoader({
+    './calendar-image-assets': {
+      fetchCalendarImageResource: async () => response(pdf, 'application/pdf', pdfUrl),
+      isCalendarPdfContentType: value => /^application\/pdf/i.test(value ?? ''),
+    },
+    './calendar-image-vision': { extractCalendarImage: async () => ({
+      isEventCalendar: true, qualificationReason: 'Explicit dated calendar', weekStart: null,
+      events: [{ title: 'Fixture performance', localDate, displayedWeekday: null,
+        startTime: '18:00', endTime: '20:00', allDay: false,
+        titleConfidence: 1, dateConfidence: 1, timeConfidence: 1,
+        dateBasis: 'event_explicit', timeBasis: 'event_explicit',
+        evidence: { displayedTitle: 'Fixture performance', displayedDate: localDate,
+          displayedTime: '6 PM - 8 PM', context: [] },
+      }],
+    }) },
+  });
+  const events = await load('lib/event-harvester/first-party/calendar-image-events.ts').fetchCalendarImageEvents(pdfUrl);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].allDay, false);
+  assert.equal(events[0].sourceUrl, pdfUrl);
+  assert.equal(events[0].rawPayload.imageUrl, pdfUrl);
+  assert.equal(events[0].flyerUrl, null);
+  assert.equal(Date.parse(events[0].endsAt) - Date.parse(events[0].startsAt), 2 * 3600000);
+});

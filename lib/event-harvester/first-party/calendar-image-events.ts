@@ -510,6 +510,7 @@ function canonicalizeEvent(
   options: {
     pageUrl: string;
     imageUrl: string;
+    contentType: string;
     timeZone: string;
     qualificationReason: string;
     currentDate: string;
@@ -640,7 +641,7 @@ function canonicalizeEvent(
     sourceUrl:
       options.pageUrl,
     flyerUrl:
-      options.imageUrl,
+      isCalendarPdfContentType(options.contentType) ? null : options.imageUrl,
     location: null,
     venueName: null,
     venueAddress: null,
@@ -837,6 +838,7 @@ export async function fetchCalendarImageEvents(
               finalPageUrl,
             imageUrl:
               asset.resolvedUrl,
+            contentType: asset.contentType,
             timeZone,
             qualificationReason:
               extraction.qualificationReason,
