@@ -15,7 +15,7 @@ const compile = (value) => ts.transpileModule(value, {
 const module = { exports: {} };
 new Function("exports", compile(source.slice(helperStart, helperEnd)))(module.exports);
 const { loadAllCalendarEventPages: loadAll } = module.exports;
-const runEffect = new Function("supabase", "calendarWeeks", "venueId", "setEvents",
+const runEffect = new Function("fetch", "calendarWeeks", "venueId", "setEvents",
   "setLoading", "setLoadError", "loadAllCalendarEventPages", "console",
   compile(source.slice(effectStart, effectEnd)));
 const weeks = [{ start: new Date("2026-11-01T04:00:00Z"), end: new Date("2026-12-06T04:59:59.999Z") }];
@@ -26,24 +26,20 @@ const rows = (count) => Array.from({ length: count }, (_, id) => ({
 }));
 function database(respond) {
   const calls = [];
-  return { calls, from(table) {
-    const call = { table, filters: [], orders: [] };
+  const fetch = async (path, { signal }) => {
+    const url = new URL(path, 'https://tenderfans.example');
+    const params = url.searchParams;
+    const from = Number(params.get('offset'));
+    const call = { url, signal, from, to: from + Number(params.get('limit')) - 1 };
     calls.push(call);
-    const query = {
-      select() { return this; },
-      eq(...args) { call.filters.push(["eq", ...args]); return this; },
-      gte(...args) { call.filters.push(["gte", ...args]); return this; },
-      lte(...args) { call.filters.push(["lte", ...args]); return this; },
-      order(...args) { call.orders.push(args); return this; },
-      range(from, to) { Object.assign(call, { from, to }); return this; },
-      abortSignal(signal) { call.signal = signal; return respond(call); },
-    };
-    return query;
-  } };
+    const result = await respond(call);
+    return Response.json({ data: result.data }, { status: result.error ? 500 : 200 });
+  };
+  return { calls, fetch };
 }
 function mount(db, venueId, state = { events: [], loading: false, error: false, writes: [] }) {
   const set = (key) => (value) => { state[key] = value; state.writes.push([key, value]); };
-  const cleanup = runEffect(db, weeks, venueId, set("events"), set("loading"),
+  const cleanup = runEffect(db.fetch, weeks, venueId, set("events"), set("loading"),
     set("error"), loadAll, { error() {} });
   return { state, cleanup };
 }
@@ -85,25 +81,28 @@ test("cancelled pagination never starts another request", async () => {
   assert.equal(calls, 1);
 });
 
-test("actual calendar loader preserves scopes and stable ordering on every page", async () => {
+test("actual calendar loader preserves scopes and metadata on every API page", async () => {
   for (const venueId of [undefined, "venue-a"]) {
     const data = rows(1251);
+    data[1250].search_metadata = { categories: ['music'], performers: [], terms: [] };
     const db = database(({ from, to }) => Promise.resolve({ data: data.slice(from, to + 1), error: null }));
     const { state, cleanup } = mount(db, venueId);
     await flush();
     assert.equal(state.events.length, 1251);
     assert.equal(state.events[1250].venue_name, "Publishing Spot");
+    assert.deepEqual(state.events[1250].search_metadata, data[1250].search_metadata);
     assert.equal(state.loading, false);
     assert.equal(state.error, false);
     assert.equal(db.calls.length, 3);
     for (const call of db.calls) {
-      assert.equal(call.table, "events");
-      assert.deepEqual(call.orders, [["starts_at", { ascending: true }], ["id", { ascending: true }]]);
-      assert.deepEqual(call.filters.filter(([op]) => op === "eq"), venueId
-        ? [["eq", "status", "published"], ["eq", "venue_id", venueId]]
-        : [["eq", "status", "published"]]);
-      assert.equal(call.filters.filter(([op]) => op === "gte" || op === "lte").length, venueId ? 0 : 2);
+      assert.equal(call.url.pathname, '/api/events/calendar');
+      assert.equal(call.url.searchParams.get('limit'), '500');
+      assert.equal(call.url.searchParams.get('venue_id'), venueId ?? null);
+      assert.equal(call.url.searchParams.has('from'), !venueId);
+      assert.equal(call.url.searchParams.has('to'), !venueId);
+      assert.equal(call.signal.aborted, false);
     }
+    assert.deepEqual(db.calls.map(call => call.from), [0, 500, 1000]);
     assert.equal(state.writes.filter(([key, value]) => key === "events" && value.length).length, 1);
     cleanup();
   }

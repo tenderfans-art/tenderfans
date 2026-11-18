@@ -25,6 +25,25 @@ mod._compile(compiled, filename);
 
 const { parseIcsEvents } = mod.exports;
 
+test("retains publisher calendar labels and occurrence categories without changing recurrence identity", () => {
+  const input = calendar(
+    'X-WR-CALNAME:Live Music Schedule',
+    'X-WR-CALDESC:Public entertainment',
+    'BEGIN:VEVENT', 'UID:artist@example.com', 'SUMMARY:Example Artist',
+    'DTSTART:20261118T190000Z', 'DTEND:20261118T210000Z',
+    'RRULE:FREQ=DAILY;COUNT=2', 'CATEGORIES:Jazz,Live Music', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:artist@example.com', 'RECURRENCE-ID:20261119T190000Z',
+    'SUMMARY:Breakfast', 'DTSTART:20261119T190000Z', 'DTEND:20261119T210000Z',
+    'CATEGORIES:Food', 'END:VEVENT',
+  );
+  const events = parseIcsEvents(input, { from: new Date('2026-11-01'), to: new Date('2026-11-30') });
+  assert.deepEqual(events.map(row => row.externalEventId), ['artist@example.com', 'artist@example.com::2026-11-19T19:00:00.000Z']);
+  assert.deepEqual(events[0].rawPayload.categories, ['Jazz', 'Live Music']);
+  assert.deepEqual(events[1].rawPayload.categories, ['Food']);
+  assert.equal(events[0].rawPayload.calendarName, 'Live Music Schedule');
+  assert.equal(events[1].rawPayload.calendarDescription, 'Public entertainment');
+});
+
 function calendar(...lines) {
   return [
     "BEGIN:VCALENDAR",
@@ -264,3 +283,4 @@ test("partial overrides inherit metadata and cancelled instances are excluded", 
     false,
   );
 });
+
