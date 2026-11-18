@@ -69,6 +69,7 @@ function scenario({ kind, useProxy = false, abort = false, abortRecovery = false
   };
   const exports = {};
   new Function("require", "exports", javascript)(name => {
+    if (name === "../compatible-http-fetch") return { COMPATIBLE_USER_AGENT: "compatible-browser-test-agent" };
     if (name.endsWith("transport-recovery-context")) return { getTransportRecoveryProxy: () => undefined };
     if (name === "playwright-core") return { chromium: { launch: async options => {
       calls.push("launch"); launchOptions.push(options);

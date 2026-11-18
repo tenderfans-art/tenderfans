@@ -1560,29 +1560,17 @@ export async function GET(request: Request) {
               );
             }
 
-            // A different or unresolved identified publisher
-            // requires manual source review.
-            if (
-              calendarBusinessName &&
-              calendarVenueId !== venue.id
-            ) {
-              continue;
-            }
           }
 
           /*
-           * A business identity identified on the calendar page must
-           * not be silently assigned to the website's original Spot
-           * unless Google qualification resolved to that same Spot.
-           *
-           * Unresolved or different-Spot ownership stays in Source
-           * Review. A calendar discovered from the Spot's own site
-           * without conflicting publisher identity may proceed through
-           * the existing ratifier and vision-backed validator.
+           * Source Review precedes calendar parsing (migration 074).
+           * Discovery, including Google identity qualification, does not
+           * approve this candidate. Keep its pending review and retire
+           * only errors from premature validation of this unapproved source.
+           * Approved calendars exited above; their harvest errors remain.
            */
-
-
-          // Fall through to shared ratification and validation.
+          await resolveAdapterError("calendar_image", candidate.url);
+          continue;
         }
 
         if (!candidate.adapterAvailable) {
@@ -2038,28 +2026,6 @@ export async function GET(request: Request) {
             );
           }
 
-          /*
-           * Calendar-image discovery is no longer actionable after
-           * successful AI-backed validation and source registration.
-           * Preserve the independent calendar source.
-           */
-          if (candidate.sourceType === "calendar_image") {
-            const { error: calendarResolutionError } =
-              await supabase.rpc(
-                "resolve_event_harvest_detector_findings",
-                {
-                  p_venue_id: venue.id,
-                  p_category: "calendar_image",
-                },
-              );
-
-            if (calendarResolutionError) {
-              throw new Error(
-                `Could not resolve registered calendar finding: ${calendarResolutionError.message}`,
-              );
-            }
-          }
-
           if (candidate.sourceType === "facebook") {
             const { error: facebookResolutionError } = await supabase.rpc(
               "resolve_event_harvest_detector_findings",
@@ -2325,6 +2291,8 @@ export async function GET(request: Request) {
         "no_source",
       ]) {
         if (category === primaryCategory) continue;
+        // Independent pending source review survives a healthy HTML source.
+        if (category === "calendar_image" && calendarImageCandidate) continue;
 
         const { error: primaryResolutionError } = await supabase.rpc(
           "resolve_event_harvest_detector_findings",
