@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { eventPublicPage } from "@/lib/event-public-page";
 
 export async function GET(request: Request, { params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
@@ -12,7 +13,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await db.from("event_source_links")
-    .select("source_url, events!inner(status)")
+    .select(`source_url, events!inner(status, venues(website_url)),
+      publisher:event_harvest_sources(source_url, public_page_url:config->>public_page_url),
+      candidate:event_harvest_candidates(public_page_url:raw_payload->>publicPageUrl,
+        source_page_url:raw_payload->>sourcePageUrl, page_url:raw_payload->>pageUrl)`)
     .eq("event_id", eventId)
     .eq("events.status", "published")
     .order("last_verified_at", { ascending: false, nullsFirst: false })
@@ -22,14 +26,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
   const destination = new URL("/events", request.url);
   destination.searchParams.set("event", eventId);
   if (error) console.error("Unable to resolve event source:", error.message);
-  for (const row of data ?? []) {
-    if (!row.source_url) continue;
-    try {
-      const url = new URL(row.source_url);
-      if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) continue;
-      return NextResponse.redirect(url, { status: 307, headers: { "Cache-Control": "no-store" } });
-    } catch { /* Try the next recorded source URL. */ }
-  }
+  const publicPage = eventPublicPage(data ?? []);
+  if (publicPage) return NextResponse.redirect(publicPage, { status: 307, headers: { "Cache-Control": "no-store" } });
   // Locally submitted events without an external source retain their details.
   return NextResponse.redirect(destination, { status: 307, headers: { "Cache-Control": "no-store" } });
 }

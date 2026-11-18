@@ -6,10 +6,12 @@ const venueId = '00000000-0000-4000-8000-000000000001';
 const pageUrl = 'https://venue.example.com/events';
 const errorKey = `adapter_error:${JSON.stringify(['calendar_image', pageUrl])}`;
 
-async function scan({ approved = false, rejected = false, htmlSource = true, publisher = false, reviewError = false } = {}) {
+async function scan({ approved = false, rejected = false, htmlSource = true, publisher = false, reviewError = false, publicPage = false } = {}) {
   const calls = [], probes = [];
   const venue = { id: venueId, status: 'active', name: 'Example Venue', website_url: 'https://venue.example.com/' };
   const sources = [
+    ...(publicPage ? [{ id: 'calendar-feed', venue_id: venueId, provider: 'first_party', source_type: 'google_calendar', is_enabled: true,
+      external_source_id: 'existing-feed', config: { timezone: 'America/New_York' } }] : []),
     ...(htmlSource ? [{ id: 'html-source', venue_id: venueId, provider: 'first_party', source_type: 'html_events', is_enabled: true }] : []),
     ...(approved ? [{ id: 'approved-calendar', venue_id: venueId, provider: 'first_party', source_type: 'calendar_image', is_enabled: true,
       external_source_id: `first_party:calendar_image:${pageUrl}` }] : []),
@@ -41,7 +43,10 @@ async function scan({ approved = false, rejected = false, htmlSource = true, pub
   }
   const supabase = { from, rpc: async (name, args) => {
     calls.push({ name, args });
-    if (name === 'upsert_first_party_event_source') assert.fail('Discovery must not approve a calendar source');
+    if (name === 'upsert_first_party_event_source') {
+      if (!publicPage) assert.fail('Discovery must not approve a calendar source');
+      return { data: 'calendar-feed', error: null };
+    }
     if (name === 'upsert_event_harvest_detector_finding') {
       if (reviewError && args.p_category === 'calendar_image') return { error: { message: 'Review persistence failed' } };
       const row = findings.find(f => f.finding_key === args.p_finding_key);
@@ -56,7 +61,10 @@ async function scan({ approved = false, rejected = false, htmlSource = true, pub
   } };
   const detect = async () => ({
     websiteUrl: venue.website_url, fetchedUrl: venue.website_url, status: 'detected',
-    detections: [{ sourceType: 'calendar_image', url: pageUrl, confidence: 'medium', adapterAvailable: true, supported: true, evidence: ['Dated image candidate'] }],
+    detections: [publicPage
+      ? { sourceType: 'google_calendar', url: 'https://calendar.google.com/calendar/embed?src=example', publicPageUrl: pageUrl,
+        confidence: 'high', adapterAvailable: true, supported: true, evidence: ['Existing embedded source'] }
+      : { sourceType: 'calendar_image', url: pageUrl, confidence: 'medium', adapterAvailable: true, supported: true, evidence: ['Dated image candidate'] }],
     browserOutcomes: [], discoveredEventPages: [], error: null,
   });
   const load = typescriptLoader({
@@ -66,8 +74,15 @@ async function scan({ approved = false, rejected = false, htmlSource = true, pub
     'next/server': { NextResponse: { json: Response.json } },
     '@supabase/supabase-js': { createClient: () => supabase },
     '@/lib/event-harvester/first-party/source-detector': { detectFirstPartySources: detect, runWithPreferredFirstPartyProxy: async operation => operation(), fetchHtml: async () => ({ ok: true, html: publisher ? '<title>Example Venue Music Calendar</title>' : '<html></html>' }) },
-    '@/lib/event-harvester/first-party/ratify': { ratifyDetectedSource: async (...args) => { probes.push(args); assert.fail('Unapproved discovery must not reach ratification'); } },
-    '@/lib/event-harvester/first-party/validate': { validateFirstPartySource: async () => assert.fail('Unapproved discovery must not invoke calendar parsing') },
+    '@/lib/event-harvester/first-party/ratify': { ratifyDetectedSource: async (...args) => {
+      probes.push(args);
+      if (!publicPage) assert.fail('Unapproved discovery must not reach ratification');
+      return { status: 'ratified', source: { sourceType: 'google_calendar', sourceUrl: args[0].url, externalSourceId: 'existing-feed', config: {} } };
+    } },
+    '@/lib/event-harvester/first-party/validate': { validateFirstPartySource: async () => {
+      if (!publicPage) assert.fail('Unapproved discovery must not invoke calendar parsing');
+      return { status: 'validated', events: [], eventCount: 0, inventory: 'empty', evidence: [], error: null };
+    } },
     '@/lib/event-harvester/first-party/corporate-html-spot-discovery': {},
     '@/lib/event-harvester/google-places': {
       searchGoogleVenue: async () => { probes.push('google-identity'); return { evidence: {} }; },
@@ -136,4 +151,13 @@ test('failed persistence of source review cannot retire the previous adapter err
   assert.equal(h.result.failed, 1);
   assert.equal(h.findings.find(f => f.finding_key === errorKey).status, 'active');
   assert.equal(h.calls.some(c => c.name === 'resolve_event_harvest_adapter_error' && c.args.p_finding_key === errorKey), false);
+});
+
+test('normal source registration saves display-page metadata while preserving source identity and config', async () => {
+  const h = await scan({ publicPage: true });
+  assert.equal(h.result.failed, 0);
+  const saved = h.calls.find(c => c.name === 'upsert_first_party_event_source').args;
+  assert.equal(saved.p_source_url, 'https://calendar.google.com/calendar/embed?src=example');
+  assert.equal(saved.p_external_source_id, 'existing-feed');
+  assert.deepEqual(saved.p_config, { timezone: 'America/New_York', public_page_url: pageUrl });
 });

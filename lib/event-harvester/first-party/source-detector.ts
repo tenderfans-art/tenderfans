@@ -70,6 +70,8 @@ export type DetectedSourceType =
   | "unknown";
 
 export type SourceDetection = {
+  /** Public page where the source was observed; separate from its feed identity. */
+  publicPageUrl?: string;
   sourceType: DetectedSourceType;
   url: string;
   confidence: "high" | "medium" | "low";
@@ -679,6 +681,20 @@ function pushDetection(
 function inspectObservedBrowserUrl(
   value: string,
   detections: SourceDetection[],
+  publicPageUrl?: string,
+): void {
+  const existing = new Set(detections);
+  inspectObservedBrowserUrlContents(value, detections);
+  if (publicPageUrl) {
+    for (const detection of detections) {
+      if (!existing.has(detection)) detection.publicPageUrl = publicPageUrl;
+    }
+  }
+}
+
+function inspectObservedBrowserUrlContents(
+  value: string,
+  detections: SourceDetection[],
 ): void {
   let url: URL;
 
@@ -773,7 +789,15 @@ function isConfirmedEmptyPopmenuCalendar(html: string): boolean {
   );
 }
 
-function inspectPage(
+function inspectPage(html: string, pageUrl: string, detections: SourceDetection[]): void {
+  const existing = new Set(detections);
+  inspectPageContents(html, pageUrl, detections);
+  for (const detection of detections) {
+    if (!existing.has(detection)) detection.publicPageUrl = pageUrl;
+  }
+}
+
+function inspectPageContents(
   html: string,
   pageUrl: string,
   detections: SourceDetection[],
@@ -2923,6 +2947,7 @@ export async function detectFirstPartySources(
           inspectObservedBrowserUrl(
             observedUrl,
             detections,
+            evidence.finalUrl,
           );
         }
 

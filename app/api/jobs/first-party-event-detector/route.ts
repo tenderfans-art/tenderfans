@@ -492,6 +492,7 @@ export async function GET(request: Request) {
       const effectiveSourceConfig = (
         source: {
           sourceType: string;
+          sourceUrl: string;
           externalSourceId: string | null;
           config: Record<string, unknown>;
         },
@@ -509,7 +510,14 @@ export async function GET(request: Request) {
             ? existing.config as Record<string, unknown>
             : {};
 
-        return { ...savedConfig, ...source.config };
+        const observed = detection.detections.find(candidate =>
+          candidate.sourceType === source.sourceType && candidate.url === source.sourceUrl,
+        );
+        return {
+          ...savedConfig,
+          ...source.config,
+          ...(observed?.publicPageUrl ? { public_page_url: observed.publicPageUrl } : {}),
+        };
       };
 
       /*
