@@ -1,4 +1,11 @@
 export type EventSearchCategory = "music" | "entertainment" | "games" | "sports" | "food" | "drinks" | "comedy" | "dance";
+export type EventCategoryFilter = "music" | "games" | "sports" | "food_drink";
+export const EVENT_CATEGORY_FILTERS: { value: EventCategoryFilter; label: string }[] = [
+  { value: "music", label: "Live Music" },
+  { value: "games", label: "Game Night" },
+  { value: "sports", label: "Sports" },
+  { value: "food_drink", label: "Food and Drink" },
+];
 export type EventSearchMetadata = {
   categories: EventSearchCategory[];
   terms: string[];
@@ -23,15 +30,18 @@ export function normalizeEventSearch(value: string): string {
     .replace(/\s+/g, " ").trim();
 }
 
-const QUERY_CATEGORIES: Record<string, EventSearchCategory> = {
+const QUERY_CATEGORIES: Record<string, EventSearchCategory | "food_drink"> = {
   music: "music", "live music": "music", entertainment: "entertainment",
   game: "games", games: "games", sport: "sports", sports: "sports",
   food: "food", drink: "drinks", drinks: "drinks", comedy: "comedy", dance: "dance", dancing: "dance",
+  "game night": "games", "games night": "games",
+  "food drink": "food_drink", "food drinks": "food_drink", "food and drink": "food_drink", "food and drinks": "food_drink", fooddrink: "food_drink",
 };
 
 const NON_MUSIC = ["games", "sports", "food", "drinks", "comedy"] as const;
 
-export function matchesEventCategory(categories: readonly EventSearchCategory[], category: EventSearchCategory): boolean {
+export function matchesEventCategory(categories: readonly EventSearchCategory[], category: EventSearchCategory | "food_drink"): boolean {
+  if (category === "food_drink") return categories.includes("food") || categories.includes("drinks");
   if (categories.includes(category)) return true;
   // Requested broad music discovery includes otherwise unclassified entertainment.
   // An explicitly identified meal/game/sport/comedy event needs its own music evidence.
@@ -62,9 +72,7 @@ export function buildPerformerCatalog(events: readonly SearchableEvent[]): Perfo
   return new Map([...catalog].map(([name, categories]) => [name, [...categories]]));
 }
 
-export function matchesEventSearch(event: SearchableEvent, query: string, performers: PerformerCatalog = new Map()): boolean {
-  const search = normalizeEventSearch(query);
-  if (!search) return true;
+function eventCategories(event: SearchableEvent, performers: PerformerCatalog) {
   const metadata = event.search_metadata;
   const categories = [...(metadata?.categories ?? [])];
   if (!NON_MUSIC.some(category => categories.includes(category))) {
@@ -72,6 +80,18 @@ export function matchesEventSearch(event: SearchableEvent, query: string, perfor
       if (!categories.includes(category)) categories.push(category);
     }
   }
+  return categories;
+}
+
+export function matchesEventFilter(event: SearchableEvent, filter: EventCategoryFilter | null, performers: PerformerCatalog = new Map()): boolean {
+  return filter === null || matchesEventCategory(eventCategories(event, performers), filter);
+}
+
+export function matchesEventSearch(event: SearchableEvent, query: string, performers: PerformerCatalog = new Map()): boolean {
+  const search = normalizeEventSearch(query);
+  if (!search) return true;
+  const metadata = event.search_metadata;
+  const categories = eventCategories(event, performers);
   const text = normalizeEventSearch([
     event.title, event.description ?? "", event.venue_name ?? "", event.venue_city ?? "",
     event.venue_state_region ?? "", event.venue_postal_code ?? "", ...(metadata?.terms ?? []),
@@ -82,7 +102,9 @@ export function matchesEventSearch(event: SearchableEvent, query: string, perfor
   // Preserve direct title/Spot/location/ZIP searches, then support combinations
   // such as "music St Pete", "jazz 33701" or "trivia brewery".
   if (text.includes(search)) return true;
-  const tokens = search.replace(/\blive music\b/g, "music").split(" ");
+  const tokens = search.replace(/\blive music\b/g, "music")
+    .replace(/\bfood (?:and )?drinks?\b/g, "fooddrink")
+    .replace(/\bgames? night\b/g, "games").split(" ");
   return tokens.every(token => {
     const concept = QUERY_CATEGORIES[token];
     return concept !== undefined ? matchesEventCategory(categories, concept) : text.includes(token);

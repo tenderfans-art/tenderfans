@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import NotificationSignup from "@/components/NotificationSignup";
 import { readDiscoveryRadius, saveDiscoveryRadius } from "@/lib/discovery-radius";
-import { buildPerformerCatalog, matchesEventSearch, type EventSearchMetadata } from "@/lib/event-search";
+import { buildPerformerCatalog, EVENT_CATEGORY_FILTERS, matchesEventFilter, matchesEventSearch, type EventCategoryFilter, type EventSearchMetadata } from "@/lib/event-search";
 
 type CalendarEvent = {
   id: string;
@@ -153,6 +153,8 @@ export default function EventsCalendar({
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedFlyer, setSelectedFlyer] = useState<CalendarEvent | null>(null);
   const [eventSearch, setEventSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<EventCategoryFilter | null>(null);
+  const hasActiveSearch = Boolean(eventSearch.trim() || selectedCategory);
   const [selectedWeekday, setSelectedWeekday] = useState<number | null>(null);
   const [radiusMiles, setRadiusMiles] = useState<number | null>(15);
   const [userLocation, setUserLocation] = useState<{
@@ -449,7 +451,7 @@ export default function EventsCalendar({
        * boundary. An active search can discover matching events
        * outside the selected discovery radius.
        */
-      if (eventSearch.trim()) {
+      if (hasActiveSearch) {
         return selectedWeekEvents;
       }
 
@@ -514,7 +516,7 @@ export default function EventsCalendar({
     venueId,
     upcomingOnly,
     limit,
-    eventSearch,
+    hasActiveSearch,
     locationStatus,
     userLocation,
     radiusMiles,
@@ -607,9 +609,10 @@ export default function EventsCalendar({
         return false;
       }
 
-      return matchesEventSearch(event, eventSearch, performerCatalog);
+      return matchesEventFilter(event, selectedCategory, performerCatalog) &&
+        matchesEventSearch(event, eventSearch, performerCatalog);
     });
-  }, [visibleEvents, eventSearch, selectedWeekday, performerCatalog]);
+  }, [visibleEvents, eventSearch, selectedCategory, selectedWeekday, performerCatalog]);
 
   const eventsByDay = useMemo(() => {
     const groups = new Map<string, CalendarEvent[]>();
@@ -776,6 +779,19 @@ export default function EventsCalendar({
             <option value="50">50 mi</option>
             <option value="all">All</option>
           </select>
+          <div className="events-category-filters" role="group" aria-label="Filter events by category">
+            {EVENT_CATEGORY_FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                className={`events-category-button${selectedCategory === value ? " events-category-button-active" : ""}`}
+                aria-pressed={selectedCategory === value}
+                onClick={() => setSelectedCategory(current => current === value ? null : value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -795,7 +811,7 @@ export default function EventsCalendar({
 
         {!loading && !loadError &&
           !venueId &&
-          !eventSearch.trim() &&
+          !hasActiveSearch &&
           (locationStatus === "idle" || locationStatus === "loading") && (
             <div className="events-empty">
               <strong>Finding events near you...</strong>
@@ -810,7 +826,7 @@ export default function EventsCalendar({
         {!loading && !loadError &&
           !(
             !venueId &&
-            !eventSearch.trim() &&
+            !hasActiveSearch &&
             (locationStatus === "idle" || locationStatus === "loading")
           ) &&
           filteredEvents.length === 0 && (
@@ -818,7 +834,7 @@ export default function EventsCalendar({
               <strong>
                 {venueId
                   ? "No upcoming events posted."
-                  : eventSearch || selectedWeekday !== null
+                  : hasActiveSearch || selectedWeekday !== null
                     ? "No events match these filters."
                     : locationStatus === "ready"
                       ? radiusMiles === null
@@ -829,8 +845,8 @@ export default function EventsCalendar({
               <span>
                 {venueId
                   ? "Check back soon."
-                  : eventSearch || selectedWeekday !== null
-                    ? "Try another search or day."
+                  : hasActiveSearch || selectedWeekday !== null
+                    ? "Try another category, search or day."
                     : locationStatus === "ready"
                       ? radiusMiles === null
                         ? "Try another week or check back soon."
