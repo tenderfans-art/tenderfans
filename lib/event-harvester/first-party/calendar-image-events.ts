@@ -8,8 +8,10 @@ import {
 
 import {
   extractCalendarImage,
+  calendarImageExtractionContract,
   type CalendarImageExtractedEvent,
 } from "./calendar-image-vision";
+import { reuseCalendarImageExtraction } from "./calendar-image-extraction-cache";
 
 import type {
   FirstPartyHarvestEvent,
@@ -750,40 +752,23 @@ export async function fetchCalendarImageEvents(
         imageUrl,
       );
 
-    let extraction =
-      await extractCalendarImage(
-        asset,
-        {
-          currentDate,
-        },
-      );
-
-    /*
-     * Calendar qualification is vision-derived and can vary between
-     * otherwise identical requests. Before rejecting an asset that
-     * deterministic discovery identified as calendar-like, require
-     * one confirming non-calendar extraction.
-     *
-     * Successful qualifications and qualified calendars with zero
-     * usable events are not retried.
-     */
-    if (
-      !extraction.isEventCalendar
-    ) {
-      extraction =
-        await extractCalendarImage(
-          asset,
-          {
-            currentDate,
-          },
-        );
-
-      if (
-        !extraction.isEventCalendar
-      ) {
-        continue;
-      }
-    }
+    const extraction = await reuseCalendarImageExtraction(
+      asset,
+      calendarImageExtractionContract(currentDate),
+      async (signal) => {
+        let extracted = await extractCalendarImage(asset, { currentDate, signal });
+        /*
+         * Keep the existing confirming attempt for a non-calendar result.
+         * Cache the final raw result, including confirmed non-calendars and
+         * valid empty calendars, before deterministic freshness/date checks.
+         */
+        if (!extracted.isEventCalendar) {
+          extracted = await extractCalendarImage(asset, { currentDate, signal });
+        }
+        return extracted;
+      },
+    );
+    if (!extraction.isEventCalendar) continue;
 
     /*
      * Vision qualification is intentionally backed by a deterministic

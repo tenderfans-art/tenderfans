@@ -177,6 +177,8 @@ const EXTRACTION_SCHEMA = {
   ],
 } as const;
 
+const EXTRACTION_MODEL = "gpt-5.4";
+
 function extractionPrompt(
   currentDate: string,
 ): string {
@@ -224,6 +226,18 @@ function extractionPrompt(
     "- If the image is not a public event calendar or event schedule, set isEventCalendar=false and return an empty events array.",
     "- Do not create IDs, UTC timestamps, venue attribution, deduplication decisions, freshness decisions, or unsupported events.",
   ].join("\n");
+}
+
+// The current prompt uses today's date only to resolve a missing year/month.
+// Day-to-day freshness and weekday mapping remain deterministic downstream.
+export function calendarImageExtractionContract(currentDate: string): string {
+  return JSON.stringify({
+    model: EXTRACTION_MODEL,
+    schema: EXTRACTION_SCHEMA,
+    prompt: extractionPrompt(`${currentDate.slice(0, 7)}-01`),
+    imageDetail: "original",
+    pdfDetail: "high",
+  });
 }
 
 function outputText(
@@ -284,6 +298,7 @@ export async function extractCalendarImage(
   asset: CalendarImageAsset,
   options?: {
     currentDate?: string;
+    signal?: AbortSignal;
   },
 ): Promise<CalendarImageExtraction> {
   const apiKey =
@@ -322,7 +337,7 @@ export async function extractCalendarImage(
           "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-5.4",
+        model: EXTRACTION_MODEL,
         input: [
           {
             role: "user",
@@ -350,6 +365,7 @@ export async function extractCalendarImage(
         },
       }),
       cache: "no-store",
+      signal: options?.signal,
     },
   );
 

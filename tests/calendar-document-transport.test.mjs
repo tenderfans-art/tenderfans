@@ -92,7 +92,8 @@ test('a direct PDF calendar reuses its fetched bytes and still requires visual q
         discoverCalendarImageAssets: () => assert.fail('PDF is not an HTML page'),
         acquireCalendarImageAsset: () => assert.fail('Do not download the same PDF twice'),
       },
-      './calendar-image-vision': { extractCalendarImage: async asset => {
+      './calendar-image-extraction-cache': { reuseCalendarImageExtraction: async (_asset, _contract, produce) => produce(new AbortController().signal) },
+      './calendar-image-vision': { calendarImageExtractionContract: date => date, extractCalendarImage: async asset => {
         extractions++; assert.equal(asset.contentType, 'application/pdf'); assert.deepEqual(asset.bytes, pdf);
         return { isEventCalendar: qualifies, qualificationReason: 'Fixture qualification', weekStart: null, events: [] };
       } },
@@ -135,7 +136,8 @@ test('a qualified PDF publishes ordinary timed event fields while keeping docume
       fetchCalendarImageResource: async () => response(pdf, 'application/pdf', pdfUrl),
       isCalendarPdfContentType: value => /^application\/pdf/i.test(value ?? ''),
     },
-    './calendar-image-vision': { extractCalendarImage: async () => ({
+    './calendar-image-extraction-cache': { reuseCalendarImageExtraction: async (_asset, _contract, produce) => produce(new AbortController().signal) },
+    './calendar-image-vision': { calendarImageExtractionContract: date => date, extractCalendarImage: async () => ({
       isEventCalendar: true, qualificationReason: 'Explicit dated calendar', weekStart: null,
       events: [{ title: 'Fixture performance', localDate, displayedWeekday: null,
         startTime: '18:00', endTime: '20:00', allDay: false,

@@ -3,6 +3,7 @@ import { chromium as playwright } from "playwright-core";
 import Chromium from "@sparticuz/chromium";
 import { getChromiumExecutablePath } from "./chromium-runtime";
 import { withTransportPermit } from "../transport-capacity-permits";
+import { COMPATIBLE_USER_AGENT } from "../compatible-http-fetch";
 
 /*
  * Shared Playwright proxy configuration for browser transports.
@@ -33,16 +34,25 @@ const USER_AGENT = "TenderFans Event Harvester/1.0";
 const MAX_BROWSER_HTML_BYTES = 2_000_000;
 const MAX_OBSERVED_URLS = 500;
 
-async function withHttp1Fallback<T>(operation: (disableHttp2: boolean) => Promise<T>): Promise<T> {
+async function withBrowserCompatibilityFallback<T>(
+  operation: (disableHttp2: boolean, compatibleHeaders: boolean) => Promise<T>,
+): Promise<T> {
   try {
-    return await operation(false);
+    return await operation(false, false);
   } catch (error) {
-    // A fresh browser is required to change Chromium's negotiated protocol.
-    // The first attempt has completed its existing permit/close lifecycle.
-    if (!(error instanceof Error) || !/net::ERR_HTTP2_PROTOCOL_ERROR/.test(error.message)) {
+    // A retry starts only after the first browser and permits finish cleanup.
+    // Preserve cancellation/ownership failures even if they mention navigation.
+    if (!(error instanceof Error) || [
+      "TransportCapacityUnavailableError", "TransportPermitOwnershipLostError",
+      "BrowserOperationTimeoutError", "AbortError",
+    ].includes(error.name)) {
       throw error;
     }
-    return operation(true);
+    const failure = /^page\.goto:\s+net::(ERR_HTTP2_PROTOCOL_ERROR|ERR_EMPTY_RESPONSE)\b/.exec(error.message);
+    if (!failure) throw error;
+    // Reuse native HTTP's compatible headers for peers that close without a
+    // response. Disable HTTP/2 only when negotiation itself failed. One retry.
+    return operation(failure[1] === "ERR_HTTP2_PROTOCOL_ERROR", true);
   }
 }
 
@@ -101,6 +111,7 @@ async function fetchBrowserEvidenceOnce(
   url: string,
   proxyUrl?: string,
   disableHttp2 = false,
+  compatibleHeaders = false,
 ): Promise<BrowserPageEvidence> {
   if (!isAllowedBrowserUrl(url) || new URL(url).protocol !== "https:") {
     throw new Error("Browser navigation requires a public HTTPS URL");
@@ -147,7 +158,8 @@ async function fetchBrowserEvidenceOnce(
 
     const page = await browser.newPage({
       viewport: { width: 1440, height: 1600 },
-      userAgent: USER_AGENT,
+      userAgent: compatibleHeaders ? COMPATIBLE_USER_AGENT : USER_AGENT,
+      ...(compatibleHeaders ? { extraHTTPHeaders: { "Accept-Language": "en-US,en;q=0.9" } } : {}),
     });
 
     await page.route("**/*", async (route) => {
@@ -232,7 +244,8 @@ export async function fetchBrowserEvidence(
   url: string,
   proxyUrl = getTransportRecoveryProxy(),
 ): Promise<BrowserPageEvidence> {
-  return withHttp1Fallback(disableHttp2 => fetchBrowserEvidenceOnce(url, proxyUrl, disableHttp2));
+  return withBrowserCompatibilityFallback((disableHttp2, compatibleHeaders) =>
+    fetchBrowserEvidenceOnce(url, proxyUrl, disableHttp2, compatibleHeaders));
 }
 
 
@@ -246,6 +259,7 @@ async function fetchBrowserJsonResponsesOnce(
   matchesEndpoint: (url: string) => boolean,
   proxyUrl?: string,
   disableHttp2 = false,
+  compatibleHeaders = false,
 ): Promise<{
   status: number | null;
   observedEndpoint: boolean;
@@ -292,7 +306,8 @@ async function fetchBrowserJsonResponsesOnce(
 
       const page = await instance.newPage({
         viewport: { width: 1440, height: 1600 },
-        userAgent: USER_AGENT,
+        userAgent: compatibleHeaders ? COMPATIBLE_USER_AGENT : USER_AGENT,
+        ...(compatibleHeaders ? { extraHTTPHeaders: { "Accept-Language": "en-US,en;q=0.9" } } : {}),
       });
 
       await page.route("**/*", async (route) => {
@@ -398,8 +413,8 @@ export async function fetchBrowserJsonResponses(
     | undefined;
 
   try {
-    direct = await withHttp1Fallback(disableHttp2 => fetchBrowserJsonResponsesOnce(
-      url, matchesEndpoint, undefined, disableHttp2,
+    direct = await withBrowserCompatibilityFallback((disableHttp2, compatibleHeaders) => fetchBrowserJsonResponsesOnce(
+      url, matchesEndpoint, undefined, disableHttp2, compatibleHeaders,
     ));
   } catch (error) {
     // Capacity ownership and admission failures must never be
@@ -437,8 +452,8 @@ export async function fetchBrowserJsonResponses(
   }
 
   try {
-    const recovered = await withHttp1Fallback(disableHttp2 => fetchBrowserJsonResponsesOnce(
-      url, matchesEndpoint, recoveryProxy, disableHttp2,
+    const recovered = await withBrowserCompatibilityFallback((disableHttp2, compatibleHeaders) => fetchBrowserJsonResponsesOnce(
+      url, matchesEndpoint, recoveryProxy, disableHttp2, compatibleHeaders,
     ));
 
     if (
