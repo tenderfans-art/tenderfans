@@ -34,7 +34,9 @@ test('event title destination uses the stored published event URL and ignores in
   assert.equal(response.headers.get('location'), 'https://publisher.example/event/live-music/');
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.deepEqual(filters, [['event_id', id], ['events.status', 'published']]);
-  assert.deepEqual(calls, ['source_url, events!inner(status)']);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /events!inner\(status, venues\(website_url\)\)/);
+  assert.match(calls[0], /source_page_url:raw_payload->>sourcePageUrl/);
 });
 
 test('events without an external source retain their TenderFans event details', async () => {
@@ -60,4 +62,22 @@ test('invalid event IDs stop before a database request', async () => {
   const { response, calls } = await open({ eventId: 'invalid-id' });
   assert.equal(response.status, 404);
   assert.deepEqual(calls, []);
+});
+
+test('an embedded calendar links to its recorded containing page instead of the provider UI', async () => {
+  const { response } = await open({ records: [{
+    event_id: id, status: 'published',
+    source_url: 'https://calendar.google.com/calendar/embed?src=calendar-id',
+    publisher: { source_url: 'https://calendar.google.com/calendar/embed?src=calendar-id', public_page_url: 'https://venue.example.com/live-music/' },
+    events: { venues: { website_url: 'https://venue.example.com/' } },
+  }] });
+  assert.equal(response.headers.get('location'), 'https://venue.example.com/live-music/');
+});
+
+test('a legacy technical source without a saved containing page falls back to the venue website', async () => {
+  const { response } = await open({ records: [{
+    event_id: id, status: 'published', source_url: 'https://publisher.example.com/calendar.ics',
+    events: { venues: { website_url: 'https://venue.example.com/' } },
+  }] });
+  assert.equal(response.headers.get('location'), 'https://venue.example.com/');
 });
