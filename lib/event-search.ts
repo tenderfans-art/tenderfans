@@ -76,14 +76,15 @@ export function matchesEventSearch(event: SearchableEvent, query: string, perfor
     event.title, event.description ?? "", event.venue_name ?? "", event.venue_city ?? "",
     event.venue_state_region ?? "", event.venue_postal_code ?? "", ...(metadata?.terms ?? []),
   ].join(" "));
+  // Category intent uses event evidence, not a word in a venue's name.
+  const category = QUERY_CATEGORIES[search];
+  if (category) return matchesEventCategory(categories, category);
   // Preserve direct title/Spot/location/ZIP searches, then support combinations
   // such as "music St Pete", "jazz 33701" or "trivia brewery".
   if (text.includes(search)) return true;
-  const category = QUERY_CATEGORIES[search];
-  if (category) return matchesEventCategory(categories, category);
   const tokens = search.replace(/\blive music\b/g, "music").split(" ");
   return tokens.every(token => {
     const concept = QUERY_CATEGORIES[token];
-    return text.includes(token) || (concept !== undefined && matchesEventCategory(categories, concept));
+    return concept !== undefined ? matchesEventCategory(categories, concept) : text.includes(token);
   });
 }
