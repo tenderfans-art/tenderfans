@@ -946,20 +946,32 @@ export default function EventsCalendar({
               <div className="events-day-events">
                 {dayEvents.map((event) => (
                   <article className="events-list-row" key={event.id}>
-                    <button
-                      type="button"
-                      className="events-list-row-main"
-                      onClick={() => setSelectedEvent(event)}
-                      aria-label={`View ${event.title} event details`}
-                    >
+                    <div className="events-list-row-main">
                       <span className="events-list-row-top">
-                        <strong>{event.title}</strong>
+                        <strong>
+                          <a
+                            href={`/events/${event.id}/source`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {event.title}
+                          </a>
+                        </strong>
                         <span aria-hidden="true">·</span>
-                        <span>{event.venue_name}</span>
+                        <span>
+                          {event.venue_slug ? (
+                            <a href={`/s/${event.venue_slug}`}>{event.venue_name}</a>
+                          ) : event.venue_name}
+                        </span>
                       </span>
 
                       <span className="events-list-row-bottom">
-                        <span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEvent(event)}
+                          aria-label={`View ${event.title} event details`}
+                          style={{ border: 0, padding: 0, background: "none", color: "inherit", font: "inherit", cursor: "pointer" }}
+                        >
                           {event.is_all_day ? (
                             "All day"
                           ) : (
@@ -973,7 +985,7 @@ export default function EventsCalendar({
                               )}
                             </>
                           )}
-                        </span>
+                        </button>
 
                         <span
                           className="events-list-reminder"
@@ -986,7 +998,7 @@ export default function EventsCalendar({
                           />
                         </span>
                       </span>
-                    </button>
+                    </div>
 
                     {event.flyer_url ? (
                       <button
