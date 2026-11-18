@@ -1,5 +1,6 @@
 import { normalizeEventSearch, type EventSearchCategory, type EventSearchMetadata } from "./event-search";
 import { hasSportsEvidence } from "./event-sports-evidence";
+import { foodDrinkEvidence, foodDrinkLabel } from "./event-food-drink-evidence";
 
 export const CALENDAR_EVENT_SELECT = `
   id, venue_id, title, description, starts_at, ends_at, is_all_day, flyer_url,
@@ -17,12 +18,10 @@ export const CALENDAR_EVENT_SELECT = `
     event_performer:raw_payload->sourceRecord->performer
   ))`;
 
-const CUES: Record<Exclude<EventSearchCategory, "sports">, string[]> = {
+const CUES: Record<Exclude<EventSearchCategory, "sports" | "food" | "drinks">, string[]> = {
   music: ["music", "musical", "concert", "concerts", "band", "bands", "musician", "musicians", "singer", "songwriter", "acoustic", "dj", "djs", "karaoke", "open jam", "jam session", "jazz", "reggae", "bluegrass", "hip hop", "r b", "rnb", "edm"],
   entertainment: ["entertainment", "performance", "performances", "performer", "performers", "duo", "trio", "quartet", "quintet"],
-  games: ["game", "games", "trivia", "bingo", "poker", "board game", "arcade"],
-  food: ["food", "breakfast", "brunch", "lunch", "dinner", "buffet", "cookout", "oyster", "oysters", "wings", "taco", "tacos", "burger", "burgers", "barbecue", "bbq"],
-  drinks: ["drink", "drinks", "cocktail", "cocktails", "beer", "wine", "happy hour", "margarita", "margaritas", "martini", "martinis", "vodka", "whiskey", "tequila"],
+  games: ["game night", "games night", "game show", "trivia", "quiz", "bingo", "poker", "board game", "board games", "card game", "card games", "arcade", "tabletop", "mahjong", "dominoes", "chess", "jackbox", "dungeons and dragons", "cornhole", "darts", "billiards", "pool tournament", "beer pong", "shuffleboard"],
   comedy: ["comedy", "comedian", "comedians", "stand up", "standup"],
   dance: ["dance", "dancing", "dj", "djs"],
 };
@@ -51,6 +50,7 @@ function labels(value: unknown): string[] {
 function addCues(value: string, categories: Set<EventSearchCategory>) {
   if (hasSportsEvidence(value, "", false)) categories.add("sports");
   const text = ` ${normalizeEventSearch(value)} `;
+  if (["game", "games"].includes(text.trim())) categories.add("games");
   for (const [category, terms] of Object.entries(CUES)) {
     if (terms.some(term => text.includes(` ${term} `)) &&
         !(category === "music" && /\b(?:no|not|without) (?:live )?music\b/.test(text))) {
@@ -60,7 +60,7 @@ function addCues(value: string, categories: Set<EventSearchCategory>) {
 }
 
 /** Derive public search hints from retained event evidence, not venue or adapter identity. */
-export function eventSearchMetadata(event: { title: string; description?: string | null; event_source_links?: unknown }): EventSearchMetadata {
+export function eventSearchMetadata(event: { title: string; description?: string | null; event_source_links?: unknown; venues?: unknown }): EventSearchMetadata {
   const categories = new Set<EventSearchCategory>();
   const terms = new Set<string>();
   const performers = new Set<string>();
@@ -71,6 +71,9 @@ export function eventSearchMetadata(event: { title: string; description?: string
       const normalized = normalizeEventSearch(name);
       if (MUSIC_GENRES.has(normalized)) categories.add("music");
       addCues(name, categories);
+      const hospitality = foodDrinkLabel(name);
+      if (hospitality.food) categories.add("food");
+      if (hospitality.drinks) categories.add("drinks");
       terms.add(name);
     }
   };
@@ -101,7 +104,7 @@ export function eventSearchMetadata(event: { title: string; description?: string
       genre(row.genre);
       for (const classification of list(row.classifications)) {
         const fields = object(classification);
-        for (const name of labels(fields.segment)) { addCues(name, categories); terms.add(name); }
+        genre(fields.segment);
         for (const value of [fields.genre, fields.subGenre]) genre(value);
       }
       for (const value of [row.performer, row.event_performer]) {
@@ -127,6 +130,14 @@ export function eventSearchMetadata(event: { title: string; description?: string
       }
     }
   }
+  const titleName = normalizeEventSearch(event.title.replace(/^(?:live\s+music|music)\s*[:|–—-]\s*/i, ""));
+  const hospitality = foodDrinkEvidence(event.title, event.description ?? "", {
+    venueName: typeof object(event.venues).name === "string" ? String(object(event.venues).name) : "",
+    isPerformance: categories.has("music"),
+    performerOnly: [...performers].some(name => normalizeEventSearch(name) === titleName),
+  });
+  if (hospitality.food) categories.add("food");
+  if (hospitality.drinks) categories.add("drinks");
   if (hasSportsEvidence(event.title, event.description ?? "",
     !categories.has("music") && !categories.has("comedy"))) categories.add("sports");
   // A round/final can inherit an explicit sports-calendar heading. An ordinary
