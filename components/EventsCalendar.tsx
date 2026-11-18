@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import NotificationSignup from "@/components/NotificationSignup";
 import { readDiscoveryRadius, saveDiscoveryRadius } from "@/lib/discovery-radius";
+import { buildPerformerCatalog, matchesEventSearch, type EventSearchMetadata } from "@/lib/event-search";
 
 type CalendarEvent = {
   id: string;
@@ -21,33 +22,7 @@ type CalendarEvent = {
   venue_postal_code: string;
   venue_latitude: number | null;
   venue_longitude: number | null;
-};
-
-const EVENT_SEARCH_CONCEPTS: Record<string, string[]> = {
-  game: ["game", "games", "trivia", "bingo", "poker", "board game", "arcade"],
-  music: ["music", "live music", "band", "acoustic", "dj", "karaoke"],
-  sports: [
-    "sport",
-    "sports",
-    "football",
-    "baseball",
-    "basketball",
-    "hockey",
-    "soccer",
-    "watch party",
-  ],
-  food: ["food", "dinner", "brunch", "lunch", "buffet", "cookout"],
-  drink: [
-    "drink",
-    "drinks",
-    "cocktail",
-    "cocktails",
-    "beer",
-    "wine",
-    "happy hour",
-  ],
-  comedy: ["comedy", "comedian", "stand up", "standup"],
-  dance: ["dance", "dancing", "dj"],
+  search_metadata?: EventSearchMetadata;
 };
 
 type CalendarWeek = {
@@ -335,41 +310,16 @@ export default function EventsCalendar({
 
       try {
         const data = await loadAllCalendarEventPages(
-          (from, to) => {
-            let query = supabase
-              .from("events")
-              .select(`
-                id,
-                venue_id,
-                title,
-                description,
-                starts_at,
-                ends_at,
-                is_all_day,
-                flyer_url,
-                venues (
-                  name,
-                  slug,
-                  city,
-                  state_region,
-                  postal_code,
-                  latitude,
-                  longitude
-                )
-              `)
-              .eq("status", "published")
-              .order("starts_at", { ascending: true })
-              .order("id", { ascending: true });
-
-            if (venueId) {
-              query = query.eq("venue_id", venueId);
-            } else {
-              query = query
-                .gte("starts_at", rangeStart.toISOString())
-                .lte("starts_at", rangeEnd.toISOString());
+          async (from, to) => {
+            const params = new URLSearchParams({ offset: String(from), limit: String(to - from + 1) });
+            if (venueId) params.set("venue_id", venueId);
+            else {
+              params.set("from", rangeStart.toISOString());
+              params.set("to", rangeEnd.toISOString());
             }
-
-            return query.range(from, to).abortSignal(controller.signal);
+            const response = await fetch(`/api/events/calendar?${params}`, { signal: controller.signal });
+            if (!response.ok) throw new Error("Unable to load calendar page.");
+            return { data: (await response.json()).data, error: null };
           },
           controller.signal,
         );
@@ -390,6 +340,7 @@ export default function EventsCalendar({
           venue_postal_code: event.venues?.postal_code ?? "",
           venue_latitude: event.venues?.latitude ?? null,
           venue_longitude: event.venues?.longitude ?? null,
+          search_metadata: event.search_metadata,
         }));
 
         if (!controller.signal.aborted) setEvents(normalized);
@@ -642,8 +593,9 @@ export default function EventsCalendar({
       })
     : "";
 
+  const performerCatalog = useMemo(() => buildPerformerCatalog(events), [events]);
+
   const filteredEvents = useMemo(() => {
-    const search = eventSearch.trim().toLowerCase();
 
     return visibleEvents.filter((event) => {
       const eventDate = eventCalendarDate(event);
@@ -655,54 +607,9 @@ export default function EventsCalendar({
         return false;
       }
 
-      if (search) {
-        const normalize = (value: string) =>
-          value
-            .toLowerCase()
-            .replace(/[^\p{L}\p{N}\s]/gu, " ")
-            .replace(/\bsaint\b/g, "st")
-            .replace(/\s+/g, " ")
-            .trim();
-
-        const normalizedSearch = normalize(search);
-        const searchableText = normalize(
-          [
-            event.title,
-            event.description ?? "",
-            event.venue_name,
-            event.venue_city,
-            event.venue_state_region,
-            event.venue_postal_code,
-          ].join(" ")
-        );
-
-        /*
-         * Literal matching always remains authoritative so searches
-         * for performers, Spots, cities, ZIPs, and exact event names
-         * continue to work normally.
-         *
-         * Concept expansion only adds additional matches for common
-         * hospitality-event searches.
-         */
-        const literalMatch =
-          searchableText.includes(normalizedSearch);
-
-        const expandedTerms =
-          EVENT_SEARCH_CONCEPTS[normalizedSearch] ?? [];
-
-        const conceptMatch =
-          expandedTerms.some((term) =>
-            searchableText.includes(normalize(term))
-          );
-
-        if (!literalMatch && !conceptMatch) {
-          return false;
-        }
-      }
-
-      return true;
+      return matchesEventSearch(event, eventSearch, performerCatalog);
     });
-  }, [visibleEvents, eventSearch, selectedWeekday]);
+  }, [visibleEvents, eventSearch, selectedWeekday, performerCatalog]);
 
   const eventsByDay = useMemo(() => {
     const groups = new Map<string, CalendarEvent[]>();

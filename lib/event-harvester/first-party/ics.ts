@@ -41,6 +41,10 @@ export function parseIcsEvents(
   } = {},
 ): FirstPartyHarvestEvent[] {
   const parsed = ical.sync.parseICS(rawIcs);
+  const calendar = Object.values(parsed).find(component => component?.type === "VCALENDAR") as
+    Record<string, unknown> | undefined;
+  const calendarName = cleanText(calendar?.["WR-CALNAME"]);
+  const calendarDescription = cleanText(calendar?.["WR-CALDESC"]);
 
   const from = options.from ?? new Date();
   const to = options.to ?? new Date(
@@ -170,6 +174,11 @@ export function parseIcsEvents(
             ? recurrenceStart
             : null,
           seriesStart,
+          // Retain free publisher metadata for discovery/search. Occurrence
+          // identity, date expansion and approval rules use the same fields.
+          categories: instance.event.categories ?? component.categories ?? [],
+          calendarName,
+          calendarDescription,
         },
       });
     }
@@ -179,3 +188,4 @@ export function parseIcsEvents(
     (a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt),
   );
 }
+
