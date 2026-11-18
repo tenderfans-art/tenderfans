@@ -1,4 +1,5 @@
 import { normalizeEventSearch, type EventSearchCategory, type EventSearchMetadata } from "./event-search";
+import { hasSportsEvidence } from "./event-sports-evidence";
 
 export const CALENDAR_EVENT_SELECT = `
   id, venue_id, title, description, starts_at, ends_at, is_all_day, flyer_url,
@@ -7,6 +8,8 @@ export const CALENDAR_EVENT_SELECT = `
     status, categories:raw_payload->categories, category:raw_payload->category,
     tags:raw_payload->tags, genre:raw_payload->genre, performer:raw_payload->performer,
     structured_type:raw_payload->@type, classifications:raw_payload->classifications,
+    sport:raw_payload->sport, home_team:raw_payload->homeTeam,
+    away_team:raw_payload->awayTeam, competitors:raw_payload->competitor,
     calendar_context:raw_payload->>qualificationReason,
     image_event_context:raw_payload->observation->evidence->context,
     calendar_name:raw_payload->>calendarName, calendar_description:raw_payload->>calendarDescription,
@@ -14,11 +17,10 @@ export const CALENDAR_EVENT_SELECT = `
     event_performer:raw_payload->sourceRecord->performer
   ))`;
 
-const CUES: Record<EventSearchCategory, string[]> = {
+const CUES: Record<Exclude<EventSearchCategory, "sports">, string[]> = {
   music: ["music", "musical", "concert", "concerts", "band", "bands", "musician", "musicians", "singer", "songwriter", "acoustic", "dj", "djs", "karaoke", "open jam", "jam session", "jazz", "reggae", "bluegrass", "hip hop", "r b", "rnb", "edm"],
   entertainment: ["entertainment", "performance", "performances", "performer", "performers", "duo", "trio", "quartet", "quintet"],
   games: ["game", "games", "trivia", "bingo", "poker", "board game", "arcade"],
-  sports: ["sport", "sports", "football", "baseball", "basketball", "hockey", "soccer", "golf", "tennis", "nfl", "nba", "nhl", "mlb", "ufc", "watch party"],
   food: ["food", "breakfast", "brunch", "lunch", "dinner", "buffet", "cookout", "oyster", "oysters", "wings", "taco", "tacos", "burger", "burgers", "barbecue", "bbq"],
   drinks: ["drink", "drinks", "cocktail", "cocktails", "beer", "wine", "happy hour", "margarita", "margaritas", "martini", "martinis", "vodka", "whiskey", "tequila"],
   comedy: ["comedy", "comedian", "comedians", "stand up", "standup"],
@@ -31,7 +33,7 @@ const MUSIC_GENRES = new Set([
 ]);
 const TYPES: Record<string, EventSearchCategory> = {
   musicevent: "music", musicgroup: "music", musiccomposition: "music", musicrecording: "music",
-  sportsevent: "sports", comedyevent: "comedy", foodevent: "food", danceevent: "dance",
+  sportsevent: "sports", sportsteam: "sports", athlete: "sports", comedyevent: "comedy", foodevent: "food", danceevent: "dance",
   theaterevent: "entertainment", festival: "entertainment", performinggroup: "entertainment",
 };
 
@@ -41,12 +43,13 @@ function object(value: unknown): Record<string, unknown> {
 function list(value: unknown): unknown[] { return Array.isArray(value) ? value.slice(0, 100) : value == null ? [] : [value]; }
 function labels(value: unknown): string[] {
   return list(value).flatMap(item => {
-    if (typeof item === "string") return [item.slice(0, 1000)];
+    if (typeof item === "string") return item.trim() ? [item.trim().slice(0, 1000)] : [];
     const row = object(item);
-    return [row.name, row.label, row.slug].filter((text): text is string => typeof text === "string").map(text => text.slice(0, 1000));
+    return [row.name, row.label, row.slug].filter((text): text is string => typeof text === "string" && Boolean(text.trim())).map(text => text.trim().slice(0, 1000));
   });
 }
 function addCues(value: string, categories: Set<EventSearchCategory>) {
+  if (hasSportsEvidence(value, "", false)) categories.add("sports");
   const text = ` ${normalizeEventSearch(value)} `;
   for (const [category, terms] of Object.entries(CUES)) {
     if (terms.some(term => text.includes(` ${term} `)) &&
@@ -83,6 +86,15 @@ export function eventSearchMetadata(event: { title: string; description?: string
       const row = object(entry);
       if (["ignored", "suppressed", "stale", "cancelled"].includes(String(row.status))) continue;
       types(row.structured_type);
+      for (const name of labels(row.sport)) { categories.add("sports"); terms.add(name); }
+      const home = labels(row.home_team), away = labels(row.away_team);
+      for (const team of [row.home_team, row.away_team]) types(object(team)["@type"]);
+      if (home.length && away.length) categories.add("sports");
+      for (const name of [...home, ...away]) terms.add(name);
+      for (const competitor of list(row.competitors)) {
+        types(object(competitor)["@type"]);
+        for (const name of labels(competitor)) terms.add(name);
+      }
       for (const value of [row.categories, row.category, row.tags, row.event_categories]) {
         for (const label of labels(value)) genre(label);
       }
@@ -97,9 +109,13 @@ export function eventSearchMetadata(event: { title: string; description?: string
           const performer = object(person);
           types(performer["@type"]);
           genre(performer.genre);
-          if (typeof performer.name === "string" && performer.name.trim() && performer["@type"] !== "Organization") {
+          const performerTypes = list(performer["@type"]).map(value => String(value).split(/[\/#]/).at(-1)?.toLowerCase());
+          if (typeof performer.name === "string" && performer.name.trim() && !performerTypes.includes("organization")) {
             const name = performer.name.trim().slice(0, 200);
-            performers.add(name); terms.add(name); categories.add("entertainment");
+            terms.add(name);
+            if (!performerTypes.some(type => type === "sportsteam" || type === "athlete")) {
+              performers.add(name); categories.add("entertainment");
+            }
           }
         }
       }
@@ -111,6 +127,12 @@ export function eventSearchMetadata(event: { title: string; description?: string
       }
     }
   }
+  if (hasSportsEvidence(event.title, event.description ?? "",
+    !categories.has("music") && !categories.has("comedy"))) categories.add("sports");
+  // A round/final can inherit an explicit sports-calendar heading. An ordinary
+  // performance or special on that same calendar cannot use this fallback.
+  if (!categories.size && /\b(?:round|finals?|semifinals?|quarterfinals?|qualifying|fixture)\b/.test(normalizeEventSearch(event.title)) &&
+    contexts.some(context => hasSportsEvidence(context, "", false))) categories.add("sports");
   // Collection-level context helps name-only performances, but must not turn
   // an explicitly identified meal, special, game or sport into a music event.
   if (!["games", "sports", "food", "drinks", "comedy"].some(category => categories.has(category as EventSearchCategory))) {
