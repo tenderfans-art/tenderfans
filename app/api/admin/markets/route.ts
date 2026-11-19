@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { countyMarketIdentity, isMarketTimezone } from "@/lib/market-creation";
 
 export async function GET(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -154,10 +155,9 @@ export async function POST(request: Request) {
 
   let body: {
     action?: string;
-    name?: string;
-    key?: string;
     stateRegion?: string;
     countyName?: string;
+    scheduleTimezone?: string;
     marketId?: string;
     enabled?: boolean;
   };
@@ -172,12 +172,12 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "create") {
-    const name = body.name?.trim() ?? "";
-    const key = body.key?.trim().toLowerCase() ?? "";
     const stateRegion =
-      body.stateRegion?.trim().toUpperCase() ?? "";
+      typeof body.stateRegion === "string" ? body.stateRegion.trim().toUpperCase() : "";
     const countyName =
-      body.countyName?.trim() ?? "";
+      typeof body.countyName === "string" ? body.countyName.trim().replace(/\s+/g, " ") : "";
+    const { name, key } = countyMarketIdentity(countyName);
+    const scheduleTimezone = body.scheduleTimezone;
 
     if (
       name.length < 2 ||
@@ -185,10 +185,11 @@ export async function POST(request: Request) {
       !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key) ||
       !/^[A-Z]{2}$/.test(stateRegion) ||
       countyName.length < 3 ||
-      countyName.length > 100
+      countyName.length > 100 ||
+      !isMarketTimezone(scheduleTimezone)
     ) {
       return NextResponse.json(
-        { error: "Enter a Market name, URL key, state and county." },
+        { error: "Enter a county, state and valid daily scan time zone." },
         { status: 400 }
       );
     }
@@ -200,6 +201,7 @@ export async function POST(request: Request) {
         p_country_code: "US",
         p_state_region: stateRegion,
         p_county_name: countyName,
+        p_schedule_timezone: scheduleTimezone,
       });
 
     if (createError || !createdId) {
@@ -301,3 +303,4 @@ export async function POST(request: Request) {
     { status: 400 }
   );
 }
+

@@ -152,6 +152,43 @@ for(const endings of ["LF","CRLF"])test(`continuous Market admission on PostgreS
     assert.equal((await claim(a,100)).kind,'work');
     assert.equal(await sql("select count(*) from public.event_processing_work where status='leased';"),"16");
   });
+  await t.test("two Markets admit two Workflows and sixteen independent worker slots each",async()=>{
+    await reset();
+    await sql('update public.event_processing_pool_config set max_concurrent_sources=32,max_concurrent_batches=4;');
+    try {
+      const markets=[await fixture(Array(24).fill('detect_spot')),await fixture(Array(24).fill('detect_spot'))];
+      const runs=[];
+      for(const f of markets) {
+        const own=[];
+        for(let i=0;i<2;i++) {
+          const reserved=await json(`select row_to_json(r) from public.reserve_shared_harvester_batch_scoped(${literal(f.market)}) r;`);
+          assert.equal(reserved.selected_market_id,f.market);
+          const r={id:reserved.reservation_id,run:'wrun_'+randomUUID().replaceAll('-','')};
+          assert.equal(await sql(`select public.prepare_shared_market_refill(${literal(r.id)});`),'t');
+          assert.equal(await sql(`select public.bind_shared_harvester_workflow_run(${literal(f.market)},${literal(r.id)},${literal(r.run)});`),'t');
+          own.push(r);
+        }
+        assert.equal(await sql(`select count(*) from public.reserve_shared_harvester_batch_scoped(${literal(f.market)});`),'0');
+        runs.push(own);
+      }
+      const claimed=await Promise.all(markets.map((f,index)=>Promise.all(
+        runs[index].flatMap(r=>Array.from({length:8},(_,slot)=>claim(r,slot))))));
+      for(let i=0;i<markets.length;i++) {
+        assert.equal(claimed[i].filter(x=>x.kind==='work').length,16);
+        const venues=new Set(markets[i].work.map(w=>w.venue));
+        for(const x of claimed[i]) assert.ok(venues.has(x.item.claimed_venue_id));
+        assert.equal((await claim(runs[i][0],100)).kind,'wait');
+      }
+      assert.equal(await sql("select count(*) from public.event_processing_work where status='leased';"),'32');
+      await complete(claimed[0][0].item);
+      assert.equal((await claim(runs[1][0],101)).kind,'wait');
+      assert.equal((await claim(runs[0][0],101)).kind,'work');
+      assert.equal(await sql("select count(*) from public.event_processing_work where status='leased';"),'32');
+    } finally {
+      await reset();
+      await sql('update public.event_processing_pool_config set max_concurrent_sources=16,max_concurrent_batches=2;');
+    }
+  });
   await t.test("immutable replay survives closure and never claims another item",async()=>{
     await reset();const f=await fixture(['detect_spot','detect_spot']),r=await reservation(f),x=await claim(r,0);
     await sql(`select public.stop_shared_market_refill(${literal(r.id)});`);
