@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import GooglePlacePicker from "@/components/GooglePlacePicker";
+import { countyMarketIdentity, isMarketTimezone } from "@/lib/market-creation";
 
 type Market = {
   id: string;
@@ -17,10 +18,10 @@ export default function MarketsPage() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [name, setName] = useState("");
-  const [key, setKey] = useState("");
   const [stateRegion, setStateRegion] = useState("");
   const [countyName, setCountyName] = useState("");
+  const [scheduleTimezone, setScheduleTimezone] = useState("");
+  const { key } = countyMarketIdentity(countyName);
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -42,6 +43,9 @@ export default function MarketsPage() {
     detail: string;
   }>>([]);
 
+  useEffect(() => {
+    setScheduleTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
 
   async function createMarket() {
     if (creating) return;
@@ -63,10 +67,9 @@ export default function MarketsPage() {
         },
         body: JSON.stringify({
           action: "create",
-          name,
-          key,
           stateRegion,
           countyName,
+          scheduleTimezone,
         }),
       });
 
@@ -79,8 +82,6 @@ export default function MarketsPage() {
             a.display_name.localeCompare(b.display_name)
           )
       );
-      setName("");
-      setKey("");
       setStateRegion("");
       setCountyName("");
       setCreateOpen(false);
@@ -347,6 +348,8 @@ export default function MarketsPage() {
                 padding: 24,
                 width: "100%",
                 maxWidth: 620,
+                maxHeight: "calc(100dvh - 40px)",
+                overflowY: "auto",
               }}>
                 <button
                   type="button"
@@ -367,28 +370,22 @@ export default function MarketsPage() {
               display: "flex",
               gap: 12,
               flexWrap: "wrap",
-              alignItems: "center",
+              alignItems: "flex-start",
             }}>
               <input
-                aria-label="Market name"
-                placeholder="Market name"
-                value={name}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setName(value);
-                  setKey(value.toLowerCase()
-                    .replace(/[^a-z0-9]+/g, "-")
-                    .replace(/^-|-$/g, ""));
-                }}
-                style={{ padding: 12, flex: "1 1 220px" }}
+                aria-label="County name"
+                placeholder="County (e.g. Hillsborough County)"
+                value={countyName}
+                onChange={(event) => setCountyName(event.target.value)}
+                style={{ padding: 12, flex: "1 1 220px", minWidth: 0 }}
               />
               <input
                 aria-label="Market URL key"
                 placeholder="market-url-key"
                 value={key}
                 readOnly
-                title="Automatically generated from the Market name"
-                style={{ padding: 12, flex: "1 1 180px" }}
+                title="Automatically generated from the county name"
+                style={{ padding: 12, flex: "1 1 180px", minWidth: 0 }}
               />
               <input
                 aria-label="State abbreviation"
@@ -400,24 +397,24 @@ export default function MarketsPage() {
                 }
                 style={{ padding: 12, width: 130 }}
               />
-              <input
-                aria-label="County name"
-                placeholder="County (e.g. Pinellas County)"
-                value={countyName}
-                onChange={(event) =>
-                  setCountyName(event.target.value)
-                }
-                style={{ padding: 12, flex: "1 1 220px" }}
-              />
+              <label style={{ display: "grid", gap: 6, flex: "1 1 220px", minWidth: 0 }}>
+                <input
+                  value={scheduleTimezone}
+                  placeholder="America/New_York"
+                  onChange={(event) => setScheduleTimezone(event.target.value.trim())}
+                  style={{ padding: 12, width: "100%", boxSizing: "border-box" }}
+                />
+                <span style={{ fontSize: 13, opacity: 0.7 }}>Daily scan time zone</span>
+              </label>
               <button
                 className="btn primary"
                 type="button"
                 disabled={
                   creating ||
-                  !name.trim() ||
                   !key.trim() ||
                   !/^[A-Z]{2}$/.test(stateRegion) ||
-                  !countyName.trim()
+                  !countyName.trim() ||
+                  !isMarketTimezone(scheduleTimezone)
                 }
                 onClick={createMarket}
               >
@@ -425,7 +422,8 @@ export default function MarketsPage() {
               </button>
             </div>
             <p style={{ opacity: 0.7, marginBottom: 0 }}>
-              New markets always begin with automated processing disabled.
+              The county is the market name. Daily scans run at 9:30 AM in the selected time zone after you enable processing.
+              New markets begin with automated processing disabled.
             </p>
           </div>
 
@@ -644,3 +642,4 @@ export default function MarketsPage() {
     </main>
   );
 }
+
